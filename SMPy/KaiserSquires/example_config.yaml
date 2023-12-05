@@ -2,14 +2,14 @@
 
 # Paths
 input_path: "/home/wslgeorgios/SMPy/notebooks/forecast_lum_annular.fits"   # Path to the input shear catalog (FITS file)
-output_path: "/home/wslgeorgios/mykmaptest.png"                               # Path for the output image
+output_path: "/home/wslgeorgios/SMPy/notebooks/simulation_kmap.png"             # Path for the output image
 
 # Parameters
 resolution: 0.141                   # Pixel resolution of the map in arcminutes
 width: 220                          # Width of the map in pixels
 
 # Plotting
-vmax: 0.2                           # Max value for color scale in the plot
+vmax: 0.2                          # Max value for color scale in the plot
 vmin: -0.1                          # Min value for color scale in the plot
 gaussian_kernel: 1.5                # Gaussian kernel size for smoothing
 figsize: [10, 10]                   # Size of the figure (width, height)

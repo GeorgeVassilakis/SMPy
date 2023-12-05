@@ -43,7 +43,7 @@ def calculate_field_boundaries(ra, dec, resolution, width):
     med_dec = np.median(dec)
 
     # Calculate size of the field in degrees
-    size = width * resolution / 60.  # Convert from arcminutes to degrees
+    size = width * resolution / 60.  # Convert from arcseconds to arcminutes
 
     # Calculate RA and Dec extents and store in a dictionary
     boundaries = {
