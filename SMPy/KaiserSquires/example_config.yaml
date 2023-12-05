@@ -1,4 +1,4 @@
-# YAML File for SMPy/KaiserSquires/run.py 
+# YAML File for SMPy/KaiserSquires/run.py  
 
 # Paths
 input_path: "/home/wslgeorgios/SMPy/notebooks/forecast_lum_annular.fits"   # Path to the input shear catalog (FITS file)
