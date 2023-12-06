@@ -17,3 +17,6 @@ SMPy is a Python-based toolkit designed for astrophysicists and cosmologists, fa
 
    ```bash
    git clone https://github.com/your-repository/SMPy.git
+
+## Example
+![K-map](https://github.com/GeorgeVassilakis/SMPy/blob/main/notebooks/simulation_kmap.png)https://github.com/GeorgeVassilakis/SMPy/blob/main/notebooks/simulation_kmap.png)
