@@ -9,7 +9,7 @@ resolution: 0.141                   # Pixel resolution of the map in arcminutes
 width: 220                          # Width of the map in pixels
 
 # Plotting
-vmax: 0.2                          # Max value for color scale in the plot
+vmax: 0.175                          # Max value for color scale in the plot
 vmin: -0.1                          # Min value for color scale in the plot
 gaussian_kernel: 1.5                # Gaussian kernel size for smoothing
 figsize: [10, 10]                   # Size of the figure (width, height)
