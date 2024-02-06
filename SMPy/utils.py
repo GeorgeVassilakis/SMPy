@@ -106,7 +106,7 @@ def create_shear_grid(ra, dec, g1, g2, weight, boundaries, npix):
             g2_grid[dec_idx[i], ra_idx[i]] += g2[i] * weight[i]
             weight_grid[dec_idx[i], ra_idx[i]] += weight[i]
 
-    # Normalize the grid by the total weight in each bin
+    # Normalize the grid by the total weight in each bin (weighted average)
     nonzero_weight_mask = weight_grid != 0
     g1_grid[nonzero_weight_mask] /= weight_grid[nonzero_weight_mask]
     g2_grid[nonzero_weight_mask] /= weight_grid[nonzero_weight_mask]
