@@ -17,6 +17,20 @@ SMPy is a Python-based toolkit designed for astrophysicists and cosmologists, fa
 
    ```bash
    git clone https://github.com/GeorgeVassilakis/SMPy.git
+## How to Run
+1. Import the runner script:
+`from SMPy.KaiserSquires import run`
+
+2. Edit the `example_config.yaml` configuration file
+   - This file defines many parameters.
+   - Most importantly, it defines the input/output paths and file specific columns like ra, dec, g1, g2, and weights.
+   - It also controls various visualization parameters like titles, color scaling, and smoothing parameters.
+  
+3. Define config path and run:
+
+   `config_path = '/path/to/repo/.../SMPy/SMPy/KaiserSquires/example_config.yaml'`
+
+   `run.run(config_path)`
 
 ## Example
 ![K-map](https://github.com/GeorgeVassilakis/SMPy/blob/main/notebooks/simulation_kmap.png)https://github.com/GeorgeVassilakis/SMPy/blob/main/notebooks/simulation_kmap.png)
