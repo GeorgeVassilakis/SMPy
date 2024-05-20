@@ -4,9 +4,10 @@
 SMPy is a Python-based toolkit designed for astrophysicists and cosmologists, facilitating the construction of convergence maps from shear data. This tool leverages the power of Python to provide an accessible and efficient way to analyze gravitational lensing effects, particularly focusing on the mapping of dark matter distribution in galaxy clusters.
 
 ## Features
-- Efficient algorithms for shear-to-convergence mapping.
-- Support for various inversion techniques, including Kaiser-Squires.
 - User-friendly interface for data handling and visualization.
+- Modular codebase that allows multiple convergence mapping methods/techniques.
+   - Currently uses Kaiser-Squires Inversion (1993).
+   - Aperture-mass mapping is currently under development.
 - Compatibility with standard astrophysical data formats.
 
 ## Installation
@@ -17,6 +18,12 @@ SMPy is a Python-based toolkit designed for astrophysicists and cosmologists, fa
 
    ```bash
    git clone https://github.com/GeorgeVassilakis/SMPy.git
+
+3. **Install the Package:** Install SMPy using setup.py:
+
+   ```bash
+   pip install .
+
 ## How to Run
 1. Import the runner script:
 `from SMPy.KaiserSquires import run`
