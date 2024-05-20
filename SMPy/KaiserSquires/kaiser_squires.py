@@ -15,9 +15,11 @@ def ks_inversion(g1_grid, g2_grid):
     k1, k2 = np.meshgrid(np.fft.fftfreq(npix_ra), np.fft.fftfreq(npix_dec))
     k_squared = k1**2 + k2**2
 
+    # Avoid division by zero by replacing zero values with a small number
+    k_squared = np.where(k_squared == 0, np.finfo(float).eps, k_squared)
+
     # Kaiser-Squires inversion in Fourier space
-    # Avoid division by zero by setting zero frequency component to zero
-    kappa_hat = np.where(k_squared != 0, (1 / k_squared) * ((k1**2 - k2**2) * g1_hat + 2 * k1 * k2 * g2_hat), 0)
+    kappa_hat = (1 / k_squared) * ((k1**2 - k2**2) * g1_hat + 2 * k1 * k2 * g2_hat)
 
     # Inverse Fourier transform to get the convergence map
     kappa_grid = np.fft.ifft2(kappa_hat)
