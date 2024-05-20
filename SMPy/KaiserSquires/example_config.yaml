@@ -1,26 +1,26 @@
 # YAML File for SMPy/KaiserSquires/run.py  
 
 # Paths
-input_path: "/home/wslgeorgios/SMPy/notebooks/forecast_lum_annular.fits"   # Path to the input shear catalog (FITS file)
-output_path: "/home/wslgeorgios/SMPy/notebooks/simulation_kmap.png"             # Path for the output image
+input_path: "/home/wslgeorgios/SMPy/notebooks/forecast_lum_annular.fits"
+output_path: "/home/wslgeorgios/SMPy/notebooks/simulation_kmap.png"
 
 # Parameters
-resolution: 0.141                   # Pixel resolution of the map in arcminutes
-width: 220                          # Width of the map in pixels
+resolution: .141                # Pixel resolution of the map in arcminutes
 
 # Plotting
-vmax: 0.175                          # Max value for color scale in the plot
-vmin: -0.1                          # Min value for color scale in the plot
-gaussian_kernel: 1.5                # Gaussian kernel size for smoothing
-figsize: [10, 10]                   # Size of the figure (width, height)
+vmax: 0.2                         # Max value for color scale in the plot
+vmin: -0.1                         # Min value for color scale in the plot
+gaussian_kernel: 2                 # Gaussian kernel size for smoothing
+figsize: [10, 7]                  # Size of the figure (width, height)
 cmap: 'magma'                       # Colormap for the plot
 xlabel: 'Right Ascension (deg)'     # Label for x-axis
 ylabel: 'Declination (deg)'         # Label for y-axis
 plot_title: 'Convergence Map'       # Title of the plot
+gridlines: True                     # Add gridlines? (boolean)
 
 # Columns
 ra_col: 'ra'                        # Column name for Right Ascension
 dec_col: 'dec'                      # Column name for Declination
 g1_col: 'g1_Rinv'                   # Column name for first shear component
 g2_col: 'g2_Rinv'                   # Column name for second shear component
-weight_col: 'weight'                # Column name for data weighting
+weight_col: 'weight'  # Column name for data weighting

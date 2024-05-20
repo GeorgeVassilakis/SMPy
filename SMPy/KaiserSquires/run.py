@@ -20,7 +20,7 @@ def create_convergence_map(config):
     boundaries = utils.calculate_field_boundaries(shear_df['ra'], 
                                                   shear_df['dec'], 
                                                   config['resolution'], 
-                                                  config['width'])
+                                                  )
 
     # Create shear grid
     g1map, g2map = utils.create_shear_grid(shear_df['ra'], 
@@ -29,10 +29,10 @@ def create_convergence_map(config):
                                            shear_df['g2'], 
                                            shear_df['weight'], 
                                            boundaries=boundaries,
-                                           npix=config['width'])
+                                           resolution=config['resolution'])
 
     # Calculate the convergence map
-    convergence = kaiser_squires.ks_inversion(g1map, -g2map, config['width'])
+    convergence = kaiser_squires.ks_inversion(g1map, -g2map)
 
     # Plot the convergence map using the separate plotting function
     plot_kmap.plot_convergence(convergence, boundaries, config)
