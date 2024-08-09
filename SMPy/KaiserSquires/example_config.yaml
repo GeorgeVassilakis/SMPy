@@ -4,12 +4,16 @@
 input_path: "/home/wslgeorgios/SMPy/notebooks/forecast_lum_annular.fits"
 output_path: "/home/wslgeorgios/SMPy/notebooks/simulation_kmap.png"
 
+# Export convergence as FITS?
+save_fits: true  # Set to false if you don't want to save as FITS
+fits_output_path: "/home/wslgeorgios/SMPy/union_maps/test_kmap_output.fits"  # Optional: specify a different path for FITS output
+
 # Parameters
 resolution: .141                # Pixel resolution of the map in arcminutes
 
 # Plotting
 vmax: 0.2                         # Max value for color scale in the plot
-vmin: -0.1                         # Min value for color scale in the plot
+vmin: -0.15                         # Min value for color scale in the plot
 gaussian_kernel: 2                 # Gaussian kernel size for smoothing
 figsize: [10, 7]                  # Size of the figure (width, height)
 cmap: 'magma'                       # Colormap for the plot

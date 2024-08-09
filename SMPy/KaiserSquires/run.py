@@ -34,6 +34,9 @@ def create_convergence_map(config):
     # Calculate the convergence map
     convergence = kaiser_squires.ks_inversion(g1map, -g2map)
 
+    # Save the convergence map as a FITS file (or not)
+    utils.save_convergence_fits(convergence, boundaries, config)
+
     # Plot the convergence map using the separate plotting function
     plot_kmap.plot_convergence(convergence, boundaries, config)
 
