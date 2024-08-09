@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 from astropy.table import Table
+from astropy.io import fits
+from astropy.wcs import WCS
 
 def load_shear_data(shear_cat_path, ra_col, dec_col, g1_col, g2_col, weight_col):
     """ 
@@ -117,3 +119,56 @@ def create_shear_grid(ra, dec, g1, g2, weight, boundaries, resolution):
     g2_grid[nonzero_weight_mask] /= weight_grid[nonzero_weight_mask]
     
     return g1_grid, g2_grid
+
+
+def save_convergence_fits(convergence, boundaries, config):
+    """
+    Save the convergence map as a FITS file with WCS information if configured to do so.
+
+    Parameters:
+    -----------
+    convergence : numpy.ndarray
+        The 2D convergence map.
+    boundaries : dict
+        Dictionary containing 'ra_min', 'ra_max', 'dec_min', 'dec_max'.
+    config : dict
+        Configuration dictionary containing output path and other settings.
+
+    Returns:
+    --------
+    None
+    """
+    if not config.get('save_fits', False):
+        return
+
+    fits_output_path = config.get('fits_output_path', config['output_path'].replace('.png', '.fits'))
+
+    # Create a WCS object
+    wcs = WCS(naxis=2)
+    
+    # Set up the WCS parameters
+    npix_dec, npix_ra = convergence.shape
+    wcs.wcs.crpix = [npix_ra / 2, npix_dec / 2]
+    wcs.wcs.cdelt = [(boundaries['ra_max'] - boundaries['ra_min']) / npix_ra, 
+                     (boundaries['dec_max'] - boundaries['dec_min']) / npix_dec]
+    wcs.wcs.crval = [(boundaries['ra_max'] + boundaries['ra_min']) / 2, 
+                     (boundaries['dec_max'] + boundaries['dec_min']) / 2]
+    wcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+
+    # Create a FITS header from the WCS information
+    header = wcs.to_header()
+
+    # Add some additional information to the header
+    header['AUTHOR'] = 'SMPy'
+    header['CONTENT'] = 'Convergence Map'
+
+    # Create a primary HDU containing the convergence map
+    hdu = fits.PrimaryHDU(convergence, header=header)
+
+    # Create a FITS file
+    hdul = fits.HDUList([hdu])
+
+    # Save the FITS file
+    hdul.writeto(fits_output_path, overwrite=True)
+
+    print(f"Convergence map saved as FITS file: {fits_output_path}")
