@@ -19,7 +19,7 @@ def ks_e_mode_inversion(g1_grid, g2_grid):
     k_squared = np.where(k_squared == 0, np.finfo(float).eps, k_squared)
 
     # Kaiser-Squires inversion in Fourier space
-    kappa_hat = (1 / k_squared) * ((k1**2 - k2**2) * g1_hat + 2 * k1**2 * k2**2 * g2_hat)
+    kappa_hat = (1 / k_squared) * ((k1**2 - k2**2) * g1_hat + 2 * k1 * k2 * g2_hat)
 
     # Inverse Fourier transform to get the convergence map
     kappa_grid = np.fft.ifft2(kappa_hat)
@@ -46,7 +46,7 @@ def ks_b_mode_inversion(g1_grid, g2_grid):
     k_squared = np.where(k_squared == 0, np.finfo(float).eps, k_squared)
 
     # Kaiser-Squires inversion in Fourier space
-    kappa_hat = (1 / k_squared) * ((k1**2 - k2**2) * g2_hat - 2 * k1**2 * k2**2 * g1_hat)
+    kappa_hat = (1 / k_squared) * ((k1**2 - k2**2) * g2_hat - 2 * k1 * k2 * g1_hat)
 
     # Inverse Fourier transform to get the convergence map
     kappa_grid = np.fft.ifft2(kappa_hat)
