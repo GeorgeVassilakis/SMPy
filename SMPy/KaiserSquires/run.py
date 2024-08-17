@@ -32,7 +32,13 @@ def create_convergence_map(config):
                                            resolution=config['resolution'])
 
     # Calculate the convergence map
-    convergence = kaiser_squires.ks_inversion(g1map, -g2map)
+    mode = config['mode']
+    if mode == 'E'
+        convergence = kaiser_squires.ks_e_mode_inversion(g1map, -g2map)
+    elif mode == 'B'
+        convergence = kaiser_squires.ks_b_mode_inversion(g1map, -g2map)
+    else
+        raise ValueError(f"Invalid mode: {mode}. Must be 'E' or 'B'.")
 
     # Save the convergence map as a FITS file (or not)
     utils.save_convergence_fits(convergence, boundaries, config)
