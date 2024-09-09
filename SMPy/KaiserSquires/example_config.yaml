@@ -30,4 +30,4 @@ g2_col: 'g2_Rinv'                   # Column name for second shear component
 weight_col: 'weight'  # Column name for data weighting
 
 # Mode
-mode: 'E' # either E or B
+mode: ['E', 'B']  # For both E and/or B modes
