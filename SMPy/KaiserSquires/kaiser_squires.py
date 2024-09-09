@@ -2,7 +2,7 @@ import numpy as np
 
 def ks_inversion(g1_grid, g2_grid):
     """
-    Perform the Kaiser-Squires inversion to obtain the convergence map from shear components.
+    Perform the Kaiser-Squires inversion to obtain both E-mode and B-mode convergence maps from shear components.
     """
     # Get the dimensions of the input grids
     npix_dec, npix_ra = g1_grid.shape
@@ -19,9 +19,11 @@ def ks_inversion(g1_grid, g2_grid):
     k_squared = np.where(k_squared == 0, np.finfo(float).eps, k_squared)
 
     # Kaiser-Squires inversion in Fourier space
-    kappa_hat = (1 / k_squared) * ((k1**2 - k2**2) * g1_hat + 2 * k1 * k2 * g2_hat)
+    kappa_e_hat = (1 / k_squared) * ((k1**2 - k2**2) * g1_hat + 2 * k1 * k2 * g2_hat)
+    kappa_b_hat = (1 / k_squared) * ((k1**2 - k2**2) * g2_hat - 2 * k1 * k2 * g1_hat)
 
-    # Inverse Fourier transform to get the convergence map
-    kappa_grid = np.fft.ifft2(kappa_hat)
+    # Inverse Fourier transform to get the convergence maps
+    kappa_e_grid = np.real(np.fft.ifft2(kappa_e_hat))
+    kappa_b_grid = np.real(np.fft.ifft2(kappa_b_hat))
 
-    return np.real(kappa_grid)  # Return the real part
+    return kappa_e_grid, kappa_b_grid

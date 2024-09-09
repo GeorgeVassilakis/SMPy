@@ -31,14 +31,29 @@ def create_convergence_map(config):
                                            boundaries=boundaries,
                                            resolution=config['resolution'])
 
-    # Calculate the convergence map
-    convergence = kaiser_squires.ks_inversion(g1map, -g2map)
+    # Calculate the convergence maps
+    modes = config['mode']
+    kappa_e, kappa_b = kaiser_squires.ks_inversion(g1map, -g2map)
 
-    # Save the convergence map as a FITS file (or not)
-    utils.save_convergence_fits(convergence, boundaries, config)
+    convergence_maps = {}
+    if 'E' in modes:
+        convergence_maps['E'] = kappa_e
+    if 'B' in modes:
+        convergence_maps['B'] = kappa_b
 
-    # Plot the convergence map using the separate plotting function
-    plot_kmap.plot_convergence(convergence, boundaries, config)
+    # Plot and save the convergence maps
+    for mode, convergence in convergence_maps.items():
+        config_copy = config.copy()
+        config_copy['plot_title'] = f'{config["plot_title"]} ({mode}-mode)'
+        config_copy['output_path'] = config['output_path'].replace('.png', f'_{mode.lower()}_mode.png')
+        plot_kmap.plot_convergence(convergence, boundaries, config_copy)
+
+        # Save the convergence map as a FITS file
+        if config.get('save_fits', False):
+            fits_output_path = config.get('fits_output_path', config['output_path'].replace('.png', '.fits'))
+            fits_output_path = fits_output_path.replace('.fits', f'_{mode.lower()}_mode.fits')
+            config_copy['fits_output_path'] = fits_output_path
+            utils.save_convergence_fits(convergence, boundaries, config_copy)
 
 def run(config_path):
     config = read_config(config_path)

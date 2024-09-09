@@ -28,3 +28,6 @@ dec_col: 'dec'                      # Column name for Declination
 g1_col: 'g1_Rinv'                   # Column name for first shear component
 g2_col: 'g2_Rinv'                   # Column name for second shear component
 weight_col: 'weight'  # Column name for data weighting
+
+# Mode
+mode: ['E', 'B']  # For both E and/or B modes
