@@ -19,8 +19,7 @@ def create_convergence_map(config):
     # Calculate field boundaries
     boundaries = utils.calculate_field_boundaries(shear_df['ra'], 
                                                   shear_df['dec'], 
-                                                  config['resolution'], 
-                                                  )
+                                                  config['resolution'])
 
     # Create shear grid
     g1map, g2map = utils.create_shear_grid(shear_df['ra'], 
