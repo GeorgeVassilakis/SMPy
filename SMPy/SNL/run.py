@@ -26,14 +26,14 @@ def ks_inversion_list(grid_list):
     
     for g1map, g2map in grid_list:
         # Call the ks_inversion function for each pair
-        kappa_e, kappa_b = KaiserSquires.ks_inversion(g1map, -g2map)  
+        kappa_e, kappa_b = kaiser_squires.ks_inversion(g1map, -g2map)  
         kappa_e_list.append(kappa_e)
         kappa_b_list.append(kappa_b)
     
     return kappa_e_list, kappa_b_list
 
 
-def create_sn_map(config)
+def create_sn_map(config):
     # load in orginial data frame 
     shear_df = utils.load_shear_data(config['input_path'], 
                                           config['ra_col'], 
@@ -52,32 +52,46 @@ def create_sn_map(config)
                                                     first_df['dec'], 
                                                     config['resolution'])
 
-    #create a list of tuples (g1map, g2map) for all the shuffled data frames
-    g1_g2_map_list = shear_grids_for_shuffled_dfs(shuffled_dfs) 
+    # create a list of tuples (g1map, g2map) for all the shuffled data frames
+    g1_g2_map_list = utils.shear_grids_for_shuffled_dfs(shuffled_dfs, boundaries, config) 
 
     # create the grid of convergence values for both E and B mode
     shuff_kappa_e_list, shuff_kappa_b_list = ks_inversion_list(g1_g2_map_list)
 
-    #stacks all the maps into a 3D array (axis = 0 is the depth across all the maps)
+    # stacks all the maps into a 3D array (axis = 0 is the depth across all the maps)
     kappa_e_stack = np.stack(shuff_kappa_e_list, axis = 0)
     kappa_b_stack = np.stack(shuff_kappa_b_list, axis = 0)
 
-    #takes the variance across each map for each pixel 
+    # takes the variance across each map for each pixel 
     variance_map_e = np.var(kappa_e_stack, axis = 0)
     variance_map_b = np.var(kappa_b_stack, axis = 0)
 
-    #calculate signal to noise
-    signal_to_noise = (og_kappa_e / variance_map_e)
+    # Calculate truth convergence kappa_e_truth
+    # Create truth shear grid
+    g1map, g2map = utils.create_shear_grid(shear_df['ra'], 
+                                           shear_df['dec'], 
+                                           shear_df['g1'],
+                                           shear_df['g2'], 
+                                           shear_df['weight'], 
+                                           boundaries=boundaries,
+                                           resolution=config['resolution'])
+    
+    # Calculate the convergence maps
+    modes = config['mode']
+    kappa_e_truth, kappa_b_truth = kaiser_squires.ks_inversion(g1map, -g2map)
 
-    #plot ***important, need to adjust plot_convergence to include S/N***
+    convergence_maps = {}
+    if 'E' in modes:
+        convergence_maps['E'] = kappa_e_truth
+    if 'B' in modes:
+        convergence_maps['B'] = kappa_b_truth
+    
+    # calculate signal to noise
+    signal_to_noise = (kappa_e_truth / variance_map_e)
+
+    # plot ***important, need to adjust plot_convergence to include S/N plotting properties***
     config_copy = config.copy()
     plot_kmap.plot_convergence(signal_to_noise, boundaries, config_copy)
-
-    # Save the convergence map as a FITS file (**not sure if I did this right**)
-    if config.get('save_fits', False):
-        fits_output_path = config.get('fits_output_path', config['output_path'].replace('.png', '.fits'))
-        config_copy['fits_output_path'] = fits_output_path
-        utils.save_convergence_fits(convergence, boundaries, config_copy)
     
 
 def run(config_path):

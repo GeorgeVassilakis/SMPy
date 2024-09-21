@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+import random
+
 from astropy.table import Table
 from astropy.io import fits
 from astropy.wcs import WCS
@@ -199,7 +201,7 @@ def generate_multiple_shear_dfs(og_shear_df, num_shuffles=100):
     
     return shuffled_dfs
 
-def shear_grids_for_shuffled_dfs(list_of_dfs): 
+def shear_grids_for_shuffled_dfs(list_of_dfs, boundaries, config): 
     grid_list = []
     for shear_df in list_of_dfs: 
         g1map, g2map = create_shear_grid(shear_df['ra'], 
@@ -213,26 +215,3 @@ def shear_grids_for_shuffled_dfs(list_of_dfs):
         grid_list.append((g1map, g2map))
 
     return grid_list
-
-def ks_inversion_list(grid_list):
-    """
-    Iterate through a list of (g1map, g2map) pairs and return a list of kappa_e values.
-    
-    Parameters:
-    shear_maps : list of tuples
-        A list where each element is a tuple of (g1map, g2map)
-        
-    Returns:
-    kappa_e_list : list
-        A list containing the kappa_e maps for each (g1map, g2map) pair.
-    """
-    kappa_e_list = []
-    kappa_b_list = []
-    
-    for g1map, g2map in grid_list:
-        # Call the ks_inversion function for each pair
-        kappa_e, kappa_b = KaiserSquires.ks_inversion(g1map, -g2map)  # We only care about kappa_e
-        kappa_e_list.append(kappa_e)
-        kappa_b_list.append(kappa_b)
-    
-    return kappa_e_list, kappa_b_list
