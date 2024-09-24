@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+import random
+
 from astropy.table import Table
 from astropy.io import fits
 from astropy.wcs import WCS
@@ -30,7 +32,7 @@ def load_shear_data(shear_cat_path, ra_col, dec_col, g1_col, g2_col, weight_col)
 
     return shear_df
 
-def calculate_field_boundaries(ra, dec, resolution):
+def calculate_field_boundaries(ra, dec):
     """
     Calculate the boundaries of the field in right ascension (RA) and declination (Dec).
     
@@ -64,28 +66,6 @@ def calculate_field_boundaries(ra, dec, resolution):
 def create_shear_grid(ra, dec, g1, g2, weight, boundaries, resolution):
     '''
     Bin values of shear data according to position on the sky.
-    
-    Parameters
-    ----------
-    ra : array_like
-        Array of right ascension values.
-    dec : array_like
-        Array of declination values.
-    g1 : array_like
-        Array of g1 values (shear component 1).
-    g2 : array_like
-        Array of g2 values (shear component 2).
-    weight : array_like
-        Array of weight values for each shear measurement.
-    boundaries : dict
-        Boundaries of the field of view, given as a dictionary with keys 'ra_min', 'ra_max', 'dec_min', 'dec_max'.
-    resolution : float
-        Resolution of the map in arcminutes.
-        
-    Returns
-    -------
-    g1_grid, g2_grid : ndarray
-        2D numpy arrays of binned g1 and g2 values.
     '''
     ra_min, ra_max = boundaries['ra_min'], boundaries['ra_max']
     dec_min, dec_max = boundaries['dec_min'], boundaries['dec_max']
@@ -94,26 +74,33 @@ def create_shear_grid(ra, dec, g1, g2, weight, boundaries, resolution):
     npix_ra = int(np.ceil((ra_max - ra_min) * 60 / resolution))
     npix_dec = int(np.ceil((dec_max - dec_min) * 60 / resolution))
     
-    ra_bins = np.linspace(ra_min, ra_max, npix_ra)
-    dec_bins = np.linspace(dec_min, dec_max, npix_dec)
-    
-    # Initialize the grid
-    g1_grid = np.zeros((npix_dec, npix_ra))
-    g2_grid = np.zeros((npix_dec, npix_ra))
-    weight_grid = np.zeros((npix_dec, npix_ra))
+    ra_bins = np.linspace(ra_min, ra_max, npix_ra + 1)
+    dec_bins = np.linspace(dec_min, dec_max, npix_dec + 1)
     
     # Digitize the RA and Dec to find bin indices
     ra_idx = np.digitize(ra, ra_bins) - 1
     dec_idx = np.digitize(dec, dec_bins) - 1
     
-    # Iterate over each point and accumulate weighted g1, g2 values
-    for i in range(len(ra)):
-        if 0 <= ra_idx[i] < npix_ra and 0 <= dec_idx[i] < npix_dec:
-            g1_grid[dec_idx[i], ra_idx[i]] += g1[i] * weight[i]
-            g2_grid[dec_idx[i], ra_idx[i]] += g2[i] * weight[i]
-            weight_grid[dec_idx[i], ra_idx[i]] += weight[i]
+    # Filter out indices that are outside the grid boundaries
+    valid_mask = (ra_idx >= 0) & (ra_idx < npix_ra) & (dec_idx >= 0) & (dec_idx < npix_dec)
+    ra_idx = ra_idx[valid_mask]
+    dec_idx = dec_idx[valid_mask]
+    g1 = g1[valid_mask]
+    g2 = g2[valid_mask]
+    weight = weight[valid_mask]
+    
+    # Initialize the grids
+    g1_grid = np.zeros((npix_dec, npix_ra))
+    g2_grid = np.zeros((npix_dec, npix_ra))
+    weight_grid = np.zeros((npix_dec, npix_ra))
+    
+    # Accumulate weighted values using np.add.at
+    np.add.at(g1_grid, (dec_idx, ra_idx), g1 * weight)
+    np.add.at(g2_grid, (dec_idx, ra_idx), g2 * weight)
+    np.add.at(weight_grid, (dec_idx, ra_idx), weight)
     
     # Normalize the grid by the total weight in each bin (weighted average)
+    #try with commented out 
     nonzero_weight_mask = weight_grid != 0
     g1_grid[nonzero_weight_mask] /= weight_grid[nonzero_weight_mask]
     g2_grid[nonzero_weight_mask] /= weight_grid[nonzero_weight_mask]
@@ -172,3 +159,59 @@ def save_convergence_fits(convergence, boundaries, config):
     hdul.writeto(fits_output_path, overwrite=True)
 
     print(f"Convergence map saved as FITS file: {fits_output_path}")
+
+
+def _shuffle_ra_dec(shear_df):
+    """
+    Shuffle the 'ra' and 'dec' columns of the input DataFrame together.
+    
+    :param shear_df: Input pandas DataFrame.
+    :return: A new pandas DataFrame with shuffled 'ra' and 'dec' columns.
+    """
+    # Make a copy to avoid modifying the original
+    shuffled_df = shear_df.copy()
+
+    # Combine RA and DEC into pairs
+    ra_dec_pairs = list(zip(shuffled_df['ra'], shuffled_df['dec']))
+    
+    # Shuffle the pairs
+    random.shuffle(ra_dec_pairs)
+    
+    # Unzip the shuffled pairs back into RA and DEC
+    shuffled_ra, shuffled_dec = zip(*ra_dec_pairs)
+    
+    shuffled_df['ra'] = shuffled_ra
+    shuffled_df['dec'] = shuffled_dec
+
+    return shuffled_df
+
+def generate_multiple_shear_dfs(og_shear_df, num_shuffles=100):
+    """
+    Generate a list of multiple data frames with shuffled RA and DEC columns by calling the load and shuffle functions.
+    :return: A list of shuffled pandas DataFrames.
+    """
+
+    # List to store the shuffled data frames (not sure if a list of these data frames is the best format rn)
+    shuffled_dfs = []
+    
+    # Loop to generate multiple shuffled data frames
+    for i in range(num_shuffles):
+        shuffled_df = _shuffle_ra_dec(og_shear_df)
+        shuffled_dfs.append(shuffled_df)
+    
+    return shuffled_dfs
+
+def shear_grids_for_shuffled_dfs(list_of_dfs, boundaries, config): 
+    grid_list = []
+    for shear_df in list_of_dfs: 
+        g1map, g2map = create_shear_grid(shear_df['ra'], 
+                                           shear_df['dec'], 
+                                           shear_df['g1'],
+                                           shear_df['g2'], 
+                                           shear_df['weight'], 
+                                           boundaries=boundaries,
+                                           resolution=config['resolution'])
+
+        grid_list.append((g1map, g2map))
+
+    return grid_list

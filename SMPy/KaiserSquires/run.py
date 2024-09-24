@@ -18,9 +18,7 @@ def create_convergence_map(config):
 
     # Calculate field boundaries
     boundaries = utils.calculate_field_boundaries(shear_df['ra'], 
-                                                  shear_df['dec'], 
-                                                  config['resolution'], 
-                                                  )
+                                                  shear_df['dec'])
 
     # Create shear grid
     g1map, g2map = utils.create_shear_grid(shear_df['ra'], 
@@ -31,7 +29,7 @@ def create_convergence_map(config):
                                            boundaries=boundaries,
                                            resolution=config['resolution'])
 
-    # Calculate the convergence maps
+# Calculate the convergence maps
     modes = config['mode']
     kappa_e, kappa_b = kaiser_squires.ks_inversion(g1map, -g2map)
 
@@ -43,17 +41,19 @@ def create_convergence_map(config):
 
     # Plot and save the convergence maps
     for mode, convergence in convergence_maps.items():
-        config_copy = config.copy()
-        config_copy['plot_title'] = f'{config["plot_title"]} ({mode}-mode)'
-        config_copy['output_path'] = config['output_path'].replace('.png', f'_{mode.lower()}_mode.png')
-        plot_kmap.plot_convergence(convergence, boundaries, config_copy)
+        plot_config = config.copy()
+        plot_config['plot_title'] = f'{config["plot_title"]} ({mode}-mode)'
+        output_name = f"{config['output_directory']}{config['output_base_name']}_kaiser_squires_{mode.lower()}_mode.png"
+        plot_kmap.plot_convergence(convergence, boundaries, plot_config, output_name)
 
         # Save the convergence map as a FITS file
         if config.get('save_fits', False):
             fits_output_path = config.get('fits_output_path', config['output_path'].replace('.png', '.fits'))
-            fits_output_path = fits_output_path.replace('.fits', f'_{mode.lower()}_mode.fits')
-            config_copy['fits_output_path'] = fits_output_path
-            utils.save_convergence_fits(convergence, boundaries, config_copy)
+            fits_output_path = fits_output_path.replace('.fits', f'_kaiser_squires_{mode.lower()}_mode.fits')
+            config['fits_output_path'] = fits_output_path
+            utils.save_convergence_fits(convergence, boundaries, config)
+
+    return convergence_maps, boundaries
 
 def run(config_path):
     config = read_config(config_path)
