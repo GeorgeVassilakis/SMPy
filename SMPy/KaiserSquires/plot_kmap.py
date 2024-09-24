@@ -3,7 +3,7 @@ from matplotlib import rc, rcParams
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.ndimage import gaussian_filter
 
-def plot_convergence(convergence, boundaries, config):
+def plot_convergence(convergence, boundaries, config, output_name):
     """
     Make plot of convergence map and save to file using information passed
     in run configuration file. 
@@ -75,5 +75,6 @@ def plot_convergence(convergence, boundaries, config):
 
     # Save to file and exit, redoing tight_layout b/c sometimes figure gets cut off 
     fig.tight_layout() 
-    fig.savefig(config['output_path'])
+    fig.savefig(output_name)
+    print(f"Convergence map saved as PNG file: {output_name}")
     plt.close(fig)

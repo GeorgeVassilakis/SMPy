@@ -32,7 +32,7 @@ def load_shear_data(shear_cat_path, ra_col, dec_col, g1_col, g2_col, weight_col)
 
     return shear_df
 
-def calculate_field_boundaries(ra, dec, resolution):
+def calculate_field_boundaries(ra, dec):
     """
     Calculate the boundaries of the field in right ascension (RA) and declination (Dec).
     

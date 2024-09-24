@@ -1,33 +1,46 @@
 # YAML File for SMPy/KaiserSquires/run.py  
 
-# Paths
-input_path: "/home/wslgeorgios/SMPy/notebooks/forecast_lum_annular.fits"
-output_path: "/home/wslgeorgios/SMPy/notebooks/SNR.png"
+# General settings
+general:
+  # Paths
+  input_path: "/home/wslgeorgios/SMPy/notebooks/forecast_lum_annular.fits"
+  output_directory: "/home/wslgeorgios/SMPy/notebooks/output_testing/"
+  output_base_name: "simulation_testing"  # Base name for output files
 
-# Export convergence as FITS?
-save_fits: false  # Set to false if you don't want to save as FITS
-fits_output_path: "/home/wslgeorgios/SMPy/union_maps/test_kmap_output.fits"  # Optional: specify a different path for FITS output
+  # Map creation settings
+  method: "kaiser_squires"  # Convergence map method
+  create_snr: true  # Set to false if you don't want to create the SNR map
 
-# Parameters
-resolution: .4                # Pixel resolution of the map in arcminutes
+  # Common parameters
+  resolution: 0.4  # Pixel resolution of the map in arcminutes
+  ra_col: 'ra'
+  dec_col: 'dec'
+  g1_col: 'g1_Rinv'
+  g2_col: 'g2_Rinv'
+  weight_col: 'weight'
+  mode: ['E']  # For both E and/or B modes
 
-# Plotting
-vmax: 5                     # Max value for color scale in the plot
-vmin: -2                        # Min value for color scale in the plot
-gaussian_kernel: 1.5                # Gaussian kernel size for smoothing
-figsize: [10, 7]                  # Size of the figure (width, height)
-cmap: 'magma'                       # Colormap for the plot
-xlabel: 'Right Ascension (deg)'     # Label for x-axis
-ylabel: 'Declination (deg)'         # Label for y-axis
-plot_title: 'Simulated S/N Map'       # Title of the plot
-gridlines: True                     # Add gridlines? (boolean)
+# Convergence Map Settings
+convergence:
+  vmax: 0.2
+  vmin: -0.1
+  gaussian_kernel: 2
+  figsize: [20, 10]
+  cmap: 'magma'
+  xlabel: 'Right Ascension (deg)'
+  ylabel: 'Declination (deg)'
+  plot_title: 'Convergence Map'
+  gridlines: true
 
-# Columns
-ra_col: 'ra'                        # Column name for Right Ascension
-dec_col: 'dec'                      # Column name for Declination
-g1_col: 'g1_Rinv'                   # Column name for first shear component
-g2_col: 'g2_Rinv'                   # Column name for second shear component
-weight_col: 'weight'  # Column name for data weighting
-
-# Mode
-mode: ['E', 'B']  # For both E and/or B modes
+# SNR Map Settings
+snr:
+  vmax: 5
+  vmin: -2
+  gaussian_kernel: 1.5
+  figsize: [20, 10]
+  cmap: 'magma'
+  xlabel: 'Right Ascension (deg)'
+  ylabel: 'Declination (deg)'
+  plot_title: 'Signal-to-Noise Map'
+  gridlines: true
+  num_shuffles: 100  # Number of shuffles for SNR calculation
