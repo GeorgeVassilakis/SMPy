@@ -62,10 +62,10 @@ def create_sn_map(config, convergence_maps, boundaries):
 
     # Calculate signal-to-noise maps if the respective mode exists
     if 'E' in convergence_maps and variance_map_e is not None:
-        sn_maps['E'] = convergence_maps['E'] / variance_map_e
+        sn_maps['E'] = convergence_maps['E'] / np.sqrt(variance_map_e)
 
     if 'B' in convergence_maps and variance_map_b is not None:
-        sn_maps['B'] = convergence_maps['B'] / variance_map_b
+        sn_maps['B'] = convergence_maps['B'] / np.sqrt(variance_map_b)
 
     # Plot and save the SNR maps
     modes = config['mode'] if isinstance(config['mode'], list) else [config['mode']]  # Ensure modes is a list
