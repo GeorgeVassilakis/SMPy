@@ -48,10 +48,8 @@ def create_convergence_map(config):
 
         # Save the convergence map as a FITS file
         if config.get('save_fits', False):
-            fits_output_path = config.get('fits_output_path', config['output_path'].replace('.png', '.fits'))
-            fits_output_path = fits_output_path.replace('.fits', f'_kaiser_squires_{mode.lower()}_mode.fits')
-            config['fits_output_path'] = fits_output_path
-            utils.save_convergence_fits(convergence, boundaries, config)
+            output_name = f"{config['output_directory']}{config['output_base_name']}_kaiser_squires_{mode.lower()}_mode.fits"
+            utils.save_convergence_fits(convergence, boundaries, config, output_name)
 
     return convergence_maps, boundaries
 

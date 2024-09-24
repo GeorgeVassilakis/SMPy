@@ -108,7 +108,7 @@ def create_shear_grid(ra, dec, g1, g2, weight, boundaries, resolution):
     return g1_grid, g2_grid
 
 
-def save_convergence_fits(convergence, boundaries, config):
+def save_convergence_fits(convergence, boundaries, config, output_name):
     """
     Save the convergence map as a FITS file with WCS information if configured to do so.
 
@@ -127,8 +127,6 @@ def save_convergence_fits(convergence, boundaries, config):
     """
     if not config.get('save_fits', False):
         return
-
-    fits_output_path = config.get('fits_output_path', config['output_path'].replace('.png', '.fits'))
 
     # Create a WCS object
     wcs = WCS(naxis=2)
@@ -156,9 +154,9 @@ def save_convergence_fits(convergence, boundaries, config):
     hdul = fits.HDUList([hdu])
 
     # Save the FITS file
-    hdul.writeto(fits_output_path, overwrite=True)
+    hdul.writeto(output_name, overwrite=True)
 
-    print(f"Convergence map saved as FITS file: {fits_output_path}")
+    print(f"Convergence map saved as FITS file: {output_name}")
 
 
 def _shuffle_ra_dec(shear_df):
