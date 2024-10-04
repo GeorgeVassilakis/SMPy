@@ -9,8 +9,8 @@ def plot_convergence(convergence, boundaries, config, output_name):
     in run configuration file. 
 
     Arguments
-        convergence: XXX raw convergence map XXX
-        boundaries: XXX RA/Dec axis limits for plot, set in XXX
+        convergence: raw convergence map
+        boundaries: X/Y axis limits for plot
         config: overall run configuration file
 
     """
@@ -50,11 +50,11 @@ def plot_convergence(convergence, boundaries, config, output_name):
         cmap=config['cmap'],
         vmax=config['vmax'], 
         vmin=config['vmin'],
-        extent=[boundaries['ra_max'], 
-                    boundaries['ra_min'], 
-                    boundaries['dec_min'], 
-                    boundaries['dec_max']],
-        origin='lower' # Sets the origin to bottom left to match the RA/DEC convention
+        extent=[boundaries['x_max'], 
+                boundaries['x_min'], 
+                boundaries['y_min'], 
+                boundaries['y_max']],
+        origin='lower'
     )  
 
     ax.set_xlabel(config['xlabel'])

@@ -28,7 +28,7 @@ SMPy is a Python-based toolkit designed for astrophysicists and cosmologists, fa
 ### With runner script
 1. **Edit your `example_config.yaml` configuration file**
    - This file defines many parameters.
-   - Most importantly, it defines the input/output paths and file-specific columns like ra, dec, g1, g2, and weights.
+   - Most importantly, it defines the input/output paths and file-specific columns like x, y, g1, g2, and weights.
    - It also controls various visualization parameters like titles, color scaling, and smoothing parameters.
 
 2. **Run the runner.py script:** Use the -c or -config flag to pass your .yaml file

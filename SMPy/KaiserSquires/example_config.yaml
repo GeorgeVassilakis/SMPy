@@ -5,17 +5,17 @@ general:
   # Paths
   input_path: "/home/wslgeorgios/SMPy/notebooks/forecast_lum_annular.fits"
   output_directory: "/home/wslgeorgios/SMPy/notebooks/output_testing/"
-  output_base_name: "simulation_testing"  # Base name for output files
-  save_fits: true  # Save output as FITS file 
+  output_base_name: "XY_testing"  # Base name for output files
+  save_fits: false  # Save output as FITS file 
 
   # Map creation settings
   method: "kaiser_squires"  # Convergence map method
-  create_snr: true  # Set to false if you don't want to create the SNR map
+  create_snr: false  # Set to false if you don't want to create the SNR map
 
   # Common parameters
-  resolution: 0.4  # Pixel resolution of the map in arcminutes
-  ra_col: 'ra'
-  dec_col: 'dec'
+  scaling_factor: 100  # Pixel downscaling factor
+  x_col: 'X_IMAGE_se'
+  y_col: 'Y_IMAGE_se'
   g1_col: 'g1_Rinv'
   g2_col: 'g2_Rinv'
   weight_col: 'weight'
@@ -28,8 +28,8 @@ convergence:
   gaussian_kernel: 2
   figsize: [20, 10]
   cmap: 'magma'
-  xlabel: 'Right Ascension (deg)'
-  ylabel: 'Declination (deg)'
+  xlabel: 'X Pixel Coordinate'
+  ylabel: 'Y Pixel Coordinate'
   plot_title: 'Convergence Map'
   gridlines: true
 
@@ -40,8 +40,8 @@ snr:
   gaussian_kernel: 1.5
   figsize: [20, 10]
   cmap: 'magma'
-  xlabel: 'Right Ascension (deg)'
-  ylabel: 'Declination (deg)'
+  xlabel: 'X Pixel Coordinate'
+  ylabel: 'Y Pixel Coordinate'
   plot_title: 'Signal-to-Noise Map'
   gridlines: true
   num_shuffles: 100  # Number of shuffles for SNR calculation

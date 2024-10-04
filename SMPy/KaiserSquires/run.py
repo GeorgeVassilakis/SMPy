@@ -10,24 +10,24 @@ def read_config(file_path):
 def create_convergence_map(config):
     # Load shear data 
     shear_df = utils.load_shear_data(config['input_path'], 
-                                          config['ra_col'], 
-                                          config['dec_col'], 
+                                          config['x_col'], 
+                                          config['y_col'], 
                                           config['g1_col'], 
                                           config['g2_col'], 
                                           config['weight_col'])
 
     # Calculate field boundaries
-    boundaries = utils.calculate_field_boundaries(shear_df['ra'], 
-                                                  shear_df['dec'])
+    boundaries = utils.calculate_field_boundaries(shear_df['x_col'], 
+                                                  shear_df['y_col'])
 
     # Create shear grid
-    g1map, g2map = utils.create_shear_grid(shear_df['ra'], 
-                                           shear_df['dec'], 
+    g1map, g2map = utils.create_shear_grid(shear_df['x_col'], 
+                                           shear_df['y_col'], 
                                            shear_df['g1'],
                                            shear_df['g2'], 
                                            shear_df['weight'], 
                                            boundaries=boundaries,
-                                           resolution=config['resolution'])
+                                           scaling_factor=config['scaling_factor'])
 
 # Calculate the convergence maps
     modes = config['mode']
@@ -44,7 +44,7 @@ def create_convergence_map(config):
         plot_config = config.copy()
         plot_config['plot_title'] = f'{config["plot_title"]} ({mode}-mode)'
         output_name = f"{config['output_directory']}{config['output_base_name']}_kaiser_squires_{mode.lower()}_mode.png"
-        plot_kmap.plot_convergence(convergence, boundaries, plot_config, output_name)
+        plot_kmap.plot_convergence(g1map, boundaries, plot_config, output_name)
 
         # Save the convergence map as a FITS file
         if config.get('save_fits', False):

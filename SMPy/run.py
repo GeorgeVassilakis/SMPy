@@ -8,9 +8,9 @@ def read_config(file_path):
 
 def run(config_path):
     config = read_config(config_path)
-    
+
     general_config = config['general']
-    
+
     # Create convergence map
     method = general_config.get('method', 'kaiser_squires')
     if method == 'kaiser_squires':

@@ -37,8 +37,8 @@ def create_sn_map(config, convergence_maps, boundaries):
     # Load shear data
     shear_df = utils.load_shear_data(
         config['input_path'],
-        config['ra_col'],
-        config['dec_col'],
+        config['x_col'],
+        config['y_col'],
         config['g1_col'],
         config['g2_col'],
         config['weight_col']
