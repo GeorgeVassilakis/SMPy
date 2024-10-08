@@ -1,0 +1,35 @@
+# YAML File for SMPy/KaiserSquires/run.py  
+
+# Paths
+#input_path: "/work/mccleary_group/superbit/mock-data-forecasting/forecast_lum/cl_m4.1e14_z0.45/r0/forecast_lum_annular.fits"
+
+input_path: "/Users/sayan/SuperBIT/git_repos/temp/1E0657_Bullet_b_annular.fits"
+#output_path: "/work/mccleary_group/amit.m/convergence/state_of_the_union/1E0657_Bullet/b/1E0657_Bullet_b_signalnoise"
+
+# Export convergence as FITS?
+save_fits: false  # Set to false if you don't want to save as FITS
+#fits_output_path: "/home/wslgeorgios/SMPy/union_maps/test_kmap_output.fits"  # Optional: specify a different path for FITS output
+
+# Parameters
+resolution: 0.3        # Pixel resolution of the map in arcminutes
+
+# Plotting
+vmax: 1                  # Max value for color scale in the plot
+vmin: -1                   # Min value for color scale in the plot
+gaussian_kernel: 1.5              # Gaussian kernel size for smoothing
+figsize: [10, 7]                  # Size of the figure (width, height)
+cmap: 'magma'                       # Colormap for the plot
+xlabel: 'Right Ascension (deg)'     # Label for x-axis
+ylabel: 'Declination (deg)'         # Label for y-axis
+plot_title: 'Convergence Map 1E0657_Bullet B '       # Title of the plot
+gridlines: True                     # Add gridlines? (boolean)
+
+# Columns
+ra_col: 'ra'                        # Column name for Right Ascension
+dec_col: 'dec'                      # Column name for Declination
+g1_col: 'g1_Rinv'                   # Column name for first shear component
+g2_col: 'g2_Rinv'                   # Column name for second shear component
+weight_col: 'weight'  # Column name for data weighting
+
+# Mode
+mode: ['E']  # For both E and/or B modes
