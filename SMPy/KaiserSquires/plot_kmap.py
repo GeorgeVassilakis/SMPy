@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 from matplotlib import rc, rcParams
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.ndimage import gaussian_filter
+import numpy as np
 
 def plot_convergence(convergence, boundaries, config, output_name):
     """
@@ -45,6 +46,11 @@ def plot_convergence(convergence, boundaries, config, output_name):
         nrows=1, ncols=1, figsize=config['figsize'], tight_layout=True
     )
     
+    # Create an aspect ratio that accounts for the curvature of the sky (pixels are not square)
+    # TODO: make this more robust. Currently, this takes an average declination (middle of image)
+    # and linearly scales the aspect ratio based on that 'middle' declination.
+    aspect_ratio = np.cos(np.deg2rad((boundaries['dec_max'] + boundaries['dec_min']) / 2))
+    
     im = ax.imshow(
         filtered_convergence[:, ::-1], 
         cmap=config['cmap'],
@@ -54,7 +60,8 @@ def plot_convergence(convergence, boundaries, config, output_name):
                     boundaries['ra_min'], 
                     boundaries['dec_min'], 
                     boundaries['dec_max']],
-        origin='lower' # Sets the origin to bottom left to match the RA/DEC convention
+        origin='lower', # Sets the origin to bottom left to match the RA/DEC convention
+        aspect=(1/aspect_ratio)
     )  
 
     ax.set_xlabel(config['xlabel'])

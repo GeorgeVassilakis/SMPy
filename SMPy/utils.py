@@ -50,7 +50,7 @@ def calculate_field_boundaries(ra, dec):
     dec_range = np.max(dec) - np.min(dec)
     
     # Calculate the size of the field in degrees
-    ra_size = ra_range * np.cos(np.deg2rad(med_dec))  # Adjust for declination
+    ra_size = ra_range
     dec_size = dec_range
     
     # Calculate RA and Dec extents and store in a dictionary
