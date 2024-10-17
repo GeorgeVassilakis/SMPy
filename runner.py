@@ -1,4 +1,4 @@
-from SMPy import run
+from smpy import run
 from argparse import ArgumentParser
 import os
 

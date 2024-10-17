@@ -1,7 +1,7 @@
 import yaml
-from SMPy import utils
-from SMPy.KaiserSquires import kaiser_squires
-from SMPy.KaiserSquires import plot_kmap
+from smpy import utils
+from smpy.mapping_methods.kaiser_squires import kaiser_squires
+from smpy.plotting import plot
 
 def read_config(file_path):
     with open(file_path, 'r') as file:
@@ -44,7 +44,7 @@ def create_convergence_map(config):
         plot_config = config.copy()
         plot_config['plot_title'] = f'{config["plot_title"]} ({mode}-mode)'
         output_name = f"{config['output_directory']}{config['output_base_name']}_kaiser_squires_{mode.lower()}_mode.png"
-        plot_kmap.plot_convergence(convergence, boundaries, plot_config, output_name)
+        plot.plot_convergence(convergence, boundaries, plot_config, output_name)
 
         # Save the convergence map as a FITS file
         if config.get('save_fits', False):

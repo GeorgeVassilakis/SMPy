@@ -3,8 +3,8 @@
 # General settings
 general:
   # Paths
-  input_path: "/home/wslgeorgios/SMPy/notebooks/forecast_lum_annular.fits"
-  output_directory: "/home/wslgeorgios/SMPy/notebooks/output_testing/"
+  input_path: "/home/wslgeorgios/SMPy/examples/data/forecast_lum_annular.fits"
+  output_directory: "/home/wslgeorgios/SMPy/examples/outputs/"
   output_base_name: "simulation_testing"  # Base name for output files
   save_fits: true  # Save output as FITS file 
 
