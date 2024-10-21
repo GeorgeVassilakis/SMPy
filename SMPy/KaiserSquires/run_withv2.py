@@ -27,6 +27,7 @@ def create_convergence_map(config):
     ## We would correct the RA and Dec values of the catalogues and 
     # Pass them to the create_shear_grid function
     # We don't need to calculate the boundaries!
+    shear_df = utils.correct_RA_dec(shear_df)
 
     # Create shear grid
     g1map, g2map = utils.create_shear_grid(shear_df['ra'], 
@@ -36,10 +37,12 @@ def create_convergence_map(config):
                                            shear_df['weight'], 
                                            boundaries=boundaries,
                                            resolution=config['resolution'])
+    
+    
 
 # Calculate the convergence maps
     modes = config['mode']
-    kappa_e, kappa_b = kaiser_squires.ks_inversion(g1map, -g2map)
+    kappa_e, kappa_b = kaiser_squires.ks_inversion(g1map, g2map)
 
     convergence_maps = {}
     if 'E' in modes:

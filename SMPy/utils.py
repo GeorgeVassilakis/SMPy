@@ -257,7 +257,7 @@ def _shuffle_ra_dec(shear_df):
 
     return shuffled_df
 
-def generate_multiple_shear_dfs(og_shear_df, num_shuffles=100):
+def generate_multiple_shear_dfs(og_shear_df, num_shuffles=100, seed=42):
     """
     Generate a list of multiple data frames with shuffled RA and DEC columns by calling the load and shuffle functions.
     :return: A list of shuffled pandas DataFrames.
@@ -266,6 +266,9 @@ def generate_multiple_shear_dfs(og_shear_df, num_shuffles=100):
     # List to store the shuffled data frames (not sure if a list of these data frames is the best format rn)
     shuffled_dfs = []
     
+    #set a seed for reproducibility
+    random.seed(seed)
+        
     # Loop to generate multiple shuffled data frames
     for i in range(num_shuffles):
         shuffled_df = _shuffle_ra_dec(og_shear_df)
