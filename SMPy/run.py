@@ -1,5 +1,5 @@
 import yaml
-from SMPy.KaiserSquires import run as ks_run
+from SMPy.KaiserSquires import run_withv2 as ks_run
 from SMPy.SNR import run as snr_run
 
 def read_config(file_path):

@@ -22,6 +22,10 @@ def create_convergence_map(config):
     boundaries = utils.calculate_field_boundaries_v2(shear_df['ra'], 
                                                   shear_df['dec'])
     
+    # Print boundaries
+    print(f"RA min: {boundaries['ra_min']}, RA max: {boundaries['ra_max']}")
+    print(f"Dec min: {boundaries['dec_min']}, Dec max: {boundaries['dec_max']}")
+    
     ## Here Instead of calculating the Boundaries 
     # (which should be anyway the max, min of the RA and Dec),
     ## We would correct the RA and Dec values of the catalogues and 
@@ -30,7 +34,7 @@ def create_convergence_map(config):
     shear_df = utils.correct_RA_dec(shear_df)
 
     # Create shear grid
-    g1map, g2map = utils.create_shear_grid(shear_df['ra'], 
+    g1map, g2map = utils.create_shear_grid_v2(shear_df['ra'], 
                                            shear_df['dec'], 
                                            shear_df['g1'],
                                            shear_df['g2'], 
@@ -55,7 +59,7 @@ def create_convergence_map(config):
         plot_config = config.copy()
         plot_config['plot_title'] = f'{config["plot_title"]} ({mode}-mode)'
         output_name = f"{config['output_directory']}{config['output_base_name']}_kaiser_squires_{mode.lower()}_mode.png"
-        plot_kmap.plot_convergence_v2(convergence, boundaries, plot_config, output_name, center_cl, smoothing = config['gaussian_kernel'], threshold=2.5)
+        plot_kmap.plot_convergence_v2(convergence, boundaries, plot_config, output_name, threshold=2.5)
 
         # Save the convergence map as a FITS file
         if config.get('save_fits', False):

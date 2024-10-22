@@ -6,11 +6,11 @@ general:
   input_path: "/home/wslgeorgios/SMPy/notebooks/forecast_lum_annular.fits"
   output_directory: "/home/wslgeorgios/SMPy/notebooks/output_testing/"
   output_base_name: "simulation_testing"  # Base name for output files
-  save_fits: true  # Save output as FITS file 
+  save_fits: false  # Save output as FITS file 
 
   # Map creation settings
   method: "kaiser_squires"  # Convergence map method
-  create_snr: true  # Set to false if you don't want to create the SNR map
+  create_snr: false  # Set to false if you don't want to create the SNR map
 
   # Common parameters
   resolution: 0.4  # Pixel resolution of the map in arcminutes
@@ -21,11 +21,9 @@ general:
   weight_col: 'weight'
   mode: ['E']  # For both E and/or B modes
 
+
 # Convergence Map Settings
 convergence:
-  vmax: 0.2
-  vmin: -0.1
-  gaussian_kernel: 2
   figsize: [20, 10]
   cmap: 'magma'
   xlabel: 'Right Ascension (deg)'
@@ -33,11 +31,16 @@ convergence:
   plot_title: 'Convergence Map'
   gridlines: true
 
+  # Optional Plotting
+  vmax: null
+  vmin: null
+  smoothing: 'gaussian_filter' # Current options: null or 'gaussian_filter'
+  gaussian_kernel: 2
+  cluster_center: null # Options for marker: null (do nothing), 'auto' (center of boundaries), {"ra_center": val, "dec_center": val} (custom coords)
+
+
 # SNR Map Settings
 snr:
-  vmax: 5
-  vmin: -2
-  gaussian_kernel: 1.5
   figsize: [20, 10]
   cmap: 'magma'
   xlabel: 'Right Ascension (deg)'
@@ -45,3 +48,10 @@ snr:
   plot_title: 'Signal-to-Noise Map'
   gridlines: true
   num_shuffles: 100  # Number of shuffles for SNR calculation
+
+  # Optional Plotting
+  vmax: null
+  vmin: null
+  smoothing: 'gaussian_filter' # Current options: null or 'gaussian_filter'
+  gaussian_kernel: 2
+  cluster_center: null # Options for marker: null (do nothing), 'auto' (center of boundaries), {"ra_center": val, "dec_center": val} (custom coords)

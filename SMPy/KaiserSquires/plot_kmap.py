@@ -91,7 +91,7 @@ def plot_convergence(convergence, boundaries, config, output_name):
     print(f"Convergence map saved as PNG file: {output_name}")
     plt.close(fig)
 
-def plot_convergence_v2(convergence, boundaries, config, output_name="Converenge map", center_cl=None, smoothing=None, vmax=None, vmin=None, title=None, threshold = None):
+def plot_convergence_v2(convergence, boundaries, config, output_name, threshold = None):
     """
     Make plot of convergence map and save to file using information passed
     in run configuration file. 
@@ -128,9 +128,9 @@ def plot_convergence_v2(convergence, boundaries, config, output_name="Converenge
     # We are planning on implementing other filters at some point, right?
     #filtered_convergence = gaussian_filter(convergence, config['gaussian_kernel'])
     
-    if smoothing is not None:
-        filtered_convergence = gaussian_filter(convergence, smoothing)
-    else:
+    if config['smoothing'] == 'gaussian_filter':
+        filtered_convergence = gaussian_filter(convergence, config['gaussian_kernel'])
+    elif config['smoothing'] is None:
         filtered_convergence = convergence
         
     if threshold is not None:
@@ -143,18 +143,11 @@ def plot_convergence_v2(convergence, boundaries, config, output_name="Converenge
         nrows=1, ncols=1, figsize=config['figsize'], tight_layout=True
     )
     
-    if vmax is None:
-        vmax = config['vmax']
-    if vmin is None:
-        vmin = config['vmin']
-    if title is None:
-        title = config['plot_title']
-    
     im = ax.imshow(
         filtered_convergence[:, ::-1], 
         cmap=config['cmap'],
-        vmax=vmax, 
-        vmin=vmin,
+        vmax=config['vmax'], 
+        vmin=config['vmin'],
         extent=[boundaries['ra_max'], 
                     boundaries['ra_min'], 
                     boundaries['dec_min'], 
@@ -162,9 +155,21 @@ def plot_convergence_v2(convergence, boundaries, config, output_name="Converenge
         origin='lower' # Sets the origin to bottom left to match the RA/DEC convention
     )
     
-    if center_cl is not None:
-        ra_c, dec_c = center_cl["ra_c"], center_cl["dec_c"]
-        ax.plot(ra_c, dec_c, 'wx', markersize=10)
+    cluster_center = config['cluster_center']
+    # Case 1: Do nothing if cluster_center is None
+    if cluster_center is None:
+        pass
+    # Case 2: Calculate center if cluster_center is 'auto'
+    elif cluster_center == 'auto':
+        ra_0 = (boundaries['ra_max'] + boundaries['ra_min']) / 2
+        dec_0 = (boundaries['dec_max'] + boundaries['dec_min']) / 2
+        ax.plot(ra_0, dec_0, 'wx', markersize=10)
+    # Case 3: Plot marker if cluster_center is a dictionary
+    elif isinstance(cluster_center, dict):
+        ra_center, dec_center = cluster_center['ra_center'], cluster_center['dec_center']
+        ax.plot(ra_center, dec_center, 'wx', markersize=10)
+    else:
+        print("Unrecognized cluster_center format, skipping marker.")
         
     # convert x,y to ra,dec
     ra_peak, dec_peak = [], []
@@ -176,7 +181,7 @@ def plot_convergence_v2(convergence, boundaries, config, output_name="Converenge
       
     ax.set_xlabel(config['xlabel'])
     ax.set_ylabel(config['ylabel'])
-    ax.set_title(title)
+    ax.set_title(config['plot_title'])
 
     # Is there a better way to force something to be a boolean?
     if config['gridlines'] == True:
