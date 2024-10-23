@@ -19,8 +19,7 @@ def create_convergence_map(config):
                                           config['weight_col'])
 
     # Calculate field boundaries
-    boundaries = utils.calculate_field_boundaries_v2(shear_df['ra'], 
-                                                  shear_df['dec'])
+ 
     
     ## Here Instead of calculating the Boundaries 
     # (which should be anyway the max, min of the RA and Dec),
@@ -28,7 +27,8 @@ def create_convergence_map(config):
     # Pass them to the create_shear_grid function
     # We don't need to calculate the boundaries!
     shear_df = utils.correct_RA_dec(shear_df)
-
+    boundaries = utils.calculate_field_boundaries_v2(shear_df['ra'], 
+                                                  shear_df['dec'])
     # Create shear grid
     g1map, g2map = utils.create_shear_grid(shear_df['ra'], 
                                            shear_df['dec'], 
