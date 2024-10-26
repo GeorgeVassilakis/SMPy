@@ -27,25 +27,48 @@ def load_shear_data(shear_cat_path, ra_col, dec_col, g1_col, g2_col, weight_col)
         'dec': shear_catalog[dec_col],
         'g1': shear_catalog[g1_col],
         'g2': shear_catalog[g2_col],
-        'weight': shear_catalog[weight_col]
     })
 
+    # If weight_col is none, set all weights to 1, if it's passed, add a column to shear df of 'weight': shear_catalog[weight_col]
+    # Make the weight column a column of ones of length = ra_col
+    if weight_col is None:
+        shear_df['weight'] = np.ones(len(shear_df))
+    else:
+        shear_df['weight'] = shear_catalog[weight_col]
+        
     return shear_df
 
-def correct_RA_dec(shear_df):
-    shear_df_f = shear_df.copy()
-    ra = shear_df['ra']
-    dec = shear_df['dec']
-    ra_0 = (np.max(ra) + np.min(ra))/2 # center of ra, set as a refernce for this transformation
-    dec_0 = (np.max(dec) + np.min(dec))/2 # center of dec, set as a refernce for this transformation
+def scale_ra_dec(shear_df):
+    """
+    Correct the RA and Dec coordinates by centering and flattening RA.
+
+    Parameters
+    ----------
+    shear_df : pd.DataFrame
+        DataFrame containing 'ra' and 'dec' columns representing
+        right ascension and declination in degrees.
+
+    Returns
+    -------
+    pd.DataFrame
+        A new DataFrame with corrected 'ra' and 'dec' columns.
+    """
+    # Create a copy to avoid modifying the original DataFrame
+    corrected_df = shear_df.copy()
     
-    ra_flat, dec_flat = np.zeros(len(ra)), np.zeros(len(dec))
-    for i in range(len(ra)):
-        ra_flat[i] = (ra[i] - ra_0) * np.cos(np.deg2rad(dec[i]))
-        dec_flat[i] = dec[i] - dec_0
-    shear_df_f['ra'] = ra_flat
-    shear_df_f['dec'] = dec_flat
-    return shear_df_f
+    # Extract RA and Dec columns
+    ra = corrected_df['ra']
+    dec = corrected_df['dec']
+    
+    # Compute the central RA and Dec
+    ra_0 = (ra.max() + ra.min()) / 2  # Center of RA
+    dec_0 = (dec.max() + dec.min()) / 2  # Center of Dec
+    
+    # Apply the transformation using vectorized operations
+    corrected_df['ra_scaled'] = (ra - ra_0) * np.cos(np.deg2rad(dec))
+    corrected_df['dec_scaled'] = dec - dec_0
+    
+    return corrected_df
 
 def calculate_field_boundaries(ra, dec):
     """
@@ -53,38 +76,6 @@ def calculate_field_boundaries(ra, dec):
     
     :param ra: Dataframe column containing the right ascension values.
     :param dec: Dataframe column containing the declination values.
-    :param resolution: Resolution of the map in arcminutes.
-    :return: A dictionary containing the corners of the map {'ra_min', 'ra_max', 'dec_min', 'dec_max'}.
-    """
-    # Calculate median RA and Dec
-    med_ra = np.median(ra)
-    med_dec = np.median(dec)
-    
-    # Calculate the range of RA and Dec values
-    ra_range = np.max(ra) - np.min(ra)
-    dec_range = np.max(dec) - np.min(dec)
-    
-    # Calculate the size of the field in degrees
-    ra_size = ra_range
-    dec_size = dec_range
-    
-    # Calculate RA and Dec extents and store in a dictionary
-    boundaries = {
-        'ra_min': med_ra - ra_size / 2,
-        'ra_max': med_ra + ra_size / 2,
-        'dec_min': med_dec - dec_size / 2,
-        'dec_max': med_dec + dec_size / 2
-    }
-    
-    return boundaries
-
-def calculate_field_boundaries_v2(ra, dec):
-    """
-    Calculate the boundaries of the field in right ascension (RA) and declination (Dec).
-    
-    :param ra: Dataframe column containing the right ascension values.
-    :param dec: Dataframe column containing the declination values.
-    :param resolution: Resolution of the map in arcminutes.
     :return: A dictionary containing the corners of the map {'ra_min', 'ra_max', 'dec_min', 'dec_max'}.
     """
     boundaries = {
@@ -139,48 +130,6 @@ def create_shear_grid(ra, dec, g1, g2, weight, boundaries, resolution):
     g2_grid[nonzero_weight_mask] /= weight_grid[nonzero_weight_mask]
     
     return g1_grid, g2_grid
-
-def create_shear_grid_v2(ra, dec, g1, g2, weight, resolution, boundaries = None, verbose=False):
-    '''
-    Bin values of shear data according to position on the sky with an option of not having a specified boundary.
-    
-    Args:
-    - ra, dec, g1, g2, weight: numpy arrays of the same length containing the shear data.
-    - resolution: Resolution of the map in arcminutes.
-    - boundaries: Dictionary containing 'ra_min', 'ra_max', 'dec_min', 'dec_max'.
-    - verbose: If True, print details of the binning.
-    Returns:
-    - A tuple of two 2D numpy arrays containing the binned g1 and g2 values.
-    '''
-    
-    if boundaries is not None:
-        ra_min, ra_max = boundaries['ra_min'], boundaries['ra_max']
-        dec_min, dec_max = boundaries['dec_min'], boundaries['dec_max']
-    else:
-        ra_min, ra_max = np.min(ra), np.max(ra)
-        dec_min, dec_max = np.min(dec), np.max(dec)
-    
-    # Calculate number of pixels based on field size and resolution
-    npix_ra = int(np.ceil((ra_max - ra_min) * 60 / resolution))
-    npix_dec = int(np.ceil((dec_max - dec_min) * 60 / resolution))
-    
-    # Initialize the grids
-    wmap, xbins, ybins = np.histogram2d(ra, dec, bins=[npix_ra, npix_dec], range=[[ra_min, ra_max], [dec_min, dec_max]],
-                                            weights=weight)
-    
-    wmap[wmap == 0] = np.inf
-    # Compute mean values per pixel
-    result = tuple((np.histogram2d(ra, dec, bins=[npix_ra, npix_dec], range=[[ra_min, ra_max], [dec_min, dec_max]],
-                    weights=(vv * weight))[0] / wmap).T for vv in [g1, g2])
-    
-    if verbose:
-        print("npix : {}".format([npix_ra, npix_dec]))
-        print("extent : {}".format([xbins[0], xbins[-1], ybins[0], ybins[-1]]))
-        print("(dx, dy) : ({}, {})".format(xbins[1] - xbins[0],
-                                           ybins[1] - ybins[0]))
-        
-    return result
-
 
 def save_convergence_fits(convergence, boundaries, config, output_name):
     """

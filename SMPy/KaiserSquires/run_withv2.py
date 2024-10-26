@@ -7,7 +7,6 @@ def read_config(file_path):
     with open(file_path, 'r') as file:
         return yaml.safe_load(file)
 
-center_cl = {"ra_c": 104.629583, "dec_c": -55.946944}
 
 def create_convergence_map(config):
     # Load shear data 
@@ -18,35 +17,30 @@ def create_convergence_map(config):
                                           config['g2_col'], 
                                           config['weight_col'])
 
-    # Calculate field boundaries
-    boundaries = utils.calculate_field_boundaries_v2(shear_df['ra'], 
-                                                  shear_df['dec'])
-    
-    # Print boundaries
-    print(f"RA min: {boundaries['ra_min']}, RA max: {boundaries['ra_max']}")
-    print(f"Dec min: {boundaries['dec_min']}, Dec max: {boundaries['dec_max']}")
-    
-    ## Here Instead of calculating the Boundaries 
-    # (which should be anyway the max, min of the RA and Dec),
-    ## We would correct the RA and Dec values of the catalogues and 
-    # Pass them to the create_shear_grid function
-    # We don't need to calculate the boundaries!
-    shear_df = utils.correct_RA_dec(shear_df)
+    # Calculate true field boundaries before scaling
+    true_boundaries = utils.calculate_field_boundaries(shear_df['ra'], 
+                                                     shear_df['dec'])
+    # Transform RA/Dec
+    shear_df = utils.scale_ra_dec(shear_df)
 
+    # Calculate field boundaries
+    scaled_boundaries = utils.calculate_field_boundaries(shear_df['ra_scaled'], 
+                                                  shear_df['dec_scaled'])
+    
     # Create shear grid
-    g1map, g2map = utils.create_shear_grid_v2(shear_df['ra'], 
-                                           shear_df['dec'], 
+    g1map, g2map = utils.create_shear_grid(shear_df['ra_scaled'], 
+                                           shear_df['dec_scaled'], 
                                            shear_df['g1'],
                                            shear_df['g2'], 
                                            shear_df['weight'], 
-                                           boundaries=boundaries,
+                                           boundaries=scaled_boundaries,
                                            resolution=config['resolution'])
     
     
 
-# Calculate the convergence maps
+    # Calculate the convergence maps
     modes = config['mode']
-    kappa_e, kappa_b = kaiser_squires.ks_inversion(g1map, g2map)
+    kappa_e, kappa_b = kaiser_squires.ks_inversion(g1map, -g2map)
 
     convergence_maps = {}
     if 'E' in modes:
@@ -59,14 +53,14 @@ def create_convergence_map(config):
         plot_config = config.copy()
         plot_config['plot_title'] = f'{config["plot_title"]} ({mode}-mode)'
         output_name = f"{config['output_directory']}{config['output_base_name']}_kaiser_squires_{mode.lower()}_mode.png"
-        plot_kmap.plot_convergence_v2(convergence, boundaries, plot_config, output_name, threshold=2.5)
+        plot_kmap.plot_convergence(convergence, scaled_boundaries, true_boundaries, plot_config, output_name)
 
         # Save the convergence map as a FITS file
         if config.get('save_fits', False):
             output_name = f"{config['output_directory']}{config['output_base_name']}_kaiser_squires_{mode.lower()}_mode.fits"
-            utils.save_convergence_fits(convergence, boundaries, config, output_name)
+            utils.save_convergence_fits(convergence, scaled_boundaries, true_boundaries, config, output_name)
 
-    return convergence_maps, boundaries
+    return convergence_maps, scaled_boundaries
 
 def run(config_path):
     config = read_config(config_path)
