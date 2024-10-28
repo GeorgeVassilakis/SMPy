@@ -110,6 +110,9 @@ def create_shear_grid(ra, dec, g1, g2, weight, boundaries, resolution):
     ra_bins = np.linspace(ra_min, ra_max, npix_ra + 1)
     dec_bins = np.linspace(dec_min, dec_max, npix_dec + 1)
     
+    if weight is None:
+        weight = np.ones_like(ra)
+    
     # Digitize the RA and Dec to find bin indices
     ra_idx = np.digitize(ra, ra_bins) - 1
     dec_idx = np.digitize(dec, dec_bins) - 1
