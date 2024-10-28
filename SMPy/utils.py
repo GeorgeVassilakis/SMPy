@@ -140,7 +140,7 @@ def create_shear_grid(ra, dec, g1, g2, weight, boundaries, resolution):
     
     return g1_grid, g2_grid
 
-def create_shear_grid_v2(ra, dec, g1, g2, weight, resolution, boundaries = None, verbose=False):
+def create_shear_grid_v2(ra, dec, g1, g2, resolution, weight=None, boundaries = None, verbose=False):
     '''
     Bin values of shear data according to position on the sky with an option of not having a specified boundary.
     
@@ -159,6 +159,9 @@ def create_shear_grid_v2(ra, dec, g1, g2, weight, resolution, boundaries = None,
     else:
         ra_min, ra_max = np.min(ra), np.max(ra)
         dec_min, dec_max = np.min(dec), np.max(dec)
+        
+    if weight is None:
+        weight = np.ones_like(ra)
     
     # Calculate number of pixels based on field size and resolution
     npix_ra = int(np.ceil((ra_max - ra_min) * 60 / resolution))
