@@ -32,6 +32,41 @@ def load_shear_data(shear_cat_path, ra_col, dec_col, g1_col, g2_col, weight_col)
 
     return shear_df
 
+def load_shear_data_v2(shear_cat_path, ra_col, dec_col, g1_col, g2_col, weight_col, mu_col, obj_class_col):
+    """ 
+    Load shear data from a FITS file and return a pandas DataFrame.
+
+    :param path: Path to the FITS file.
+    :param ra_col: Column name for right ascension.
+    :param dec_col: Column name for declination.
+    :param g1_col: Column name for the first shear component.
+    :param g2_col: Column name for the second shear component.
+    :param weight_col: Column name for the weight.
+    :return: pandas DataFrame with the specified columns.
+    """
+    # Read data from the FITS file
+    shear_catalog = Table.read(shear_cat_path)
+
+    # Convert to pandas DataFrame
+    shear_df = pd.DataFrame({
+        'ra': shear_catalog[ra_col],
+        'dec': shear_catalog[dec_col],
+        'g1': shear_catalog[g1_col],
+        'g2': shear_catalog[g2_col],
+        'weight': shear_catalog[weight_col],
+        'mu': shear_catalog[mu_col],
+        'obj_class': shear_catalog[obj_class_col]
+    })
+    gal_idx = np.where(shear_df['obj_class'] == b'gal')[0]
+    
+    shear_df_c = []
+
+    for i in gal_idx:
+        shear_df_c.append(shear_df.iloc[i])
+        
+    shear_df_c = pd.DataFrame(shear_df_c)
+    return shear_df_c
+
 def correct_RA_dec(shear_df):
     shear_df_f = shear_df.copy()
     ra = shear_df['ra']
