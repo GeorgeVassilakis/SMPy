@@ -346,7 +346,6 @@ def g1g2_to_gt_gc(g1, g2, ra, dec, ra_c, dec_c, pix_ra = 100):
     """ 
     ra_max, ra_min, dec_max, dec_min = np.max(ra), np.min(ra), np.max(dec), np.min(dec)
     aspect_ratio = (ra_max - ra_min) / (dec_max - dec_min)
-    pix_ra = 100
     pix_dec = int(pix_ra / aspect_ratio)
     ra_grid, dec_grid = np.meshgrid(np.linspace(ra_min, ra_max, pix_ra), np.linspace(dec_min, dec_max, pix_dec))
 
