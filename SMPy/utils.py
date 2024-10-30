@@ -331,3 +331,29 @@ def shear_grids_for_shuffled_dfs(list_of_dfs, boundaries, config):
         grid_list.append((g1map, g2map))
 
     return grid_list
+
+def g1g2_to_gt_gc(g1, g2, ra, dec, ra_c, dec_c, pix_ra = 100):
+    """
+    Convert reduced shear to tangential and cross shear (Eq. 10, 11 in McCleary et al. 2023).
+    args:
+    - g1, g2: Reduced shear components.
+    - ra, dec: Right ascension and declination of the catalogue,i.e. shear_df['ra'], shear_df['dec'].
+    - ra_c, dec_c: Right ascension and declination of the cluster-centre.
+    
+    returns:
+    - gt, gc: Tangential and cross shear components.
+    - phi: Polar angle in the plane of the sky.
+    """ 
+    ra_max, ra_min, dec_max, dec_min = np.max(ra), np.min(ra), np.max(dec), np.min(dec)
+    aspect_ratio = (ra_max - ra_min) / (dec_max - dec_min)
+    pix_ra = 100
+    pix_dec = int(pix_ra / aspect_ratio)
+    ra_grid, dec_grid = np.meshgrid(np.linspace(ra_min, ra_max, pix_ra), np.linspace(dec_min, dec_max, pix_dec))
+
+    phi = np.arctan2(dec_grid - dec_c, ra_grid - ra_c)
+    
+    # Calculate the tangential and cross components
+    gt = -g1 * np.cos(2 * phi) - g2 * np.sin(2 * phi)
+    gc = -g1 * np.sin(2 * phi) + g2 * np.cos(2 * phi)
+
+    return gt, gc, phi
