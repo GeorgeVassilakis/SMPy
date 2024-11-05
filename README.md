@@ -38,13 +38,13 @@ SMPy is a Python-based toolkit designed for astrophysicists and cosmologists, fa
 
 ### With Jupyter Notebook
 1. Import the run module:
-`from SMPy.KaiserSquires import run`
+`from smpy import run`
 
 2. Edit the `example_config.yaml` configuration file
   
 3. Define config path and run:
 
-   `config_path = '/path/to/repo/.../SMPy/SMPy/KaiserSquires/example_config.yaml'`
+   `config_path = '/path/to/repo/.../SMPy/smpy/configs/example_config.yaml'`
 
    `run.run(config_path)`
 

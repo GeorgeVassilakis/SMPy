@@ -27,10 +27,48 @@ def load_shear_data(shear_cat_path, ra_col, dec_col, g1_col, g2_col, weight_col)
         'dec': shear_catalog[dec_col],
         'g1': shear_catalog[g1_col],
         'g2': shear_catalog[g2_col],
-        'weight': shear_catalog[weight_col]
     })
 
+    # If weight_col is none, set all weights to 1, if it's passed, add a column to shear df of 'weight': shear_catalog[weight_col]
+    # Make the weight column a column of ones of length = ra_col
+    if weight_col is None:
+        shear_df['weight'] = np.ones(len(shear_df))
+    else:
+        shear_df['weight'] = shear_catalog[weight_col]
+        
     return shear_df
+
+def scale_ra_dec(shear_df):
+    """
+    Correct the RA and Dec coordinates by centering and flattening RA.
+
+    Parameters
+    ----------
+    shear_df : pd.DataFrame
+        DataFrame containing 'ra' and 'dec' columns representing
+        right ascension and declination in degrees.
+
+    Returns
+    -------
+    pd.DataFrame
+        A new DataFrame with corrected 'ra' and 'dec' columns.
+    """
+    # Create a copy to avoid modifying the original DataFrame
+    corrected_df = shear_df.copy()
+    
+    # Extract RA and Dec columns
+    ra = corrected_df['ra']
+    dec = corrected_df['dec']
+    
+    # Compute the central RA and Dec
+    ra_0 = (ra.max() + ra.min()) / 2  # Center of RA
+    dec_0 = (dec.max() + dec.min()) / 2  # Center of Dec
+    
+    # Apply the transformation using vectorized operations
+    corrected_df['ra_scaled'] = (ra - ra_0) * np.cos(np.deg2rad(dec))
+    corrected_df['dec_scaled'] = dec - dec_0
+    
+    return corrected_df
 
 def calculate_field_boundaries(ra, dec):
     """
@@ -38,27 +76,13 @@ def calculate_field_boundaries(ra, dec):
     
     :param ra: Dataframe column containing the right ascension values.
     :param dec: Dataframe column containing the declination values.
-    :param resolution: Resolution of the map in arcminutes.
     :return: A dictionary containing the corners of the map {'ra_min', 'ra_max', 'dec_min', 'dec_max'}.
     """
-    # Calculate median RA and Dec
-    med_ra = np.median(ra)
-    med_dec = np.median(dec)
-    
-    # Calculate the range of RA and Dec values
-    ra_range = np.max(ra) - np.min(ra)
-    dec_range = np.max(dec) - np.min(dec)
-    
-    # Calculate the size of the field in degrees
-    ra_size = ra_range
-    dec_size = dec_range
-    
-    # Calculate RA and Dec extents and store in a dictionary
     boundaries = {
-        'ra_min': med_ra - ra_size / 2,
-        'ra_max': med_ra + ra_size / 2,
-        'dec_min': med_dec - dec_size / 2,
-        'dec_max': med_dec + dec_size / 2
+        'ra_min': np.min(ra),
+        'ra_max': np.max(ra),
+        'dec_min': np.min(dec),
+        'dec_max': np.max(dec)
     }
     
     return boundaries
@@ -71,7 +95,7 @@ def create_shear_grid(ra, dec, g1, g2, weight, boundaries, resolution):
     dec_min, dec_max = boundaries['dec_min'], boundaries['dec_max']
     
     # Calculate number of pixels based on field size and resolution
-    npix_ra = int(np.ceil((ra_max - ra_min) * 60 / resolution) * np.cos(np.deg2rad((boundaries['dec_max'] + boundaries['dec_min']) / 2)))
+    npix_ra = int(np.ceil((ra_max - ra_min) * 60 / resolution))
     npix_dec = int(np.ceil((dec_max - dec_min) * 60 / resolution))
     
     ra_bins = np.linspace(ra_min, ra_max, npix_ra + 1)
@@ -106,7 +130,6 @@ def create_shear_grid(ra, dec, g1, g2, weight, boundaries, resolution):
     g2_grid[nonzero_weight_mask] /= weight_grid[nonzero_weight_mask]
     
     return g1_grid, g2_grid
-
 
 def save_convergence_fits(convergence, boundaries, config, output_name):
     """
@@ -158,19 +181,23 @@ def save_convergence_fits(convergence, boundaries, config, output_name):
 
     print(f"Convergence map saved as FITS file: {output_name}")
 
-
-def _shuffle_ra_dec(shear_df):
+def _shuffle_ra_dec(shear_df, seed=None):
     """
-    Shuffle the 'ra' and 'dec' columns of the input DataFrame together.
+    Shuffle the scaled 'ra' and 'dec' columns of the input DataFrame together.
     
     :param shear_df: Input pandas DataFrame.
-    :return: A new pandas DataFrame with shuffled 'ra' and 'dec' columns.
+    :param seed: Random seed for reproducibility.
+    :return: A new pandas DataFrame with shuffled 'ra_scaled' and 'dec_scaled' columns.
     """
+    # Set seed if provided
+    if seed is not None:
+        random.seed(seed)
+        
     # Make a copy to avoid modifying the original
     shuffled_df = shear_df.copy()
 
-    # Combine RA and DEC into pairs
-    ra_dec_pairs = list(zip(shuffled_df['ra'], shuffled_df['dec']))
+    # Combine scaled RA and DEC into pairs
+    ra_dec_pairs = list(zip(shuffled_df['ra_scaled'], shuffled_df['dec_scaled']))
     
     # Shuffle the pairs
     random.shuffle(ra_dec_pairs)
@@ -178,38 +205,51 @@ def _shuffle_ra_dec(shear_df):
     # Unzip the shuffled pairs back into RA and DEC
     shuffled_ra, shuffled_dec = zip(*ra_dec_pairs)
     
-    shuffled_df['ra'] = shuffled_ra
-    shuffled_df['dec'] = shuffled_dec
+    # Update the scaled coordinates
+    shuffled_df['ra_scaled'] = shuffled_ra
+    shuffled_df['dec_scaled'] = shuffled_dec
 
     return shuffled_df
 
-def generate_multiple_shear_dfs(og_shear_df, num_shuffles=100):
+def generate_multiple_shear_dfs(og_shear_df, num_shuffles=100, seed=0):
     """
-    Generate a list of multiple data frames with shuffled RA and DEC columns by calling the load and shuffle functions.
-    :return: A list of shuffled pandas DataFrames.
+    Generate a list of multiple data frames with shuffled RA and DEC columns.
+    :param og_shear_df: Original shear DataFrame to shuffle
+    :param num_shuffles: Number of shuffled copies to generate
+    :param seed: Random starting seed for reproducibility
+    :return: A list of shuffled pandas DataFrames
     """
-
-    # List to store the shuffled data frames (not sure if a list of these data frames is the best format rn)
+    # List to store the shuffled data frames
     shuffled_dfs = []
     
     # Loop to generate multiple shuffled data frames
     for i in range(num_shuffles):
-        shuffled_df = _shuffle_ra_dec(og_shear_df)
+        shuffled_df = _shuffle_ra_dec(og_shear_df, seed=seed+i)
         shuffled_dfs.append(shuffled_df)
     
     return shuffled_dfs
 
-def shear_grids_for_shuffled_dfs(list_of_dfs, boundaries, config): 
-    grid_list = []
-    for shear_df in list_of_dfs: 
-        g1map, g2map = create_shear_grid(shear_df['ra'], 
-                                           shear_df['dec'], 
-                                           shear_df['g1'],
-                                           shear_df['g2'], 
-                                           shear_df['weight'], 
-                                           boundaries=boundaries,
-                                           resolution=config['resolution'])
+def g1g2_to_gt_gc(g1, g2, ra, dec, ra_c, dec_c, pix_ra = 100):
+    """
+    Convert reduced shear to tangential and cross shear (Eq. 10, 11 in McCleary et al. 2023).
+    args:
+    - g1, g2: Reduced shear components.
+    - ra, dec: Right ascension and declination of the catalogue,i.e. shear_df['ra'], shear_df['dec'].
+    - ra_c, dec_c: Right ascension and declination of the cluster-centre.
+    
+    returns:
+    - gt, gc: Tangential and cross shear components.
+    - phi: Polar angle in the plane of the sky.
+    """ 
+    ra_max, ra_min, dec_max, dec_min = np.max(ra), np.min(ra), np.max(dec), np.min(dec)
+    aspect_ratio = (ra_max - ra_min) / (dec_max - dec_min)
+    pix_dec = int(pix_ra / aspect_ratio)
+    ra_grid, dec_grid = np.meshgrid(np.linspace(ra_min, ra_max, pix_ra), np.linspace(dec_min, dec_max, pix_dec))
 
-        grid_list.append((g1map, g2map))
+    phi = np.arctan2(dec_grid - dec_c, ra_grid - ra_c)
+    
+    # Calculate the tangential and cross components
+    gt = -g1 * np.cos(2 * phi) - g2 * np.sin(2 * phi)
+    gc = -g1 * np.sin(2 * phi) + g2 * np.cos(2 * phi)
 
-    return grid_list
+    return gt, gc, phi
