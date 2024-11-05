@@ -37,7 +37,7 @@ convergence:
   smoothing: 'gaussian_filter' # Current options: null or 'gaussian_filter'
   gaussian_kernel: 2
   cluster_center: null # Options for marker: null (do nothing), 'auto' (center of boundaries), {"ra_center": val, "dec_center": val} (custom coords)
-  threshold: 0.05 # Threshold for marking peaks in the convergence map (float or null)
+  threshold: null # Threshold for marking peaks in the convergence map (float or null)
 
 
 # SNR Map Settings

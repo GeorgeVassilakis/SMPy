@@ -96,6 +96,8 @@ def plot_convergence(convergence, scaled_boundaries, true_boundaries, config, ou
     if ra_center is not None:
         ax.plot(ra_center, dec_center, 'wx', markersize=10)
 
+    ax.scatter(ra_peaks, dec_peaks, s=100, facecolors='none', edgecolors='g', linewidth=1.5)
+
     # Determine nice step sizes based on the range
     ra_range = true_boundaries['ra_max'] - true_boundaries['ra_min']
     dec_range = true_boundaries['dec_max'] - true_boundaries['dec_min']
