@@ -81,16 +81,20 @@ def plot_convergence(convergence, scaled_boundaries, true_boundaries, config, ou
         ra_center = (scaled_boundaries['ra_max'] + scaled_boundaries['ra_min']) / 2
         dec_center = (scaled_boundaries['dec_max'] + scaled_boundaries['dec_min']) / 2
     elif isinstance(cluster_center, dict):
-        ra_center = cluster_center['ra_center']
-        dec_center = cluster_center['dec_center']
+        # Scale the provided coordinates from true to scaled coordinates
+        ra_center = np.interp(cluster_center['ra_center'],
+                            [true_boundaries['ra_min'], true_boundaries['ra_max']],
+                            [scaled_boundaries['ra_min'], scaled_boundaries['ra_max']])
+        
+        dec_center = np.interp(cluster_center['dec_center'],
+                             [true_boundaries['dec_min'], true_boundaries['dec_max']],
+                             [scaled_boundaries['dec_min'], scaled_boundaries['dec_max']])
     elif cluster_center is not None:
         print("Unrecognized cluster_center format, skipping marker.")
         ra_center = dec_center = None
 
     if ra_center is not None:
         ax.plot(ra_center, dec_center, 'wx', markersize=10)
-    
-    ax.scatter(ra_peaks, dec_peaks, s=100, facecolors='none', edgecolors='g', linewidth=1.5)
 
     # Determine nice step sizes based on the range
     ra_range = true_boundaries['ra_max'] - true_boundaries['ra_min']

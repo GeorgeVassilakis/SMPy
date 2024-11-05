@@ -181,19 +181,18 @@ def save_convergence_fits(convergence, boundaries, config, output_name):
 
     print(f"Convergence map saved as FITS file: {output_name}")
 
-
 def _shuffle_ra_dec(shear_df):
     """
-    Shuffle the 'ra' and 'dec' columns of the input DataFrame together.
+    Shuffle the scaled 'ra' and 'dec' columns of the input DataFrame together.
     
     :param shear_df: Input pandas DataFrame.
-    :return: A new pandas DataFrame with shuffled 'ra' and 'dec' columns.
+    :return: A new pandas DataFrame with shuffled 'ra_scaled' and 'dec_scaled' columns.
     """
     # Make a copy to avoid modifying the original
     shuffled_df = shear_df.copy()
 
-    # Combine RA and DEC into pairs
-    ra_dec_pairs = list(zip(shuffled_df['ra'], shuffled_df['dec']))
+    # Combine scaled RA and DEC into pairs
+    ra_dec_pairs = list(zip(shuffled_df['ra_scaled'], shuffled_df['dec_scaled']))
     
     # Shuffle the pairs
     random.shuffle(ra_dec_pairs)
@@ -201,8 +200,9 @@ def _shuffle_ra_dec(shear_df):
     # Unzip the shuffled pairs back into RA and DEC
     shuffled_ra, shuffled_dec = zip(*ra_dec_pairs)
     
-    shuffled_df['ra'] = shuffled_ra
-    shuffled_df['dec'] = shuffled_dec
+    # Update the scaled coordinates
+    shuffled_df['ra_scaled'] = shuffled_ra
+    shuffled_df['dec_scaled'] = shuffled_dec
 
     return shuffled_df
 
@@ -225,17 +225,27 @@ def generate_multiple_shear_dfs(og_shear_df, num_shuffles=100, seed=42):
     
     return shuffled_dfs
 
-def shear_grids_for_shuffled_dfs(list_of_dfs, boundaries, config): 
-    grid_list = []
-    for shear_df in list_of_dfs: 
-        g1map, g2map = create_shear_grid(shear_df['ra'], 
-                                           shear_df['dec'], 
-                                           shear_df['g1'],
-                                           shear_df['g2'], 
-                                           shear_df['weight'], 
-                                           boundaries=boundaries,
-                                           resolution=config['resolution'])
+def g1g2_to_gt_gc(g1, g2, ra, dec, ra_c, dec_c, pix_ra = 100):
+    """
+    Convert reduced shear to tangential and cross shear (Eq. 10, 11 in McCleary et al. 2023).
+    args:
+    - g1, g2: Reduced shear components.
+    - ra, dec: Right ascension and declination of the catalogue,i.e. shear_df['ra'], shear_df['dec'].
+    - ra_c, dec_c: Right ascension and declination of the cluster-centre.
+    
+    returns:
+    - gt, gc: Tangential and cross shear components.
+    - phi: Polar angle in the plane of the sky.
+    """ 
+    ra_max, ra_min, dec_max, dec_min = np.max(ra), np.min(ra), np.max(dec), np.min(dec)
+    aspect_ratio = (ra_max - ra_min) / (dec_max - dec_min)
+    pix_dec = int(pix_ra / aspect_ratio)
+    ra_grid, dec_grid = np.meshgrid(np.linspace(ra_min, ra_max, pix_ra), np.linspace(dec_min, dec_max, pix_dec))
 
-        grid_list.append((g1map, g2map))
+    phi = np.arctan2(dec_grid - dec_c, ra_grid - ra_c)
+    
+    # Calculate the tangential and cross components
+    gt = -g1 * np.cos(2 * phi) - g2 * np.sin(2 * phi)
+    gc = -g1 * np.sin(2 * phi) + g2 * np.cos(2 * phi)
 
-    return grid_list
+    return gt, gc, phi
