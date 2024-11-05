@@ -51,6 +51,8 @@ def plot_convergence(convergence, boundaries, config, output_name):
     # and linearly scales the aspect ratio based on that 'middle' declination.
     aspect_ratio = np.cos(np.deg2rad((boundaries['dec_max'] + boundaries['dec_min']) / 2))
     
+    # Size of convergence map in pixels
+    print(f'Shape in pixels = {filtered_convergence.shape}')
     im = ax.imshow(
         filtered_convergence[:, ::-1], 
         cmap=config['cmap'],
@@ -61,7 +63,7 @@ def plot_convergence(convergence, boundaries, config, output_name):
                     boundaries['dec_min'], 
                     boundaries['dec_max']],
         origin='lower', # Sets the origin to bottom left to match the RA/DEC convention
-        aspect=(1/aspect_ratio)
+        aspect=1/aspect_ratio
     )  
 
     ax.set_xlabel(config['xlabel'])

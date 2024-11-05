@@ -71,7 +71,7 @@ def create_shear_grid(ra, dec, g1, g2, weight, boundaries, resolution):
     dec_min, dec_max = boundaries['dec_min'], boundaries['dec_max']
     
     # Calculate number of pixels based on field size and resolution
-    npix_ra = int(np.ceil((ra_max - ra_min) * 60 / resolution))
+    npix_ra = int(np.ceil((ra_max - ra_min) * 60 / resolution) * np.cos(np.deg2rad((boundaries['dec_max'] + boundaries['dec_min']) / 2)))
     npix_dec = int(np.ceil((dec_max - dec_min) * 60 / resolution))
     
     ra_bins = np.linspace(ra_min, ra_max, npix_ra + 1)

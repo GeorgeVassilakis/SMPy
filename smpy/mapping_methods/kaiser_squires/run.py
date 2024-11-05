@@ -31,7 +31,7 @@ def create_convergence_map(config):
 
 # Calculate the convergence maps
     modes = config['mode']
-    kappa_e, kappa_b = kaiser_squires.ks_inversion(g1map, -g2map)
+    kappa_e, kappa_b = kaiser_squires.ks_inversion(g1map, g2map)
 
     convergence_maps = {}
     if 'E' in modes:

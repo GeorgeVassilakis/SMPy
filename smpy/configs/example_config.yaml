@@ -6,11 +6,11 @@ general:
   input_path: "/home/wslgeorgios/SMPy/examples/data/forecast_lum_annular.fits"
   output_directory: "/home/wslgeorgios/SMPy/examples/outputs/"
   output_base_name: "simulation_testing"  # Base name for output files
-  save_fits: true  # Save output as FITS file 
+  save_fits: false  # Save output as FITS file 
 
   # Map creation settings
   method: "kaiser_squires"  # Convergence map method
-  create_snr: true  # Set to false if you don't want to create the SNR map
+  create_snr: false  # Set to false if you don't want to create the SNR map
 
   # Common parameters
   resolution: 0.4  # Pixel resolution of the map in arcminutes
