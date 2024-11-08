@@ -1,6 +1,6 @@
 import yaml
 from smpy.mapping_methods.kaiser_squires import run as ks_run
-from smpy.error_quantification.SNR import run as snr_run
+from smpy.error_quantification.snr import run as snr_run
 
 def read_config(file_path):
     with open(file_path, 'r') as file:
