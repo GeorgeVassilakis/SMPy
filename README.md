@@ -44,9 +44,9 @@ SMPy is a Python-based toolkit designed for astrophysicists and cosmologists, fa
   
 3. Define config path and run:
 
-   `config_path = '/path/to/repo/.../SMPy/smpy/configs/example_config.yaml'`
+   `config_path = '/path/to/SMPy/smpy/configs/example_config.yaml'`
 
    `run.run(config_path)`
 
-## Example
-![K-map](https://github.com/GeorgeVassilakis/SMPy/blob/main/notebooks/simulation_kmap.png)https://github.com/GeorgeVassilakis/SMPy/blob/main/notebooks/simulation_kmap.png)
+## Example Kaiser Squires Convergence Map
+![Kaiser Squires Convergence Map](examples/outputs/simulation_testing_kaiser_squires_e_mode.png)
