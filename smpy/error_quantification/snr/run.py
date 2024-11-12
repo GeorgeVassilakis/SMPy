@@ -4,6 +4,7 @@ import pandas as pd
 from smpy import utils
 from smpy.mapping_methods.kaiser_squires import kaiser_squires
 from smpy.plotting import plot
+from scipy.ndimage import gaussian_filter
 
 def read_config(file_path):
     with open(file_path, 'r') as file:
@@ -58,20 +59,33 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
     
     # Calculate kappa for shuffled maps
     kappa_e_list, kappa_b_list = ks_inversion_list(g1_g2_map_list)
+
+    # Smoothing each individual shuffled map before taking the variance!! 
+    filtered_kappa_e_list = []
+    for element in kappa_e_list: 
+        element = gaussian_filter(element, config['gaussian_kernel'])
+        filtered_kappa_e_list.append(element)
+
+    filtered_kappa_b_list = []
+    for element in kappa_b_list: 
+        element = gaussian_filter(element, config['gaussian_kernel'])
+        filtered_kappa_b_list.append(element)
     
     # Calculate variance maps
-    variance_map_e = np.var(np.stack(kappa_e_list, axis=0), axis=0) if kappa_e_list else None
-    variance_map_b = np.var(np.stack(kappa_b_list, axis=0), axis=0) if kappa_b_list else None
+    variance_map_e = np.var(np.stack(filtered_kappa_e_list, axis=0), axis=0) if filtered_kappa_e_list else None
+    variance_map_b = np.var(np.stack(filtered_kappa_b_list, axis=0), axis=0) if filtered_kappa_b_list else None
     
     # Initialize dictionary for signal-to-noise maps
     sn_maps = {}
     
     # Calculate signal-to-noise maps if the respective mode exists
     if 'E' in convergence_maps and variance_map_e is not None:
-        sn_maps['E'] = convergence_maps['E'] / np.sqrt(variance_map_e)
+        smoothed_convergence_map_e = gaussian_filter(convergence_maps['E'], config['gaussian_kernel'])
+        sn_maps['E'] = smoothed_convergence_map_e / np.sqrt(variance_map_e)
     
     if 'B' in convergence_maps and variance_map_b is not None:
-        sn_maps['B'] = convergence_maps['B'] / np.sqrt(variance_map_b)
+        smoothed_convergence_map_e = gaussian_filter(convergence_maps['B'], config['gaussian_kernel'])
+        sn_maps['B'] = smoothed_convergence_map_e / np.sqrt(variance_map_b) 
     
     # Plot and save the SNR maps
     modes = config['mode'] if isinstance(config['mode'], list) else [config['mode']]
