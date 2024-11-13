@@ -60,37 +60,35 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
     # Calculate kappa for shuffled maps
     kappa_e_list, kappa_b_list = ks_inversion_list(g1_g2_map_list)
 
-    # Smoothing each individual shuffled map before taking the variance!! 
-    filtered_kappa_e_list = []
-    for element in kappa_e_list: 
-        element = gaussian_filter(element, config['gaussian_kernel'])
-        filtered_kappa_e_list.append(element)
-
-    filtered_kappa_b_list = []
-    for element in kappa_b_list: 
-        element = gaussian_filter(element, config['gaussian_kernel'])
-        filtered_kappa_b_list.append(element)
+    # Process maps - either smooth or keep as is
+    if config['smoothing'] == 'gaussian_filter':
+        processed_kappa_e_list = [gaussian_filter(k, config['gaussian_kernel']) for k in kappa_e_list]
+        processed_kappa_b_list = [gaussian_filter(k, config['gaussian_kernel']) for k in kappa_b_list]
+    else:
+        processed_kappa_e_list = kappa_e_list
+        processed_kappa_b_list = kappa_b_list
     
     # Calculate variance maps
-    variance_map_e = np.var(np.stack(filtered_kappa_e_list, axis=0), axis=0) if filtered_kappa_e_list else None
-    variance_map_b = np.var(np.stack(filtered_kappa_b_list, axis=0), axis=0) if filtered_kappa_b_list else None
+    variance_map_e = np.var(np.stack(processed_kappa_e_list, axis=0), axis=0)
+    variance_map_b = np.var(np.stack(processed_kappa_b_list, axis=0), axis=0)
     
-    # Initialize dictionary for signal-to-noise maps
+    # Create SNR maps
     sn_maps = {}
     
-    # Calculate signal-to-noise maps if the respective mode exists
-    if 'E' in convergence_maps and variance_map_e is not None:
-        smoothed_convergence_map_e = gaussian_filter(convergence_maps['E'], config['gaussian_kernel'])
-        sn_maps['E'] = smoothed_convergence_map_e / np.sqrt(variance_map_e)
+    if 'E' in convergence_maps:
+        convergence_e = convergence_maps['E']
+        if config['smoothing'] == 'gaussian_filter':
+            convergence_e = gaussian_filter(convergence_e, config['gaussian_kernel'])
+        sn_maps['E'] = convergence_e / np.sqrt(variance_map_e)
     
-    if 'B' in convergence_maps and variance_map_b is not None:
-        smoothed_convergence_map_e = gaussian_filter(convergence_maps['B'], config['gaussian_kernel'])
-        sn_maps['B'] = smoothed_convergence_map_e / np.sqrt(variance_map_b) 
+    if 'B' in convergence_maps:
+        convergence_b = convergence_maps['B']
+        if config['smoothing'] == 'gaussian_filter':
+            convergence_b = gaussian_filter(convergence_b, config['gaussian_kernel'])
+        sn_maps['B'] = convergence_b / np.sqrt(variance_map_b)
     
-    # Plot and save the SNR maps
-    modes = config['mode'] if isinstance(config['mode'], list) else [config['mode']]
-    
-    for mode in modes:
+    # Plot SNR maps
+    for mode in config['mode']:
         if mode in sn_maps:
             plot_config = config.copy()
             plot_config['plot_title'] = f'{config["plot_title"]} ({mode}-mode)'

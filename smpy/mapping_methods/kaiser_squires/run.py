@@ -40,22 +40,30 @@ def create_convergence_map(config):
     modes = config['mode']
     kappa_e, kappa_b = kaiser_squires.ks_inversion(g1map, -g2map)
 
-    # Apply guassian smoothing -- this code is redudant and can certainly be shortned
-    # But I think keeping the E and B cases visually seperate is helpful
-    # and it only costs a few extra lines
-    convergence_maps = {}
-    if 'E' in modes:
-        convergence_maps['E'] = kappa_e
+    # Store unfiltered maps
+    convergence_maps = {
+        'E': kappa_e,
+        'B': kappa_b
+    }
+
+    # Plot and save the convergence maps
+    for mode in modes:
+        # Get the convergence map for plotting
+        plot_map = convergence_maps[mode]
         if config['smoothing'] == 'gaussian_filter':
-            filtered_convergence = gaussian_filter(kappa_e, config['gaussian_kernel'])
-        elif config['smoothing'] is None:
-            filtered_convergence = kappa_e
-    if 'B' in modes:
-        convergence_maps['B'] = kappa_b
-        if config['smoothing'] == 'gaussian_filter':
-            filtered_convergence = gaussian_filter(kappa_b, config['gaussian_kernel'])
-        elif config['smoothing'] is None:
-            filtered_convergence = kappa_b
+            plot_map = gaussian_filter(plot_map, config['gaussian_kernel'])
+
+        plot_config = config.copy()
+        plot_config['plot_title'] = f'{config["plot_title"]} ({mode}-mode)'
+        output_name = f"{config['output_directory']}{config['output_base_name']}_kaiser_squires_{mode.lower()}_mode.png"
+        plot.plot_convergence(plot_map, scaled_boundaries, true_boundaries, plot_config, output_name)
+
+        # Save the convergence map as a FITS file
+        if config.get('save_fits', False):
+            output_name = f"{config['output_directory']}{config['output_base_name']}_kaiser_squires_{mode.lower()}_mode.fits"
+            utils.save_convergence_fits(plot_map, scaled_boundaries, true_boundaries, config, output_name)
+
+    return convergence_maps, scaled_boundaries, true_boundaries
 
     
     # Plot and save the convergence maps
