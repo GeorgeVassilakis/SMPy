@@ -3,8 +3,7 @@ import numpy as np
 import pandas as pd
 from smpy import utils
 from smpy.mapping_methods.kaiser_squires import kaiser_squires
-from smpy.plotting import plot
-from scipy.ndimage import gaussian_filter
+from smpy.plotting import plot, filters
 
 def read_config(file_path):
     with open(file_path, 'r') as file:
@@ -60,13 +59,10 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
     # Calculate kappa for shuffled maps
     kappa_e_list, kappa_b_list = ks_inversion_list(g1_g2_map_list)
 
-    # Process maps - either smooth or keep as is
-    if config['smoothing'] == 'gaussian_filter':
-        processed_kappa_e_list = [gaussian_filter(k, config['gaussian_kernel']) for k in kappa_e_list]
-        processed_kappa_b_list = [gaussian_filter(k, config['gaussian_kernel']) for k in kappa_b_list]
-    else:
-        processed_kappa_e_list = kappa_e_list
-        processed_kappa_b_list = kappa_b_list
+    # Process maps
+    filter_config = config.get('smoothing')
+    processed_kappa_e_list = [filters.apply_filter(k, filter_config) for k in kappa_e_list]
+    processed_kappa_b_list = [filters.apply_filter(k, filter_config) for k in kappa_b_list]
     
     # Calculate variance maps
     variance_map_e = np.var(np.stack(processed_kappa_e_list, axis=0), axis=0)
@@ -77,14 +73,12 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
     
     if 'E' in convergence_maps:
         convergence_e = convergence_maps['E']
-        if config['smoothing'] == 'gaussian_filter':
-            convergence_e = gaussian_filter(convergence_e, config['gaussian_kernel'])
+        convergence_e = filters.apply_filter(convergence_e, filter_config)
         sn_maps['E'] = convergence_e / np.sqrt(variance_map_e)
     
     if 'B' in convergence_maps:
         convergence_b = convergence_maps['B']
-        if config['smoothing'] == 'gaussian_filter':
-            convergence_b = gaussian_filter(convergence_b, config['gaussian_kernel'])
+        convergence_b = filters.apply_filter(convergence_b, filter_config)
         sn_maps['B'] = convergence_b / np.sqrt(variance_map_b)
     
     # Plot SNR maps

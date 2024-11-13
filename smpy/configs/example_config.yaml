@@ -10,7 +10,7 @@ general:
 
   # Map creation settings
   method: "kaiser_squires"  # Convergence map method
-  create_snr: false  # Set to false if you don't want to create the SNR map
+  create_snr: true  # Set to false if you don't want to create the SNR map
 
   # Common parameters
   resolution: 0.4  # Pixel resolution of the map in arcminutes
@@ -30,11 +30,14 @@ convergence:
   plot_title: 'Convergence Map'
   gridlines: true
 
+  # Smoothing configuration
+  smoothing:
+    type: 'gaussian'  # Current options: 'gaussian' or null
+    sigma: 2.0  # Gaussian filter sigma parameter
+
   # Optional Plotting
   vmax: null
   vmin: null
-  smoothing: 'gaussian_filter' # Current options: null or 'gaussian_filter'
-  gaussian_kernel: 2
   cluster_center: null # Options for marker: null (do nothing), 'auto' (center of boundaries), {"ra_center": val, "dec_center": val} (custom coords)
   threshold: null # Threshold for marking peaks in the convergence map (float or null)
 
@@ -48,10 +51,13 @@ snr:
   gridlines: true
   num_shuffles: 100  # Number of shuffles for SNR calculation
 
+  # Smoothing configuration
+  smoothing:
+    type: 'gaussian'  # Current options: 'gaussian' or null (not reccomended for S/N maps)
+    sigma: 2.0  # Gaussian filter sigma parameter
+
   # Optional Plotting
   vmax: null
   vmin: null
-  smoothing: 'gaussian_filter' # Current options: null or 'gaussian_filter'
-  gaussian_kernel: 2
   cluster_center: null # Marker: null (no marker), 'auto' (center of boundaries), {"ra_center": float, "dec_center": float} (custom coords)
   threshold: null # Threshold for marking peaks in the convergence map (float or null)
