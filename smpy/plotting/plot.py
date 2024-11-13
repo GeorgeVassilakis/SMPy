@@ -4,9 +4,9 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.ndimage import gaussian_filter
 import numpy as np
 from matplotlib.animation import FuncAnimation
-from lenspack.peaks import find_peaks2d
+#from lenspack.peaks import find_peaks2d
 
-def plot_convergence(convergence, scaled_boundaries, true_boundaries, config, output_name):
+def plot_convergence(filtered_convergence, scaled_boundaries, true_boundaries, config, output_name):
     """
     Make plot of convergence map and save to file using information passed
     in run configuration file. 
@@ -37,22 +37,12 @@ def plot_convergence(convergence, scaled_boundaries, true_boundaries, config, ou
     plt.rcParams.update({'ytick.direction':'in'})
     plt.rcParams.update({'axes.labelsize': fontsize})
     plt.rcParams.update({'axes.titlesize': fontsize})
-
-    
-    # Apply Gaussian filter -- is this the right place to do it?
-    # We are planning on implementing other filters at some point, right?
-    #filtered_convergence = gaussian_filter(convergence, config['gaussian_kernel'])
-    
-    if config['smoothing'] == 'gaussian_filter':
-        filtered_convergence = gaussian_filter(convergence, config['gaussian_kernel'])
-    elif config['smoothing'] is None:
-        filtered_convergence = convergence
         
     # Find peaks of convergence
-    peaks = (find_peaks2d(filtered_convergence, threshold=config['threshold'], include_border=False) if config['threshold'] is not None else ([], [], []))
+    #peaks = (find_peaks2d(filtered_convergence, threshold=config['threshold'], include_border=False) if config['threshold'] is not None else ([], [], []))
 
-    ra_peaks = [scaled_boundaries['ra_min'] + (x + 0.5) * (scaled_boundaries['ra_max'] - scaled_boundaries['ra_min']) / filtered_convergence.shape[1] for x in peaks[1]]
-    dec_peaks = [scaled_boundaries['dec_min'] + (y + 0.5) * (scaled_boundaries['dec_max'] - scaled_boundaries['dec_min']) / filtered_convergence.shape[0] for y in peaks[0]]
+    #ra_peaks = [scaled_boundaries['ra_min'] + (x + 0.5) * (scaled_boundaries['ra_max'] - scaled_boundaries['ra_min']) / filtered_convergence.shape[1] for x in peaks[1]]
+    #dec_peaks = [scaled_boundaries['dec_min'] + (y + 0.5) * (scaled_boundaries['dec_max'] - scaled_boundaries['dec_min']) / filtered_convergence.shape[0] for y in peaks[0]]
 
     # Make the plot!
     fig, ax = plt.subplots(
@@ -95,7 +85,7 @@ def plot_convergence(convergence, scaled_boundaries, true_boundaries, config, ou
     if ra_center is not None:
         ax.plot(ra_center, dec_center, 'wx', markersize=10)
 
-    ax.scatter(ra_peaks, dec_peaks, s=100, facecolors='none', edgecolors='g', linewidth=1.5)
+   #ax.scatter(ra_peaks, dec_peaks, s=100, facecolors='none', edgecolors='g', linewidth=1.5)
 
     # Determine nice step sizes based on the range
     ra_range = true_boundaries['ra_max'] - true_boundaries['ra_min']

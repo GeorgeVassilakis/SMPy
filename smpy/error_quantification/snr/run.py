@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from smpy import utils
 from smpy.mapping_methods.kaiser_squires import kaiser_squires
-from smpy.plotting import plot
+from smpy.plotting import plot, filters
 
 def read_config(file_path):
     with open(file_path, 'r') as file:
@@ -58,25 +58,31 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
     
     # Calculate kappa for shuffled maps
     kappa_e_list, kappa_b_list = ks_inversion_list(g1_g2_map_list)
+
+    # Process maps
+    filter_config = config.get('smoothing')
+    processed_kappa_e_list = [filters.apply_filter(k, filter_config) for k in kappa_e_list]
+    processed_kappa_b_list = [filters.apply_filter(k, filter_config) for k in kappa_b_list]
     
     # Calculate variance maps
-    variance_map_e = np.var(np.stack(kappa_e_list, axis=0), axis=0) if kappa_e_list else None
-    variance_map_b = np.var(np.stack(kappa_b_list, axis=0), axis=0) if kappa_b_list else None
+    variance_map_e = np.var(np.stack(processed_kappa_e_list, axis=0), axis=0)
+    variance_map_b = np.var(np.stack(processed_kappa_b_list, axis=0), axis=0)
     
-    # Initialize dictionary for signal-to-noise maps
+    # Create SNR maps
     sn_maps = {}
     
-    # Calculate signal-to-noise maps if the respective mode exists
-    if 'E' in convergence_maps and variance_map_e is not None:
-        sn_maps['E'] = convergence_maps['E'] / np.sqrt(variance_map_e)
+    if 'E' in convergence_maps:
+        convergence_e = convergence_maps['E']
+        convergence_e = filters.apply_filter(convergence_e, filter_config)
+        sn_maps['E'] = convergence_e / np.sqrt(variance_map_e)
     
-    if 'B' in convergence_maps and variance_map_b is not None:
-        sn_maps['B'] = convergence_maps['B'] / np.sqrt(variance_map_b)
+    if 'B' in convergence_maps:
+        convergence_b = convergence_maps['B']
+        convergence_b = filters.apply_filter(convergence_b, filter_config)
+        sn_maps['B'] = convergence_b / np.sqrt(variance_map_b)
     
-    # Plot and save the SNR maps
-    modes = config['mode'] if isinstance(config['mode'], list) else [config['mode']]
-    
-    for mode in modes:
+    # Plot SNR maps
+    for mode in config['mode']:
         if mode in sn_maps:
             plot_config = config.copy()
             plot_config['plot_title'] = f'{config["plot_title"]} ({mode}-mode)'
