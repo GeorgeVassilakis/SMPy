@@ -39,7 +39,7 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
     shear_df = utils.scale_ra_dec(shear_df)
     
     # Create shuffled dataframes - this should preserve ra_scaled and dec_scaled columns
-    shuffled_dfs = utils.generate_multiple_shear_dfs(shear_df, config['num_shuffles'])
+    shuffled_dfs = utils.generate_multiple_shear_dfs(shear_df, config['num_shuffles'], config['shuffle_type'])
     
     # Create shear grids for shuffled dataframes using scaled coordinates
     g1_g2_map_list = []

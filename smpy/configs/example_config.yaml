@@ -1,4 +1,4 @@
-# YAML File for SMPy/KaiserSquires/run.py  
+# YAML File for SMPy Configuration
 
 # General settings
 general:
@@ -23,17 +23,18 @@ general:
 
 # Convergence Map Settings
 convergence:
+  # Smoothing configuration
+  smoothing:
+    type: 'gaussian'  # Current options: 'gaussian' or null
+    sigma: 2.0  # Gaussian filter sigma parameter
+
+  # Plotting
   figsize: [20, 10]
   cmap: 'magma'
   xlabel: 'Right Ascension (deg)'
   ylabel: 'Declination (deg)'
   plot_title: 'Convergence Map'
   gridlines: true
-
-  # Smoothing configuration
-  smoothing:
-    type: 'gaussian'  # Current options: 'gaussian' or null
-    sigma: 2.0  # Gaussian filter sigma parameter
 
   # Optional Plotting
   vmax: null
@@ -43,6 +44,15 @@ convergence:
 
 # SNR Map Settings
 snr:
+  # Type of SNR map
+  shuffle_type: 'spatial' # Options: 'spatial' or 'oritentation'
+
+  # Smoothing configuration
+  smoothing:
+    type: 'gaussian'  # Current options: 'gaussian' or null (not reccomended for S/N maps)
+    sigma: 2.0  # Gaussian filter sigma parameter
+
+  # Plotting
   figsize: [20, 10]
   cmap: 'magma'
   xlabel: 'Right Ascension (deg)'
@@ -50,11 +60,6 @@ snr:
   plot_title: 'Signal-to-Noise Map'
   gridlines: true
   num_shuffles: 100  # Number of shuffles for SNR calculation
-
-  # Smoothing configuration
-  smoothing:
-    type: 'gaussian'  # Current options: 'gaussian' or null (not reccomended for S/N maps)
-    sigma: 2.0  # Gaussian filter sigma parameter
 
   # Optional Plotting
   vmax: null
