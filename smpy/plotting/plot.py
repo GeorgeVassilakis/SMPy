@@ -4,7 +4,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.ndimage import gaussian_filter
 import numpy as np
 from matplotlib.animation import FuncAnimation
-#from lenspack.peaks import find_peaks2d
+from smpy.utils import find_peaks2d
 
 def plot_convergence(filtered_convergence, scaled_boundaries, true_boundaries, config, output_name):
     """
@@ -37,12 +37,6 @@ def plot_convergence(filtered_convergence, scaled_boundaries, true_boundaries, c
     plt.rcParams.update({'ytick.direction':'in'})
     plt.rcParams.update({'axes.labelsize': fontsize})
     plt.rcParams.update({'axes.titlesize': fontsize})
-        
-    # Find peaks of convergence
-    #peaks = (find_peaks2d(filtered_convergence, threshold=config['threshold'], include_border=False) if config['threshold'] is not None else ([], [], []))
-
-    #ra_peaks = [scaled_boundaries['ra_min'] + (x + 0.5) * (scaled_boundaries['ra_max'] - scaled_boundaries['ra_min']) / filtered_convergence.shape[1] for x in peaks[1]]
-    #dec_peaks = [scaled_boundaries['dec_min'] + (y + 0.5) * (scaled_boundaries['dec_max'] - scaled_boundaries['dec_min']) / filtered_convergence.shape[0] for y in peaks[0]]
 
     # Make the plot!
     fig, ax = plt.subplots(
@@ -61,6 +55,19 @@ def plot_convergence(filtered_convergence, scaled_boundaries, true_boundaries, c
         origin='lower' # Sets the origin to bottom left to match the RA/DEC convention
     )
     
+    # Plot peaks if a threshold is specified
+    threshold = config.get('threshold', None)
+    if threshold is not None:
+        # Find peaks of convergence using the `find_peaks2d` function
+        X, Y, heights = find_peaks2d(filtered_convergence, threshold=threshold)
+
+        # Convert peak indices to RA/Dec coordinates for plotting
+        ra_peaks = [scaled_boundaries['ra_min'] + (x + 0.5) * (scaled_boundaries['ra_max'] - scaled_boundaries['ra_min']) / filtered_convergence.shape[1] for x in X]
+        dec_peaks = [scaled_boundaries['dec_min'] + (y + 0.5) * (scaled_boundaries['dec_max'] - scaled_boundaries['dec_min']) / filtered_convergence.shape[0] for y in Y]
+
+        # Plot detected peaks as green circles
+        ax.scatter(ra_peaks, dec_peaks, s=100, facecolors='none', edgecolors='g', linewidth=1.5)
+
     # Mark cluster center if specified
     cluster_center = config['cluster_center']
     ra_center = None
@@ -85,7 +92,6 @@ def plot_convergence(filtered_convergence, scaled_boundaries, true_boundaries, c
     if ra_center is not None:
         ax.plot(ra_center, dec_center, 'wx', markersize=10)
 
-   #ax.scatter(ra_peaks, dec_peaks, s=100, facecolors='none', edgecolors='g', linewidth=1.5)
 
     # Determine nice step sizes based on the range
     ra_range = true_boundaries['ra_max'] - true_boundaries['ra_min']

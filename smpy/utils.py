@@ -284,3 +284,46 @@ def g1g2_to_gt_gc(g1, g2, ra, dec, ra_c, dec_c, pix_ra = 100):
     gc = -g1 * np.sin(2 * phi) + g2 * np.cos(2 * phi)
 
     return gt, gc, phi
+
+def find_peaks2d(image, threshold=None):
+    """
+    Identify peaks in a 2D array (image) above a specified threshold.
+    A peak is a pixel with a value greater than its 8 neighbors.
+
+    Minimized version of function from Lenspack.
+
+    Parameters:
+    - image (np.ndarray): 2D array representing the image.
+    - threshold (float, optional): Minimum pixel value to consider as a peak. Defaults to the minimum of `image`.
+
+    Returns:
+    - X, Y, heights (tuple): Indices of peaks (X, Y) and their corresponding heights.
+    """
+    image = np.atleast_2d(image)
+
+    # Set threshold to the minimum value in the image if none provided
+    threshold = threshold if threshold is not None else image.min()
+
+    # Pad the image to simplify border peak checks
+    padded_image = np.pad(image, pad_width=1, mode='constant', constant_values=image.min())
+
+    # Check for peaks by comparing to neighbors
+    is_peak = (
+        (padded_image[1:-1, 1:-1] > padded_image[:-2, :-2]) &
+        (padded_image[1:-1, 1:-1] > padded_image[:-2, 1:-1]) &
+        (padded_image[1:-1, 1:-1] > padded_image[:-2, 2:]) &
+        (padded_image[1:-1, 1:-1] > padded_image[1:-1, :-2]) &
+        (padded_image[1:-1, 1:-1] > padded_image[1:-1, 2:]) &
+        (padded_image[1:-1, 1:-1] > padded_image[2:, :-2]) &
+        (padded_image[1:-1, 1:-1] > padded_image[2:, 1:-1]) &
+        (padded_image[1:-1, 1:-1] > padded_image[2:, 2:])
+    )
+
+    # Apply threshold
+    peaks_mask = is_peak & (image >= threshold)
+
+    # Get peak coordinates and their heights
+    Y, X = np.nonzero(peaks_mask)
+    heights = image[Y, X]
+
+    return X, Y, heights
