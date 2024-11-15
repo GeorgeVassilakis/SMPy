@@ -59,7 +59,11 @@ def plot_convergence(filtered_convergence, scaled_boundaries, true_boundaries, c
     threshold = config.get('threshold', None)
     if threshold is not None:
         # Find peaks of convergence using the `find_peaks2d` function
-        X, Y, heights = find_peaks2d(filtered_convergence, threshold=threshold)
+        X, Y, heights, coords = find_peaks2d(filtered_convergence, 
+                                           threshold=threshold,
+                                           verbose=config.get('verbose', False),  # Get verbose setting from config
+                                           true_boundaries=true_boundaries,
+                                           scaled_boundaries=scaled_boundaries)
 
         # Convert peak indices to RA/Dec coordinates for plotting
         ra_peaks = [scaled_boundaries['ra_min'] + (x + 0.5) * (scaled_boundaries['ra_max'] - scaled_boundaries['ra_min']) / filtered_convergence.shape[1] for x in X]

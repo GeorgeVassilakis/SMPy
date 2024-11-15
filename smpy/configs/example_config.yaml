@@ -10,7 +10,7 @@ general:
 
   # Map creation settings
   method: "kaiser_squires"  # Convergence map method
-  create_snr: false  # Set to false if you don't want to create the SNR map
+  create_snr: true  # Set to false if you don't want to create the SNR map
 
   # Common parameters
   resolution: 0.4  # Pixel resolution of the map in arcminutes
@@ -41,6 +41,7 @@ convergence:
   vmin: null
   cluster_center: null # Options for marker: null (do nothing), 'auto' (center of boundaries), {"ra_center": val, "dec_center": val} (custom coords)
   threshold: null # Threshold for marking peaks in the convergence map (float or null)
+  verbose: false # Print out table of peak values and positions
 
 # SNR Map Settings
 snr:
@@ -66,3 +67,4 @@ snr:
   vmin: null
   cluster_center: null # Marker: null (no marker), 'auto' (center of boundaries), {"ra_center": float, "dec_center": float} (custom coords)
   threshold: null # Threshold for marking peaks in the convergence map (float or null)
+  verbose: false # Print out table of peak values and positions

@@ -285,19 +285,20 @@ def g1g2_to_gt_gc(g1, g2, ra, dec, ra_c, dec_c, pix_ra = 100):
 
     return gt, gc, phi
 
-def find_peaks2d(image, threshold=None):
+def find_peaks2d(image, threshold=None, verbose=False, true_boundaries=None, scaled_boundaries=None):
     """
     Identify peaks in a 2D array (image) above a specified threshold.
     A peak is a pixel with a value greater than its 8 neighbors.
 
-    Minimized version of function from Lenspack.
-
     Parameters:
     - image (np.ndarray): 2D array representing the image.
     - threshold (float, optional): Minimum pixel value to consider as a peak. Defaults to the minimum of `image`.
+    - verbose (bool): Whether to print peak information.
+    - true_boundaries (dict): Dictionary containing true RA/Dec boundaries for coordinate conversion.
+    - scaled_boundaries (dict): Dictionary containing scaled RA/Dec boundaries for coordinate conversion.
 
     Returns:
-    - X, Y, heights (tuple): Indices of peaks (X, Y) and their corresponding heights.
+    - X, Y, heights, coords (tuple): Indices of peaks (X, Y), their heights, and their true coordinates (if boundaries provided).
     """
     image = np.atleast_2d(image)
 
@@ -326,4 +327,37 @@ def find_peaks2d(image, threshold=None):
     Y, X = np.nonzero(peaks_mask)
     heights = image[Y, X]
 
-    return X, Y, heights
+    # Sort peaks by height in descending order
+    sort_indices = np.argsort(-heights)  # Negative for descending order
+    X = X[sort_indices]
+    Y = Y[sort_indices]
+    heights = heights[sort_indices]
+
+    # Convert pixel coordinates to true RA/Dec if boundaries are provided
+    coords = None
+    if verbose and true_boundaries and scaled_boundaries:
+        coords = []
+        for x, y in zip(X, Y):
+            # Convert pixel coordinates to scaled coordinates
+            scaled_ra = scaled_boundaries['ra_min'] + (x + 0.5) * (scaled_boundaries['ra_max'] - scaled_boundaries['ra_min']) / image.shape[1]
+            scaled_dec = scaled_boundaries['dec_min'] + (y + 0.5) * (scaled_boundaries['dec_max'] - scaled_boundaries['dec_min']) / image.shape[0]
+            
+            # Convert scaled coordinates to true coordinates
+            true_ra = np.interp(scaled_ra,
+                              [scaled_boundaries['ra_min'], scaled_boundaries['ra_max']],
+                              [true_boundaries['ra_min'], true_boundaries['ra_max']])
+            true_dec = np.interp(scaled_dec,
+                               [scaled_boundaries['dec_min'], scaled_boundaries['dec_max']],
+                               [true_boundaries['dec_min'], true_boundaries['dec_max']])
+            coords.append((true_ra, true_dec))
+
+        # Print peak information
+        print("Detected Peaks:")
+        print("-" * 60)
+        print(f"{'Peak #':<8}{'Value':<12}{'RA':<12}{'Dec':<12}")
+        print("-" * 60)
+        for i, ((ra, dec), height) in enumerate(zip(coords, heights), 1):
+            print(f"{i:<8}{height:.<12.5f}{ra:.<12.5f}{dec:.<12.5f}")
+        print("-" * 60)
+
+    return X, Y, heights, coords
