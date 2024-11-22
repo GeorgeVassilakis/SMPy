@@ -91,19 +91,6 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
             plot_config = config.copy()
             plot_config['plot_title'] = f'{config["plot_title"]} ({mode}-mode)'
             output_name = f"{config['output_directory']}{config['output_base_name']}_snr_{mode.lower()}_mode.png"
-            
-            # Update axis labels based on coordinate system
-            if coord_system_type == 'pixel':
-                plot_config['xlabel'] = 'X (pixels)'
-                plot_config['ylabel'] = 'Y (pixels)'
-                if isinstance(plot_config.get('cluster_center'), dict):
-                    # Convert ra_center, dec_center to x_center, y_center if needed
-                    if 'ra_center' in plot_config['cluster_center']:
-                        plot_config['cluster_center'] = {
-                            'x_center': plot_config['cluster_center']['ra_center'],
-                            'y_center': plot_config['cluster_center']['dec_center']
-                        }
-            
             plot.plot_convergence(sn_maps[mode], scaled_boundaries, true_boundaries, plot_config, output_name)
 
 def run(config_path, convergence_maps, scaled_boundaries, true_boundaries):

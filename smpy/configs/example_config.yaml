@@ -37,8 +37,10 @@ convergence:
   # Plotting
   figsize: [20, 10]
   cmap: 'magma'
-  xlabel: 'Right Ascension (deg)'
-  ylabel: 'Declination (deg)'
+  xlabel: 'auto'  # Options: 'auto' for automatic labels based on coordinate system,
+                  # null for no label, or custom string
+  ylabel: 'auto'  # Options: 'auto' for automatic labels based on coordinate system,
+                  # null for no label, or custom string
   plot_title: 'Convergence Map'
   gridlines: true
 
@@ -48,24 +50,26 @@ convergence:
   threshold: null # Threshold for marking peaks in the convergence map (float or null)
   verbose: null # Print out table of peak values and positions
   cluster_center: null  # Options: null (do nothing), 'auto' (center of image), or 
-                        # {'ra_center': float, 'dec_center': float} for radec (decimal degrees)
-                        # {'x_center': float, 'y_center': float} for pixel (pixel coordinates)
+                       # {'ra_center': float, 'dec_center': float} for radec (decimal degrees)
+                       # {'x_center': float, 'y_center': float} for pixel (pixel coordinates)
 
 # SNR Map Settings
 snr:
   # Type of SNR map
-  shuffle_type: 'spatial' # Options: 'spatial' or 'oritentation'
+  shuffle_type: 'spatial' # Options: 'spatial' or 'orientation'
 
   # Smoothing configuration
   smoothing:
-    type: 'gaussian'  # Options: 'gaussian' or null (null is not reccomended for S/N maps)
+    type: 'gaussian'  # Options: 'gaussian' or null (null is not recommended for S/N maps)
     sigma: 2.0  # Gaussian filter sigma parameter
 
   # Plotting
   figsize: [20, 10]
   cmap: 'magma'
-  xlabel: 'Right Ascension (deg)'
-  ylabel: 'Declination (deg)'
+  xlabel: 'auto'  # Options: 'auto' for automatic labels based on coordinate system,
+                  # null for no label, or custom string
+  ylabel: 'auto'  # Options: 'auto' for automatic labels based on coordinate system,
+                  # null for no label, or custom string
   plot_title: 'Signal-to-Noise Map'
   gridlines: true
   num_shuffles: 100  # Number of shuffles for SNR calculation
@@ -75,6 +79,6 @@ snr:
   vmin: null
   threshold: null # Threshold for marking peaks in the convergence map (float or null)
   verbose: null # Print out table of peak values and positions
-  cluster_center: null    # Options: null (do nothing), 'auto' (center of image), or 
-                          # {'ra_center': float, 'dec_center': float} for radec (decimal degrees)
-                          # {'x_center': float, 'y_center': float} for pixel (pixel coordinates)
+  cluster_center: null  # Options: null (do nothing), 'auto' (center of image), or 
+                       # {'ra_center': float, 'dec_center': float} for radec (decimal degrees)
+                       # {'x_center': float, 'y_center': float} for pixel (pixel coordinates)

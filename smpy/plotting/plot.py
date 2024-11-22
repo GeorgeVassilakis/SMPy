@@ -163,8 +163,19 @@ def _plot_convergence_pixel(filtered_convergence, scaled_boundaries, true_bounda
         ax.scatter(peak_x, peak_y, s=100, facecolors='none', edgecolors='g', linewidth=1.5)
     
     # Set labels
-    ax.set_xlabel(config.get('xlabel', 'X (pixels)'))
-    ax.set_ylabel(config.get('ylabel', 'Y (pixels)'))
+    xlabel = config.get('xlabel')
+    ylabel = config.get('ylabel')
+
+    if xlabel == 'auto':
+        ax.set_xlabel('X (pixels)')
+    elif xlabel is not None:
+        ax.set_xlabel(xlabel)
+        
+    if ylabel == 'auto':
+        ax.set_ylabel('Y (pixels)')
+    elif ylabel is not None:
+        ax.set_ylabel(ylabel)
+    
     ax.set_title(config.get('plot_title', ''))
     
     # Add grid if requested
@@ -274,8 +285,20 @@ def _plot_convergence_radec(filtered_convergence, scaled_boundaries, true_bounda
     ax.set_xticklabels([f"{x:.2f}" for x in x_ticks])
     ax.set_yticklabels([f"{y:.2f}" for y in y_ticks])
     
-    ax.set_xlabel(config['xlabel'])
-    ax.set_ylabel(config['ylabel'])
+    # Set labels
+    xlabel = config.get('xlabel')
+    ylabel = config.get('ylabel')
+    
+    if xlabel == 'auto':
+        ax.set_xlabel('Right Ascension (degrees)')
+    elif xlabel is not None:
+        ax.set_xlabel(xlabel)
+        
+    if ylabel == 'auto':
+        ax.set_ylabel('Declination (degrees)')
+    elif ylabel is not None:
+        ax.set_ylabel(ylabel)
+    
     ax.set_title(config['plot_title'])
     
     if config['gridlines']:
