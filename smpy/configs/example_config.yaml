@@ -2,85 +2,74 @@
 
 # General settings
 general:
-  # Coordinate system specific settings
-  coordinate_system: "radec"  # Options: "radec" or "pixel"
-  radec:
-    resolution: 0.4  # Resolution in arcminutes
-    coord1: 'ra'  # Column name for RA
-    coord2: 'dec'  # Column name for Dec
-  pixel:
-    downsample_factor: 170  # Factor to downsample pixel grid
-    coord1: 'X_IMAGE_se'  # Column name for X coordinate
-    coord2: 'Y_IMAGE_se'  # Column name for Y coordinate
-  
-  # Paths
+  # Input/Output paths
   input_path: "/home/wslgeorgios/SMPy/examples/data/forecast_lum_annular.fits"
   output_directory: "/home/wslgeorgios/SMPy/examples/outputs/"
-  output_base_name: "simulation_testing"  # Base name for output files
-  save_fits: false  # ***BROKEN FEATURE*** Save output as FITS file 
+  output_base_name: "simulation_testing"
+  save_fits: false  # Currently not supported
 
-  # Map creation settings
-  method: "kaiser_squires"  # Convergence map method
-  create_snr: true  # Set to false if you don't want to create the SNR map
-
-  # Common parameters
+  # Coordinate system settings
+  coordinate_system: "radec"  # 'radec' or 'pixel'
+  radec:
+    resolution: 0.4  # In arcminutes
+    coord1: 'ra'    # RA column name
+    coord2: 'dec'   # Dec column name
+  pixel:
+    downsample_factor: 170  # Grid reduction factor
+    coord1: 'X_IMAGE_se'    # X column name
+    coord2: 'Y_IMAGE_se'    # Y column name
+  
+  # Data columns
   g1_col: 'g1_Rinv'
   g2_col: 'g2_Rinv'
-  weight_col: 'weight' # Provide null if you have no weights
-  mode: ['E']  # Can be ['E'], ['B'], or ['E', 'B']
+  weight_col: 'weight'  # Set to null if no weights
+  
+  # Analysis settings
+  method: "kaiser_squires"
+  create_snr: true  # Whether to create SNR map
+  mode: ['E']  # ['E'], ['B'], or ['E', 'B']
 
 # Convergence Map Settings
 convergence:
-  # Smoothing configuration
   smoothing:
-    type: 'gaussian'  # Options: 'gaussian' or null
-    sigma: 2.0  # Gaussian filter sigma parameter
-
-  # Plotting
+    type: 'gaussian'  # 'gaussian' or null
+    sigma: 2.0        # Smoothing scale
+    
+  # Basic plotting
   figsize: [20, 10]
   cmap: 'magma'
-  xlabel: 'auto'  # Options: 'auto' for automatic labels based on coordinate system,
-                  # null for no label, or custom string
-  ylabel: 'auto'  # Options: 'auto' for automatic labels based on coordinate system,
-                  # null for no label, or custom string
+  xlabel: 'auto'  # 'auto', null, or custom string
+  ylabel: 'auto'  # 'auto', null, or custom string
   plot_title: 'Convergence Map'
   gridlines: true
-
-  # Optional Plotting
+  
+  # Advanced plotting
   vmax: null
   vmin: null
-  threshold: null # Threshold for marking peaks in the convergence map (float or null)
-  verbose: null # Print out table of peak values and positions
-  cluster_center: null  # Options: null (do nothing), 'auto' (center of image), or 
-                       # {'ra_center': float, 'dec_center': float} for radec (decimal degrees)
-                       # {'x_center': float, 'y_center': float} for pixel (pixel coordinates)
+  threshold: null    # Peak detection threshold
+  verbose: null      # Print peak information
+  cluster_center: null  # null, 'auto', or {ra/x_center: float, dec/y_center: float}
 
 # SNR Map Settings
 snr:
-  # Type of SNR map
-  shuffle_type: 'spatial' # Options: 'spatial' or 'orientation'
-
-  # Smoothing configuration
+  shuffle_type: 'spatial'  # 'spatial' or 'orientation'
+  num_shuffles: 100       # Number of random realizations
+  
   smoothing:
-    type: 'gaussian'  # Options: 'gaussian' or null (null is not recommended for S/N maps)
-    sigma: 2.0  # Gaussian filter sigma parameter
-
-  # Plotting
+    type: 'gaussian'  # 'gaussian' or null (null not recommended for SNR)
+    sigma: 2.0        # Smoothing scale
+  
+  # Basic plotting
   figsize: [20, 10]
   cmap: 'magma'
-  xlabel: 'auto'  # Options: 'auto' for automatic labels based on coordinate system,
-                  # null for no label, or custom string
-  ylabel: 'auto'  # Options: 'auto' for automatic labels based on coordinate system,
-                  # null for no label, or custom string
+  xlabel: 'auto'  # 'auto', null, or custom string
+  ylabel: 'auto'  # 'auto', null, or custom string
   plot_title: 'Signal-to-Noise Map'
   gridlines: true
-  num_shuffles: 100  # Number of shuffles for SNR calculation
-
-  # Optional Plotting
+  
+  # Advanced plotting
   vmax: null
   vmin: null
-  threshold: null # Threshold for marking peaks in the convergence map (float or null)
-  verbose: null # Print out table of peak values and positions
-  cluster_center: null  # Options: null (do nothing), 'auto' (center of image), or 
-                       # {'ra_center': float, 'dec_center': float} for radec (decimal degrees)
-                       # {'x_center': float, 'y_center': float} for pixel (pixel coordinates)
+  threshold: null    # Peak detection threshold
+  verbose: null      # Print peak information
+  cluster_center: null  # null, 'auto', or {ra/x_center: float, dec/y_center: float}
