@@ -6,8 +6,12 @@ general:
   coordinate_system: "radec"  # Options: "radec" or "pixel"
   radec:
     resolution: 0.4  # Resolution in arcminutes
+    coord1: 'ra'  # Column name for RA
+    coord2: 'dec'  # Column name for Dec
   pixel:
     downsample_factor: 170  # Factor to downsample pixel grid
+    coord1: 'X_IMAGE_se'  # Column name for X coordinate
+    coord2: 'Y_IMAGE_se'  # Column name for Y coordinate
   
   # Paths
   input_path: "/home/wslgeorgios/SMPy/examples/data/forecast_lum_annular.fits"
@@ -20,8 +24,6 @@ general:
   create_snr: true  # Set to false if you don't want to create the SNR map
 
   # Common parameters
-  coord1: 'ra'
-  coord2: 'dec'
   g1_col: 'g1_Rinv'
   g2_col: 'g2_Rinv'
   weight_col: 'weight' # Provide null if you have no weights

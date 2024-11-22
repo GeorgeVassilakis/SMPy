@@ -29,12 +29,13 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
     # Get coordinate system
     coord_system_type = config.get('coordinate_system', 'radec').lower()
     coord_system = get_coordinate_system(coord_system_type)
+    coord_config = config.get(coord_system_type, {})
     
     # Load shear data
     shear_df = utils.load_shear_data(
         config['input_path'],
-        config['coord1'],
-        config['coord2'],
+        coord_config['coord1'],
+        coord_config['coord2'],
         config['g1_col'],
         config['g2_col'],
         config['weight_col']
