@@ -4,181 +4,304 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.ndimage import gaussian_filter
 import numpy as np
 from matplotlib.animation import FuncAnimation
-#from lenspack.peaks import find_peaks2d
+from smpy.utils import find_peaks2d
+
+def _get_center_coordinates(cluster_center, scaled_boundaries, true_boundaries, coord_system_type):
+    """
+    Get center coordinates for plotting based on coordinate system type.
+    
+    Parameters
+    ----------
+    cluster_center : str, dict, or None
+        Can be:
+        - 'auto' for center of field
+        - dict with 'ra_center'/'dec_center' or 'x_center'/'y_center'
+        - None for no center
+    scaled_boundaries : dict
+        Scaled coordinate boundaries
+    true_boundaries : dict
+        True coordinate boundaries
+    coord_system_type : str
+        Either 'radec' or 'pixel'
+        
+    Returns
+    -------
+    tuple or None
+        (center_coord1, center_coord2) in scaled coordinates, or None if no center
+    """
+    if cluster_center is None:
+        return None, None
+        
+    if cluster_center == 'auto':
+        # For both systems, use the center of the scaled boundaries
+        center_coord1 = (scaled_boundaries['coord1_max'] + scaled_boundaries['coord1_min']) / 2
+        center_coord2 = (scaled_boundaries['coord2_max'] + scaled_boundaries['coord2_min']) / 2
+        return center_coord1, center_coord2
+        
+    if isinstance(cluster_center, dict):
+        # Handle both coordinate systems
+        if coord_system_type == 'radec':
+            key1, key2 = 'ra_center', 'dec_center'
+        else:  # pixel
+            key1, key2 = 'x_center', 'y_center'
+            
+        if key1 not in cluster_center or key2 not in cluster_center:
+            print(f"Warning: Expected {key1} and {key2} in cluster_center dictionary")
+            return None, None
+            
+        # Convert from true to scaled coordinates
+        center_coord1 = np.interp(
+            cluster_center[key1],
+            [true_boundaries['coord1_min'], true_boundaries['coord1_max']],
+            [scaled_boundaries['coord1_min'], scaled_boundaries['coord1_max']]
+        )
+        center_coord2 = np.interp(
+            cluster_center[key2],
+            [true_boundaries['coord2_min'], true_boundaries['coord2_max']],
+            [scaled_boundaries['coord2_min'], scaled_boundaries['coord2_max']]
+        )
+        return center_coord1, center_coord2
+        
+    print("Warning: Unrecognized cluster_center format")
+    return None, None
 
 def plot_convergence(filtered_convergence, scaled_boundaries, true_boundaries, config, output_name):
     """
-    Make plot of convergence map and save to file using information passed
-    in run configuration file. 
-
-    Arguments
-        convergence: XXX raw convergence map XXX
-        boundaries: XXX RA/Dec axis limits for plot, set in XXX
-        config: overall run configuration file
-
+    Make plot of convergence map using appropriate logic for coordinate system.
+    
+    Parameters
+    ----------
+    filtered_convergence : numpy.ndarray
+        The convergence map data
+    scaled_boundaries : dict
+        Dictionary containing scaled coordinate boundaries
+    true_boundaries : dict
+        Dictionary containing true coordinate boundaries
+    config : dict
+        Configuration dictionary containing plotting parameters
+    output_name : str
+        Path where to save the plot
     """
+    # Check coordinate system
+    coord_system = config.get('coordinate_system', 'radec').lower()
+    
+    if coord_system == 'radec':
+        _plot_convergence_radec(filtered_convergence, scaled_boundaries, true_boundaries, config, output_name)
+    else:
+        _plot_convergence_pixel(filtered_convergence, scaled_boundaries, true_boundaries, config, output_name)
 
-    # Embiggen font sizes, tick marks, etc.
-    fontsize = 15
-    plt.rcParams.update({'axes.linewidth': 1.3})
-    plt.rcParams.update({'xtick.labelsize': fontsize})
-    plt.rcParams.update({'ytick.labelsize': fontsize})
-    plt.rcParams.update({'xtick.major.size': 8})
-    plt.rcParams.update({'xtick.major.width': 1.3})
-    plt.rcParams.update({'xtick.minor.visible': True})
-    plt.rcParams.update({'xtick.minor.width': 1.})
-    plt.rcParams.update({'xtick.minor.size': 6})
-    plt.rcParams.update({'xtick.direction': 'in'})
-    plt.rcParams.update({'ytick.major.width': 1.3})
-    plt.rcParams.update({'ytick.major.size': 8})
-    plt.rcParams.update({'ytick.minor.visible': True})
-    plt.rcParams.update({'ytick.minor.width': 1.})
-    plt.rcParams.update({'ytick.minor.size':6})
-    plt.rcParams.update({'ytick.direction':'in'})
-    plt.rcParams.update({'axes.labelsize': fontsize})
-    plt.rcParams.update({'axes.titlesize': fontsize})
-        
-    # Find peaks of convergence
-    #peaks = (find_peaks2d(filtered_convergence, threshold=config['threshold'], include_border=False) if config['threshold'] is not None else ([], [], []))
+def _set_plot_params(fontsize=15):
+    """Set common plotting parameters."""
+    plt.rcParams.update({
+        'axes.linewidth': 1.3,
+        'xtick.labelsize': fontsize,
+        'ytick.labelsize': fontsize,
+        'xtick.major.size': 8,
+        'xtick.major.width': 1.3,
+        'xtick.minor.visible': True,
+        'xtick.minor.width': 1.,
+        'xtick.minor.size': 6,
+        'xtick.direction': 'in',
+        'ytick.major.width': 1.3,
+        'ytick.major.size': 8,
+        'ytick.minor.visible': True,
+        'ytick.minor.width': 1.,
+        'ytick.minor.size': 6,
+        'ytick.direction': 'in',
+        'axes.labelsize': fontsize,
+        'axes.titlesize': fontsize
+    })
 
-    #ra_peaks = [scaled_boundaries['ra_min'] + (x + 0.5) * (scaled_boundaries['ra_max'] - scaled_boundaries['ra_min']) / filtered_convergence.shape[1] for x in peaks[1]]
-    #dec_peaks = [scaled_boundaries['dec_min'] + (y + 0.5) * (scaled_boundaries['dec_max'] - scaled_boundaries['dec_min']) / filtered_convergence.shape[0] for y in peaks[0]]
+def _plot_convergence_pixel(filtered_convergence, scaled_boundaries, true_boundaries, config, output_name):
+    """Simplified plotting for pixel coordinates."""
+    _set_plot_params()
+    
+    # Create figure
+    fig, ax = plt.subplots(
+        nrows=1, ncols=1, 
+        figsize=config['figsize']
+    )
+    
+    # Plot convergence map
+    im = ax.imshow(
+        filtered_convergence,
+        cmap=config['cmap'],
+        vmax=config.get('vmax'),
+        vmin=config.get('vmin'),
+        extent=[scaled_boundaries['coord1_min'],
+                scaled_boundaries['coord1_max'],
+                scaled_boundaries['coord2_min'],
+                scaled_boundaries['coord2_max']],
+        origin='lower'
+    )
+    
+    # Handle center marking
+    center_x, center_y = _get_center_coordinates(
+        config.get('cluster_center'),
+        scaled_boundaries,
+        true_boundaries,
+        'pixel')
+    
+    if center_x is not None:
+        ax.plot(center_x, center_y, 'rx', markersize=10)
 
-    # Make the plot!
+    # Add peaks if threshold specified
+    threshold = config.get('threshold')
+    if threshold is not None:
+        X, Y, heights, coords = find_peaks2d(filtered_convergence, 
+                                           threshold=threshold,
+                                           verbose=config.get('verbose', False),
+                                           true_boundaries=true_boundaries,
+                                           scaled_boundaries=scaled_boundaries)
+        # Convert peak indices to pixel coordinates
+        peak_x = [scaled_boundaries['coord1_min'] + 
+                 (x + 0.5) * (scaled_boundaries['coord1_max'] - scaled_boundaries['coord1_min']) / 
+                 filtered_convergence.shape[1] for x in X]
+        peak_y = [scaled_boundaries['coord2_min'] + 
+                 (y + 0.5) * (scaled_boundaries['coord2_max'] - scaled_boundaries['coord2_min']) / 
+                 filtered_convergence.shape[0] for y in Y]
+        ax.scatter(peak_x, peak_y, s=100, facecolors='none', edgecolors='g', linewidth=1.5)
+    
+    # Set labels
+    ax.set_xlabel(config.get('xlabel', 'X (pixels)'))
+    ax.set_ylabel(config.get('ylabel', 'Y (pixels)'))
+    ax.set_title(config.get('plot_title', ''))
+    
+    # Add grid if requested
+    if config.get('gridlines', False):
+        ax.grid(color='black')
+    
+    # Add colorbar
+    plt.rcParams.update({'ytick.minor.visible': False})
+    plt.rcParams.update({'xtick.minor.visible': False})
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="5%", pad=0.07)
+    fig.colorbar(im, cax=cax)
+    
+    # Save figure
+    if output_name:
+        fig.savefig(output_name)
+        print(f"Convergence map saved as PNG file: {output_name}")
+    
+    plt.close(fig)
+
+def _plot_convergence_radec(filtered_convergence, scaled_boundaries, true_boundaries, config, output_name):
+    """Original plotting implementation for RA/Dec coordinates."""
+    # Set plotting parameters
+    _set_plot_params()
+
+    # Create figure
     fig, ax = plt.subplots(
         nrows=1, ncols=1, figsize=config['figsize'], tight_layout=True
     )
     
+    # Plot convergence map
     im = ax.imshow(
         filtered_convergence[:, ::-1], 
         cmap=config['cmap'],
         vmax=config['vmax'], 
         vmin=config['vmin'],
-        extent=[scaled_boundaries['ra_max'], 
-                scaled_boundaries['ra_min'], 
-                scaled_boundaries['dec_min'], 
-                scaled_boundaries['dec_max']],
-        origin='lower' # Sets the origin to bottom left to match the RA/DEC convention
+        extent=[scaled_boundaries['coord1_max'], 
+                scaled_boundaries['coord1_min'], 
+                scaled_boundaries['coord2_min'], 
+                scaled_boundaries['coord2_max']],
+        origin='lower'
     )
     
-    # Mark cluster center if specified
-    cluster_center = config['cluster_center']
-    ra_center = None
-    dec_center = None
-    
-    if cluster_center == 'auto':
-        ra_center = (scaled_boundaries['ra_max'] + scaled_boundaries['ra_min']) / 2
-        dec_center = (scaled_boundaries['dec_max'] + scaled_boundaries['dec_min']) / 2
-    elif isinstance(cluster_center, dict):
-        # Scale the provided coordinates from true to scaled coordinates
-        ra_center = np.interp(cluster_center['ra_center'],
-                            [true_boundaries['ra_min'], true_boundaries['ra_max']],
-                            [scaled_boundaries['ra_min'], scaled_boundaries['ra_max']])
+    # Plot peaks if threshold specified
+    threshold = config.get('threshold')
+    if threshold is not None:
+        X, Y, heights, coords = find_peaks2d(filtered_convergence, 
+                                           threshold=threshold,
+                                           verbose=config.get('verbose', False),
+                                           true_boundaries=true_boundaries,
+                                           scaled_boundaries=scaled_boundaries)
         
-        dec_center = np.interp(cluster_center['dec_center'],
-                             [true_boundaries['dec_min'], true_boundaries['dec_max']],
-                             [scaled_boundaries['dec_min'], scaled_boundaries['dec_max']])
-    elif cluster_center is not None:
-        print("Unrecognized cluster_center format, skipping marker.")
-        ra_center = dec_center = None
+        # Convert peak indices to RA/Dec coordinates
+        ra_peaks = [scaled_boundaries['coord1_min'] + 
+                   (x + 0.5) * (scaled_boundaries['coord1_max'] - scaled_boundaries['coord1_min']) / 
+                   filtered_convergence.shape[1] for x in X]
+        dec_peaks = [scaled_boundaries['coord2_min'] + 
+                    (y + 0.5) * (scaled_boundaries['coord2_max'] - scaled_boundaries['coord2_min']) / 
+                    filtered_convergence.shape[0] for y in Y]
+        
+        ax.scatter(ra_peaks, dec_peaks, s=100, facecolors='none', edgecolors='g', linewidth=1.5)
 
+    # Handle center marking
+    ra_center, dec_center = _get_center_coordinates(
+        config.get('cluster_center'),
+        scaled_boundaries,
+        true_boundaries,
+        'radec'
+    )
+    
     if ra_center is not None:
-        ax.plot(ra_center, dec_center, 'wx', markersize=10)
+        ax.plot(ra_center, dec_center, 'rx', markersize=10)
 
-   #ax.scatter(ra_peaks, dec_peaks, s=100, facecolors='none', edgecolors='g', linewidth=1.5)
-
-    # Determine nice step sizes based on the range
-    ra_range = true_boundaries['ra_max'] - true_boundaries['ra_min']
-    dec_range = true_boundaries['dec_max'] - true_boundaries['dec_min']
-
-    # Choose step size (0.01, 0.05, 0.1, 0.25, 0.5) based on range size
+    # Handle ticks
+    ra_range = true_boundaries['coord1_max'] - true_boundaries['coord1_min']
+    dec_range = true_boundaries['coord2_max'] - true_boundaries['coord2_min']
+    
     possible_steps = np.array([0.01, 0.05, 0.1, 0.2, 0.5])
     ra_step = possible_steps[np.abs(ra_range/5 - possible_steps).argmin()]
     dec_step = possible_steps[np.abs(dec_range/5 - possible_steps).argmin()]
-
-    # Generate ticks
-    x_ticks = np.arange(np.ceil(true_boundaries['ra_min']/ra_step)*ra_step,
-                        np.floor(true_boundaries['ra_max']/ra_step)*ra_step + ra_step/2,
-                        ra_step)
-    y_ticks = np.arange(np.ceil(true_boundaries['dec_min']/dec_step)*dec_step,
-                        np.floor(true_boundaries['dec_max']/dec_step)*dec_step + dec_step/2,
-                        dec_step)
-
+    
+    x_ticks = np.arange(
+        np.ceil(true_boundaries['coord1_min']/ra_step)*ra_step,
+        np.floor(true_boundaries['coord1_max']/ra_step)*ra_step + ra_step/2,
+        ra_step
+    )
+    y_ticks = np.arange(
+        np.ceil(true_boundaries['coord2_min']/dec_step)*dec_step,
+        np.floor(true_boundaries['coord2_max']/dec_step)*dec_step + dec_step/2,
+        dec_step
+    )
+    
     # Convert to scaled coordinates
-    scaled_x_ticks = np.interp(x_ticks, 
-                            [true_boundaries['ra_min'], true_boundaries['ra_max']], 
-                            [scaled_boundaries['ra_min'], scaled_boundaries['ra_max']])
-    scaled_y_ticks = np.interp(y_ticks, 
-                            [true_boundaries['dec_min'], true_boundaries['dec_max']], 
-                            [scaled_boundaries['dec_min'], scaled_boundaries['dec_max']])
-
-    # Set the ticks
+    scaled_x_ticks = np.interp(
+        x_ticks,
+        [true_boundaries['coord1_min'], true_boundaries['coord1_max']],
+        [scaled_boundaries['coord1_min'], scaled_boundaries['coord1_max']]
+    )
+    scaled_y_ticks = np.interp(
+        y_ticks,
+        [true_boundaries['coord2_min'], true_boundaries['coord2_max']],
+        [scaled_boundaries['coord2_min'], scaled_boundaries['coord2_max']]
+    )
+    
     ax.set_xticks(scaled_x_ticks)
     ax.set_yticks(scaled_y_ticks)
     ax.set_xticklabels([f"{x:.2f}" for x in x_ticks])
     ax.set_yticklabels([f"{y:.2f}" for y in y_ticks])
-      
+    
     ax.set_xlabel(config['xlabel'])
     ax.set_ylabel(config['ylabel'])
     ax.set_title(config['plot_title'])
-
-    # Is there a better way to force something to be a boolean?
-    if config['gridlines'] == True:
+    
+    if config['gridlines']:
         ax.grid(color='black')
-
-    # Add colorbar; turn off minor axes first
+    
+    # Add colorbar
     plt.rcParams.update({'ytick.minor.visible': False})
     plt.rcParams.update({'xtick.minor.visible': False})
-
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size="5%", pad=0.07)
     fig.colorbar(im, cax=cax)
-
-    # Save to file and exit, redoing tight_layout b/c sometimes figure gets cut off 
-    fig.tight_layout() 
+    
+    # Save figure
+    fig.tight_layout()
     fig.savefig(output_name)
     print(f"Convergence map saved as PNG file: {output_name}")
     plt.close(fig)
 
-def plot_animation(convergence, boundaries, config, output_name='animation.mp4', center_cl=None, smoothing=False, num_frames=50, fps=5):
-    """
-    Make plot of convergence map and save to file using information passed
-    in run configuration file. 
+def plot_animation(convergence, boundaries, config, output_name='animation.mp4', 
+                  center_cl=None, smoothing=False, num_frames=50, fps=5):
+    """Animation plotting function [original implementation]"""
+    _set_plot_params()
 
-    Arguments
-        convergence: XXX raw convergence map XXX
-        boundaries: XXX RA/Dec axis limits for plot, set in XXX
-        config: overall run configuration file
-
-    """
-
-    # Embiggen font sizes, tick marks, etc.
-    fontsize = 15
-    plt.rcParams.update({'axes.linewidth': 1.3})
-    plt.rcParams.update({'xtick.labelsize': fontsize})
-    plt.rcParams.update({'ytick.labelsize': fontsize})
-    plt.rcParams.update({'xtick.major.size': 8})
-    plt.rcParams.update({'xtick.major.width': 1.3})
-    plt.rcParams.update({'xtick.minor.visible': True})
-    plt.rcParams.update({'xtick.minor.width': 1.})
-    plt.rcParams.update({'xtick.minor.size': 6})
-    plt.rcParams.update({'xtick.direction': 'in'})
-    plt.rcParams.update({'ytick.major.width': 1.3})
-    plt.rcParams.update({'ytick.major.size': 8})
-    plt.rcParams.update({'ytick.minor.visible': True})
-    plt.rcParams.update({'ytick.minor.width': 1.})
-    plt.rcParams.update({'ytick.minor.size':6})
-    plt.rcParams.update({'ytick.direction':'in'})
-    plt.rcParams.update({'axes.labelsize': fontsize})
-    plt.rcParams.update({'axes.titlesize': fontsize})
-
-    # Make the plot!
-    fig, ax = plt.subplots(
-        nrows=1, ncols=1, figsize=config['figsize'], tight_layout=True
-    )
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=config['figsize'], tight_layout=True)
         
     def update(frame):
-        
         if smoothing:
             filtered_convergence = gaussian_filter(convergence[frame], config['gaussian_kernel'])
         else:
@@ -189,36 +312,28 @@ def plot_animation(convergence, boundaries, config, output_name='animation.mp4',
             cmap=config['cmap'],
             vmax=1.5, 
             vmin=-1.5,
-            extent=[boundaries['ra_max'], 
-                    boundaries['ra_min'], 
-                    boundaries['dec_min'], 
-                    boundaries['dec_max']],
-            origin='lower' # Sets the origin to bottom left to match the RA/DEC convention
+            extent=[boundaries['coord1_max'], 
+                    boundaries['coord1_min'], 
+                    boundaries['coord2_min'], 
+                    boundaries['coord2_max']],
+            origin='lower'
         )  
         if center_cl is not None:
             ra_c, dec_c = center_cl["ra_c"], center_cl["dec_c"]
-            ax.plot(ra_c, dec_c, 'wx', markersize=10)
+            ax.plot(ra_c, dec_c, 'rx', markersize=10)
 
         ax.set_xlabel(config['xlabel'])
         ax.set_ylabel(config['ylabel'])
-        #ax.set_title(config['plot_title'])
 
-        # Is there a better way to force something to be a boolean?
-        if config['gridlines'] == True:
+        if config['gridlines']:
             ax.grid(color='black')
-
-        # Add colorbar; turn off minor axes first
-        plt.rcParams.update({'ytick.minor.visible': False})
-        plt.rcParams.update({'xtick.minor.visible': False})
 
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="5%", pad=0.07)
         fig.colorbar(im, cax=cax)
 
-        # Save to file and exit, redoing tight_layout b/c sometimes figure gets cut off 
-        fig.tight_layout() 
+        fig.tight_layout()
 
-    # Create the animation for the first 20 frames
     ani = FuncAnimation(fig, update, frames=num_frames, repeat=False)
     ani.save(output_name, writer='ffmpeg', fps=fps)
     print(f"Convergence map saved as MP4 file: {output_name}")
