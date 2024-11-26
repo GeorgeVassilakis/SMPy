@@ -1,63 +1,68 @@
 import yaml
 import numpy as np
-import pandas as pd
 from smpy import utils
 from smpy.mapping_methods.kaiser_squires import kaiser_squires
 from smpy.plotting import plot, filters
+from smpy.coordinates import get_coordinate_system
 
 def read_config(file_path):
     with open(file_path, 'r') as file:
         return yaml.safe_load(file)
 
-def ks_inversion_list(grid_list):
-    """
-    Iterate through a list of (g1map, g2map) pairs and return a list of kappa_e values.
-    """
+def ks_inversion_list(grid_list, coord_system_type='radec'):
+
     kappa_e_list = []
     kappa_b_list = []
     
+    # Set g2 sign based on coordinate system
+    g2_sign = -1 if coord_system_type == 'radec' else 1
+    
     for g1map, g2map in grid_list:
-        # Call the ks_inversion function for each pair
-        kappa_e, kappa_b = kaiser_squires.ks_inversion(g1map, -g2map)
+        kappa_e, kappa_b = kaiser_squires.ks_inversion(g1map, g2_sign * g2map)
         kappa_e_list.append(kappa_e)
         kappa_b_list.append(kappa_b)
     
     return kappa_e_list, kappa_b_list
 
 def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
+
+    # Get coordinate system
+    coord_system_type = config.get('coordinate_system', 'radec').lower()
+    coord_system = get_coordinate_system(coord_system_type)
+    coord_config = config.get(coord_system_type, {})
+    
     # Load shear data
     shear_df = utils.load_shear_data(
         config['input_path'],
-        config['ra_col'],
-        config['dec_col'],
+        coord_config['coord1'],
+        coord_config['coord2'],
         config['g1_col'],
         config['g2_col'],
         config['weight_col']
     )
     
-    # Scale RA and DEC - store scaled coordinates in new columns
-    shear_df = utils.scale_ra_dec(shear_df)
+    # Transform coordinates
+    shear_df = coord_system.transform_coordinates(shear_df)
     
-    # Create shuffled dataframes - this should preserve ra_scaled and dec_scaled columns
-    shuffled_dfs = utils.generate_multiple_shear_dfs(shear_df, config['num_shuffles'], config['shuffle_type'])
+    # Create shuffled dataframes
+    shuffled_dfs = utils.generate_multiple_shear_dfs(
+        shear_df,
+        config['num_shuffles'],
+        config['shuffle_type']
+    )
     
-    # Create shear grids for shuffled dataframes using scaled coordinates
+    # Create shear grids for shuffled dataframes
     g1_g2_map_list = []
     for shuffled_df in shuffled_dfs:
-        # Use ra_scaled and dec_scaled for grid creation
-        g1map, g2map = utils.create_shear_grid(
-            shuffled_df['ra_scaled'],
-            shuffled_df['dec_scaled'],
-            shuffled_df['g1'],
-            shuffled_df['g2'],
-            shuffled_df['weight'],
-            boundaries=scaled_boundaries,
-            resolution=config['resolution']
+        g1map, g2map = coord_system.create_grid(
+            shuffled_df,
+            scaled_boundaries,
+            config
         )
         g1_g2_map_list.append((g1map, g2map))
     
     # Calculate kappa for shuffled maps
-    kappa_e_list, kappa_b_list = ks_inversion_list(g1_g2_map_list)
+    kappa_e_list, kappa_b_list = ks_inversion_list(g1_g2_map_list, coord_system_type)
 
     # Process maps
     filter_config = config.get('smoothing')

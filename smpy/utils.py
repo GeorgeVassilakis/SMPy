@@ -6,307 +6,141 @@ from astropy.table import Table
 from astropy.io import fits
 from astropy.wcs import WCS
 
-def load_shear_data(shear_cat_path, ra_col, dec_col, g1_col, g2_col, weight_col):
-    """ 
-    Load shear data from a FITS file and return a pandas DataFrame.
-
-    :param path: Path to the FITS file.
-    :param ra_col: Column name for right ascension.
-    :param dec_col: Column name for declination.
-    :param g1_col: Column name for the first shear component.
-    :param g2_col: Column name for the second shear component.
-    :param weight_col: Column name for the weight.
-    :return: pandas DataFrame with the specified columns.
+def load_shear_data(shear_cat_path, coord1_col, coord2_col, g1_col, g2_col, weight_col=None):
     """
-    # Read data from the FITS file
+    Load shear data from a FITS file and return a pandas DataFrame.
+    
+    Parameters
+    ----------
+    shear_cat_path : str
+        Path to the FITS file
+    coord1_col : str
+        Column name for first coordinate (RA or X)
+    coord2_col : str
+        Column name for second coordinate (Dec or Y)
+    g1_col : str
+        Column name for first shear component
+    g2_col : str
+        Column name for second shear component
+    weight_col : str, optional
+        Column name for weights, if None uses unit weights
+        
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with coordinates, shear, and weight columns
+    """
+    # Read data from FITS file
     shear_catalog = Table.read(shear_cat_path)
-
-    # Convert to pandas DataFrame
+    
+    # Convert to pandas DataFrame with generic column names
     shear_df = pd.DataFrame({
-        'ra': shear_catalog[ra_col],
-        'dec': shear_catalog[dec_col],
+        'coord1': shear_catalog[coord1_col],
+        'coord2': shear_catalog[coord2_col],
         'g1': shear_catalog[g1_col],
         'g2': shear_catalog[g2_col],
     })
-
-    # If weight_col is none, set all weights to 1, if it's passed, add a column to shear df of 'weight': shear_catalog[weight_col]
-    # Make the weight column a column of ones of length = ra_col
+    
+    # Add weights (unit weights if not specified)
     if weight_col is None:
         shear_df['weight'] = np.ones(len(shear_df))
     else:
         shear_df['weight'] = shear_catalog[weight_col]
-        
+    
     return shear_df
 
-def scale_ra_dec(shear_df):
+def save_convergence_fits(convergence, boundaries, true_boundaries, config, output_name):
     """
-    Correct the RA and Dec coordinates by centering and flattening RA.
-
+    Save convergence map as a FITS file with WCS information.
+    
     Parameters
     ----------
-    shear_df : pd.DataFrame
-        DataFrame containing 'ra' and 'dec' columns representing
-        right ascension and declination in degrees.
-
-    Returns
-    -------
-    pd.DataFrame
-        A new DataFrame with corrected 'ra' and 'dec' columns.
-    """
-    # Create a copy to avoid modifying the original DataFrame
-    corrected_df = shear_df.copy()
-    
-    # Extract RA and Dec columns
-    ra = corrected_df['ra']
-    dec = corrected_df['dec']
-    
-    # Compute the central RA and Dec
-    ra_0 = (ra.max() + ra.min()) / 2  # Center of RA
-    dec_0 = (dec.max() + dec.min()) / 2  # Center of Dec
-    
-    # Apply the transformation using vectorized operations
-    corrected_df['ra_scaled'] = (ra - ra_0) * np.cos(np.deg2rad(dec))
-    corrected_df['dec_scaled'] = dec - dec_0
-    
-    return corrected_df
-
-def calculate_field_boundaries(ra, dec):
-    """
-    Calculate the boundaries of the field in right ascension (RA) and declination (Dec).
-    
-    :param ra: Dataframe column containing the right ascension values.
-    :param dec: Dataframe column containing the declination values.
-    :return: A dictionary containing the corners of the map {'ra_min', 'ra_max', 'dec_min', 'dec_max'}.
-    """
-    boundaries = {
-        'ra_min': np.min(ra),
-        'ra_max': np.max(ra),
-        'dec_min': np.min(dec),
-        'dec_max': np.max(dec)
-    }
-    
-    return boundaries
-
-def create_shear_grid(ra, dec, g1, g2, weight, boundaries, resolution):
-    '''
-    Bin values of shear data according to position on the sky.
-    '''
-    ra_min, ra_max = boundaries['ra_min'], boundaries['ra_max']
-    dec_min, dec_max = boundaries['dec_min'], boundaries['dec_max']
-    
-    # Calculate number of pixels based on field size and resolution
-    npix_ra = int(np.ceil((ra_max - ra_min) * 60 / resolution))
-    npix_dec = int(np.ceil((dec_max - dec_min) * 60 / resolution))
-    
-    ra_bins = np.linspace(ra_min, ra_max, npix_ra + 1)
-    dec_bins = np.linspace(dec_min, dec_max, npix_dec + 1)
-    
-    # Digitize the RA and Dec to find bin indices
-    ra_idx = np.digitize(ra, ra_bins) - 1
-    dec_idx = np.digitize(dec, dec_bins) - 1
-    
-    # Filter out indices that are outside the grid boundaries
-    valid_mask = (ra_idx >= 0) & (ra_idx < npix_ra) & (dec_idx >= 0) & (dec_idx < npix_dec)
-    ra_idx = ra_idx[valid_mask]
-    dec_idx = dec_idx[valid_mask]
-    g1 = g1[valid_mask]
-    g2 = g2[valid_mask]
-    weight = weight[valid_mask]
-    
-    # Initialize the grids
-    g1_grid = np.zeros((npix_dec, npix_ra))
-    g2_grid = np.zeros((npix_dec, npix_ra))
-    weight_grid = np.zeros((npix_dec, npix_ra))
-    
-    # Accumulate weighted values using np.add.at
-    np.add.at(g1_grid, (dec_idx, ra_idx), g1 * weight)
-    np.add.at(g2_grid, (dec_idx, ra_idx), g2 * weight)
-    np.add.at(weight_grid, (dec_idx, ra_idx), weight)
-    
-    # Normalize the grid by the total weight in each bin (weighted average)
-    #try with commented out 
-    nonzero_weight_mask = weight_grid != 0
-    g1_grid[nonzero_weight_mask] /= weight_grid[nonzero_weight_mask]
-    g2_grid[nonzero_weight_mask] /= weight_grid[nonzero_weight_mask]
-    
-    return g1_grid, g2_grid
-
-def save_convergence_fits(convergence, boundaries, config, output_name):
-    """
-    Save the convergence map as a FITS file with WCS information if configured to do so.
-
-    Parameters:
-    -----------
-    convergence : numpy.ndarray
-        The 2D convergence map.
+    convergence : np.ndarray
+        2D convergence map
     boundaries : dict
-        Dictionary containing 'ra_min', 'ra_max', 'dec_min', 'dec_max'.
+        Dictionary containing scaled coordinate boundaries
+    true_boundaries : dict
+        Dictionary containing true coordinate boundaries
     config : dict
-        Configuration dictionary containing output path and other settings.
-
-    Returns:
-    --------
-    None
+        Configuration dictionary
+    output_name : str
+        Output file path
     """
     if not config.get('save_fits', False):
         return
-
+    
     # Create a WCS object
     wcs = WCS(naxis=2)
     
-    # Set up the WCS parameters
+    # Set up the WCS parameters based on coordinate system
     npix_dec, npix_ra = convergence.shape
+    
+    # Use true boundaries for WCS information
     wcs.wcs.crpix = [npix_ra / 2, npix_dec / 2]
-    wcs.wcs.cdelt = [(boundaries['ra_max'] - boundaries['ra_min']) / npix_ra, 
-                     (boundaries['dec_max'] - boundaries['dec_min']) / npix_dec]
-    wcs.wcs.crval = [(boundaries['ra_max'] + boundaries['ra_min']) / 2, 
-                     (boundaries['dec_max'] + boundaries['dec_min']) / 2]
-    wcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]
-
+    wcs.wcs.cdelt = [
+        (true_boundaries['coord1_max'] - true_boundaries['coord1_min']) / npix_ra,
+        (true_boundaries['coord2_max'] - true_boundaries['coord2_min']) / npix_dec
+    ]
+    wcs.wcs.crval = [
+        (true_boundaries['coord1_max'] + true_boundaries['coord1_min']) / 2,
+        (true_boundaries['coord2_max'] + true_boundaries['coord2_min']) / 2
+    ]
+    
+    # Set coordinate type based on coordinate system
+    if config.get('coordinate_system', 'radec').lower() == 'radec':
+        wcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+    else:
+        wcs.wcs.ctype = ["X", "Y"]
+    
     # Create a FITS header from the WCS information
     header = wcs.to_header()
-
-    # Add some additional information to the header
+    
+    # Add metadata to header
     header['AUTHOR'] = 'SMPy'
     header['CONTENT'] = 'Convergence Map'
-
-    # Create a primary HDU containing the convergence map
+    header['COORDSYS'] = config.get('coordinate_system', 'radec').upper()
+    header['UNIT1'] = true_boundaries.get('units', '')
+    header['UNIT2'] = true_boundaries.get('units', '')
+    
+    # Create HDU and save
     hdu = fits.PrimaryHDU(convergence, header=header)
-
-    # Create a FITS file
     hdul = fits.HDUList([hdu])
-
-    # Save the FITS file
     hdul.writeto(output_name, overwrite=True)
-
+    
     print(f"Convergence map saved as FITS file: {output_name}")
-
-def _shuffle_ra_dec(shear_df, seed=None):
-    """
-    Shuffle the scaled 'ra' and 'dec' columns of the input DataFrame together.
-    
-    :param shear_df: Input pandas DataFrame.
-    :param seed: Random seed for reproducibility.
-    :return: A new pandas DataFrame with shuffled 'ra_scaled' and 'dec_scaled' columns.
-    """
-    # Set seed if provided
-    if seed is not None:
-        random.seed(seed)
-        
-    # Make a copy to avoid modifying the original
-    shuffled_df = shear_df.copy()
-
-    # Combine scaled RA and DEC into pairs
-    ra_dec_pairs = list(zip(shuffled_df['ra_scaled'], shuffled_df['dec_scaled']))
-    
-    # Shuffle the pairs
-    random.shuffle(ra_dec_pairs)
-    
-    # Unzip the shuffled pairs back into RA and DEC
-    shuffled_ra, shuffled_dec = zip(*ra_dec_pairs)
-    
-    # Update the scaled coordinates
-    shuffled_df['ra_scaled'] = shuffled_ra
-    shuffled_df['dec_scaled'] = shuffled_dec
-
-    return shuffled_df
-
-def _shuffle_galaxy_rotation(shear_df):
-    """The function will shuffle the galaxy rotation in the input shear_df DataFrame.
-
-    Args:
-        shear_df (_type_): _description_
-    """
-    
-    # Make a copy to avoid modifying the original
-    shuffled_df = shear_df.copy()
-    
-    # Shuffle the galaxy rotation
-    g1, g2 = shuffled_df['g1'], shuffled_df['g2']
-    
-    # Add a random angle to the galaxy rotation
-    angle = np.random.uniform(0, 2 * np.pi, len(g1))
-    g1g2_len = np.sqrt(np.array(g1)**2 + np.array(g2)**2)
-    g1g2_angle  = np.arctan2(g2, g1) + angle
-    g1_new = g1g2_len * np.cos(g1g2_angle)
-    g2_new = g1g2_len * np.sin(g1g2_angle)
-    
-    shuffled_df['g1'] = g1_new
-    shuffled_df['g2'] = g2_new
-    
-    return shuffled_df
-
-def generate_multiple_shear_dfs(og_shear_df, num_shuffles=100, shuffle_type='position', seed=0):
-    """
-    Generate a list of multiple data frames with shuffled RA and DEC columns.
-    :param og_shear_df: Original shear DataFrame to shuffle
-    :param num_shuffles: Number of shuffled copies to generate
-    :param seed: Random starting seed for reproducibility
-    :return: A list of shuffled pandas DataFrames
-    """
-    # List to store the shuffled data frames
-    shuffled_dfs = []
-    
-    # Loop to generate multiple shuffled data frames
-    for i in range(num_shuffles):
-        # Shuffle based on the specified type
-        if shuffle_type == 'spatial':
-            shuffled_df = _shuffle_ra_dec(og_shear_df, seed=seed+i)
-        elif shuffle_type == 'orientation':
-            shuffled_df = _shuffle_galaxy_rotation(og_shear_df)
-        else:
-            raise ValueError(f"Invalid shuffle type: {shuffle_type}")
-        shuffled_dfs.append(shuffled_df)
-    
-    return shuffled_dfs
-
-def g1g2_to_gt_gc(g1, g2, ra, dec, ra_c, dec_c, pix_ra = 100):
-    """
-    Convert reduced shear to tangential and cross shear (Eq. 10, 11 in McCleary et al. 2023).
-    args:
-    - g1, g2: Reduced shear components.
-    - ra, dec: Right ascension and declination of the catalogue,i.e. shear_df['ra'], shear_df['dec'].
-    - ra_c, dec_c: Right ascension and declination of the cluster-centre.
-    
-    returns:
-    - gt, gc: Tangential and cross shear components.
-    - phi: Polar angle in the plane of the sky.
-    """ 
-    ra_max, ra_min, dec_max, dec_min = np.max(ra), np.min(ra), np.max(dec), np.min(dec)
-    aspect_ratio = (ra_max - ra_min) / (dec_max - dec_min)
-    pix_dec = int(pix_ra / aspect_ratio)
-    ra_grid, dec_grid = np.meshgrid(np.linspace(ra_min, ra_max, pix_ra), np.linspace(dec_min, dec_max, pix_dec))
-
-    phi = np.arctan2(dec_grid - dec_c, ra_grid - ra_c)
-    
-    # Calculate the tangential and cross components
-    gt = -g1 * np.cos(2 * phi) - g2 * np.sin(2 * phi)
-    gc = -g1 * np.sin(2 * phi) + g2 * np.cos(2 * phi)
-
-    return gt, gc, phi
 
 def find_peaks2d(image, threshold=None, verbose=False, true_boundaries=None, scaled_boundaries=None):
     """
-    Identify peaks in a 2D array (image) above a specified threshold.
+    Identify peaks in a 2D array above a specified threshold.
     A peak is a pixel with a value greater than its 8 neighbors.
 
-    Parameters:
-    - image (np.ndarray): 2D array representing the image.
-    - threshold (float, optional): Minimum pixel value to consider as a peak. Defaults to the minimum of `image`.
-    - verbose (bool): Whether to print peak information.
-    - true_boundaries (dict): Dictionary containing true RA/Dec boundaries for coordinate conversion.
-    - scaled_boundaries (dict): Dictionary containing scaled RA/Dec boundaries for coordinate conversion.
+    Parameters
+    ----------
+    image : np.ndarray
+        2D array representing the image
+    threshold : float, optional
+        Minimum pixel value to consider as a peak
+    verbose : bool
+        Whether to print peak information
+    true_boundaries : dict
+        Dictionary containing true coordinate boundaries for coordinate conversion
+    scaled_boundaries : dict
+        Dictionary containing scaled coordinate boundaries for coordinate conversion
 
-    Returns:
-    - X, Y, heights, coords (tuple): Indices of peaks (X, Y), their heights, and their true coordinates (if boundaries provided).
+    Returns
+    -------
+    tuple
+        (X, Y, heights, coords) where:
+        - X, Y are peak indices
+        - heights are peak values
+        - coords are true coordinates (if boundaries provided)
     """
     image = np.atleast_2d(image)
-
-    # Set threshold to the minimum value in the image if none provided
     threshold = threshold if threshold is not None else image.min()
 
-    # Pad the image to simplify border peak checks
-    padded_image = np.pad(image, pad_width=1, mode='constant', constant_values=image.min())
+    # Pad the image for border peak checks
+    padded_image = np.pad(image, pad_width=1, mode='constant', 
+                         constant_values=image.min())
 
     # Check for peaks by comparing to neighbors
     is_peak = (
@@ -323,41 +157,200 @@ def find_peaks2d(image, threshold=None, verbose=False, true_boundaries=None, sca
     # Apply threshold
     peaks_mask = is_peak & (image >= threshold)
 
-    # Get peak coordinates and their heights
+    # Get peak coordinates and heights
     Y, X = np.nonzero(peaks_mask)
     heights = image[Y, X]
 
     # Sort peaks by height in descending order
-    sort_indices = np.argsort(-heights)  # Negative for descending order
+    sort_indices = np.argsort(-heights)
     X = X[sort_indices]
     Y = Y[sort_indices]
     heights = heights[sort_indices]
 
-    # Convert pixel coordinates to true RA/Dec if boundaries are provided
+    # Convert pixel coordinates to true coordinates if boundaries are provided
     coords = None
     if verbose and true_boundaries and scaled_boundaries:
         coords = []
+        coord_system = 'pixel' if 'X' in true_boundaries['coord1_name'] else 'radec'
+        
         for x, y in zip(X, Y):
-            # Convert pixel coordinates to scaled coordinates
-            scaled_ra = scaled_boundaries['ra_min'] + (x + 0.5) * (scaled_boundaries['ra_max'] - scaled_boundaries['ra_min']) / image.shape[1]
-            scaled_dec = scaled_boundaries['dec_min'] + (y + 0.5) * (scaled_boundaries['dec_max'] - scaled_boundaries['dec_min']) / image.shape[0]
+            # Convert pixel indices to scaled coordinates
+            scaled_coord1 = scaled_boundaries['coord1_min'] + (x + 0.5) * (
+                scaled_boundaries['coord1_max'] - scaled_boundaries['coord1_min']
+            ) / image.shape[1]
+            
+            scaled_coord2 = scaled_boundaries['coord2_min'] + (y + 0.5) * (
+                scaled_boundaries['coord2_max'] - scaled_boundaries['coord2_min']
+            ) / image.shape[0]
             
             # Convert scaled coordinates to true coordinates
-            true_ra = np.interp(scaled_ra,
-                              [scaled_boundaries['ra_min'], scaled_boundaries['ra_max']],
-                              [true_boundaries['ra_min'], true_boundaries['ra_max']])
-            true_dec = np.interp(scaled_dec,
-                               [scaled_boundaries['dec_min'], scaled_boundaries['dec_max']],
-                               [true_boundaries['dec_min'], true_boundaries['dec_max']])
-            coords.append((true_ra, true_dec))
+            true_coord1 = np.interp(
+                scaled_coord1,
+                [scaled_boundaries['coord1_min'], scaled_boundaries['coord1_max']],
+                [true_boundaries['coord1_min'], true_boundaries['coord1_max']]
+            )
+            true_coord2 = np.interp(
+                scaled_coord2,
+                [scaled_boundaries['coord2_min'], scaled_boundaries['coord2_max']],
+                [true_boundaries['coord2_min'], true_boundaries['coord2_max']]
+            )
+            
+            coords.append((true_coord1, true_coord2))
 
-        # Print peak information
-        print("Detected Peaks:")
+        # Print peak information with appropriate coordinate labels
+        if coord_system == 'radec':
+            coord1_label, coord2_label = 'RA', 'Dec'
+        else:
+            coord1_label, coord2_label = 'X', 'Y'
+            
+        print("\nDetected Peaks:")
         print("-" * 60)
-        print(f"{'Peak #':<8}{'Value':<12}{'RA':<12}{'Dec':<12}")
+        print(f"{'Peak #':<8}{'Value':<12}{coord1_label:<12}{coord2_label:<12}")
         print("-" * 60)
-        for i, ((ra, dec), height) in enumerate(zip(coords, heights), 1):
-            print(f"{i:<8}{height:.<12.5f}{ra:.<12.5f}{dec:.<12.5f}")
+        for i, ((c1, c2), height) in enumerate(zip(coords, heights), 1):
+            print(f"{i:<8}{height:.<12.5f}{c1:.<12.5f}{c2:.<12.5f}")
         print("-" * 60)
 
     return X, Y, heights, coords
+
+def g1g2_to_gt_gc(g1, g2, coord1, coord2, center_coord1, center_coord2, pix_coord1=100):
+    """
+    Convert reduced shear to tangential and cross components.
+    Works with either RA/Dec or pixel coordinates.
+    
+    Parameters
+    ----------
+    g1, g2 : np.ndarray
+        Reduced shear components
+    coord1, coord2 : np.ndarray
+        Coordinates (either RA/Dec or X/Y)
+    center_coord1, center_coord2 : float
+        Center coordinates
+    pix_coord1 : int
+        Number of pixels in first coordinate dimension
+        
+    Returns
+    -------
+    tuple
+        (gt, gc, phi) tangential shear, cross shear, and polar angle
+    """
+    coord1_max = np.max(coord1)
+    coord1_min = np.min(coord1)
+    coord2_max = np.max(coord2)
+    coord2_min = np.min(coord2)
+    
+    aspect_ratio = (coord1_max - coord1_min) / (coord2_max - coord2_min)
+    pix_coord2 = int(pix_coord1 / aspect_ratio)
+    
+    # Create coordinate grid
+    coord1_grid, coord2_grid = np.meshgrid(
+        np.linspace(coord1_min, coord1_max, pix_coord1),
+        np.linspace(coord2_min, coord2_max, pix_coord2)
+    )
+    
+    # Calculate polar angle
+    phi = np.arctan2(coord2_grid - center_coord2, 
+                     coord1_grid - center_coord1)
+    
+    # Calculate tangential and cross components
+    gt = -g1 * np.cos(2 * phi) - g2 * np.sin(2 * phi)
+    gc = -g1 * np.sin(2 * phi) + g2 * np.cos(2 * phi)
+    
+    return gt, gc, phi
+
+def _shuffle_coordinates(shear_df, seed=None):
+    """
+    Shuffle the scaled coordinates of the input DataFrame together.
+    
+    Parameters
+    ----------
+    shear_df : pd.DataFrame
+        Input DataFrame with scaled coordinates
+    seed : int, optional
+        Random seed for reproducibility
+        
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with shuffled coordinates
+    """
+    if seed is not None:
+        random.seed(seed)
+        
+    shuffled_df = shear_df.copy()
+
+    # Combine scaled coordinates into pairs
+    coord_pairs = list(zip(shuffled_df['coord1_scaled'], 
+                          shuffled_df['coord2_scaled']))
+    
+    # Shuffle the pairs
+    random.shuffle(coord_pairs)
+    
+    # Unzip the shuffled pairs
+    shuffled_coord1, shuffled_coord2 = zip(*coord_pairs)
+    
+    # Update the scaled coordinates
+    shuffled_df['coord1_scaled'] = shuffled_coord1
+    shuffled_df['coord2_scaled'] = shuffled_coord2
+
+    return shuffled_df
+
+def _shuffle_galaxy_rotation(shear_df):
+    """
+    Shuffle the galaxy rotation in the input shear DataFrame.
+    
+    Parameters
+    ----------
+    shear_df : pd.DataFrame
+        Input DataFrame with shear components
+        
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with shuffled shear components
+    """
+    shuffled_df = shear_df.copy()
+    
+    # Add a random angle to the galaxy rotation
+    g1, g2 = shuffled_df['g1'], shuffled_df['g2']
+    angle = np.random.uniform(0, 2 * np.pi, len(g1))
+    g1g2_len = np.sqrt(np.array(g1)**2 + np.array(g2)**2)
+    g1g2_angle = np.arctan2(g2, g1) + angle
+    
+    shuffled_df['g1'] = g1g2_len * np.cos(g1g2_angle)
+    shuffled_df['g2'] = g1g2_len * np.sin(g1g2_angle)
+    
+    return shuffled_df
+
+def generate_multiple_shear_dfs(og_shear_df, num_shuffles=100, shuffle_type='spatial', seed=0):
+    """
+    Generate multiple shuffled versions of the input DataFrame.
+    
+    Parameters
+    ----------
+    og_shear_df : pd.DataFrame
+        Original shear DataFrame
+    num_shuffles : int
+        Number of shuffled copies to generate
+    shuffle_type : str
+        Type of shuffling ('spatial' or 'orientation')
+    seed : int
+        Starting random seed
+        
+    Returns
+    -------
+    list
+        List of shuffled DataFrames
+    """
+    shuffled_dfs = []
+    
+    for i in range(num_shuffles):
+        if shuffle_type == 'spatial':
+            shuffled_df = _shuffle_coordinates(og_shear_df, seed=seed+i)
+        elif shuffle_type == 'orientation':
+            shuffled_df = _shuffle_galaxy_rotation(og_shear_df)
+        else:
+            raise ValueError(f"Invalid shuffle type: {shuffle_type}")
+        shuffled_dfs.append(shuffled_df)
+    
+    return shuffled_dfs

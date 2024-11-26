@@ -2,69 +2,74 @@
 
 # General settings
 general:
-  # Paths
+  # Input/Output paths
   input_path: "/home/wslgeorgios/SMPy/examples/data/forecast_lum_annular.fits"
   output_directory: "/home/wslgeorgios/SMPy/examples/outputs/"
-  output_base_name: "simulation_testing"  # Base name for output files
-  save_fits: false  # Save output as FITS file 
+  output_base_name: "simulation_testing"
+  save_fits: false  # Currently not supported
 
-  # Map creation settings
-  method: "kaiser_squires"  # Convergence map method
-  create_snr: true  # Set to false if you don't want to create the SNR map
-
-  # Common parameters
-  resolution: 0.4  # Pixel resolution of the map in arcminutes
-  ra_col: 'ra'
-  dec_col: 'dec'
+  # Coordinate system settings
+  coordinate_system: "radec"  # 'radec' or 'pixel'
+  radec:
+    resolution: 0.4  # In arcminutes
+    coord1: 'ra'    # RA column name
+    coord2: 'dec'   # Dec column name
+  pixel:
+    downsample_factor: 170  # Grid reduction factor
+    coord1: 'X_IMAGE_se'    # X column name
+    coord2: 'Y_IMAGE_se'    # Y column name
+  
+  # Data columns
   g1_col: 'g1_Rinv'
   g2_col: 'g2_Rinv'
-  weight_col: 'weight' # provide null if you have no weights
-  mode: ['E']  # For both E and/or B modes
+  weight_col: 'weight'  # Set to null if no weights
+  
+  # Analysis settings
+  method: "kaiser_squires"
+  create_snr: true  # Whether to create SNR map
+  mode: ['E']  # ['E'], ['B'], or ['E', 'B']
 
 # Convergence Map Settings
 convergence:
-  # Smoothing configuration
   smoothing:
-    type: 'gaussian'  # Current options: 'gaussian' or null
-    sigma: 2.0  # Gaussian filter sigma parameter
-
-  # Plotting
+    type: 'gaussian'  # 'gaussian' or null
+    sigma: 2.0        # Smoothing scale
+    
+  # Basic plotting
   figsize: [20, 10]
   cmap: 'magma'
-  xlabel: 'Right Ascension (deg)'
-  ylabel: 'Declination (deg)'
+  xlabel: 'auto'  # 'auto', null, or custom string
+  ylabel: 'auto'  # 'auto', null, or custom string
   plot_title: 'Convergence Map'
   gridlines: true
-
-  # Optional Plotting
+  
+  # Advanced plotting
   vmax: null
   vmin: null
-  cluster_center: null # Options for marker: null (do nothing), 'auto' (center of boundaries), {"ra_center": val, "dec_center": val} (custom coords)
-  threshold: null # Threshold for marking peaks in the convergence map (float or null)
-  verbose: false # Print out table of peak values and positions
+  threshold: null    # Peak detection threshold
+  verbose: null      # Print peak information
+  cluster_center: null  # null, 'auto', or {ra/x_center: float, dec/y_center: float}
 
 # SNR Map Settings
 snr:
-  # Type of SNR map
-  shuffle_type: 'spatial' # Options: 'spatial' or 'oritentation'
-
-  # Smoothing configuration
+  shuffle_type: 'spatial'  # 'spatial' or 'orientation'
+  num_shuffles: 100       # Number of random realizations
+  
   smoothing:
-    type: 'gaussian'  # Current options: 'gaussian' or null (not reccomended for S/N maps)
-    sigma: 2.0  # Gaussian filter sigma parameter
-
-  # Plotting
+    type: 'gaussian'  # 'gaussian' or null (null not recommended for SNR)
+    sigma: 2.0        # Smoothing scale
+  
+  # Basic plotting
   figsize: [20, 10]
   cmap: 'magma'
-  xlabel: 'Right Ascension (deg)'
-  ylabel: 'Declination (deg)'
+  xlabel: 'auto'  # 'auto', null, or custom string
+  ylabel: 'auto'  # 'auto', null, or custom string
   plot_title: 'Signal-to-Noise Map'
   gridlines: true
-  num_shuffles: 100  # Number of shuffles for SNR calculation
-
-  # Optional Plotting
+  
+  # Advanced plotting
   vmax: null
   vmin: null
-  cluster_center: null # Marker: null (no marker), 'auto' (center of boundaries), {"ra_center": float, "dec_center": float} (custom coords)
-  threshold: null # Threshold for marking peaks in the convergence map (float or null)
-  verbose: false # Print out table of peak values and positions
+  threshold: null    # Peak detection threshold
+  verbose: null      # Print peak information
+  cluster_center: null  # null, 'auto', or {ra/x_center: float, dec/y_center: float}
