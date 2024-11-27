@@ -6,7 +6,7 @@ from astropy.table import Table
 from astropy.io import fits
 from astropy.wcs import WCS
 
-def load_shear_data(shear_cat_path, coord1_col, coord2_col, g1_col, g2_col, weight_col=None):
+def load_shear_data(shear_cat_path, coord1_col, coord2_col, g1_col, g2_col, weight_col=None, hdu=0):
     """
     Load shear data from a FITS file and return a pandas DataFrame.
     
@@ -31,15 +31,21 @@ def load_shear_data(shear_cat_path, coord1_col, coord2_col, g1_col, g2_col, weig
         DataFrame with coordinates, shear, and weight columns
     """
     # Read data from FITS file
-    shear_catalog = Table.read(shear_cat_path)
+    try:
+        shear_catalog = Table.read(shear_cat_path, hdu=hdu)
+    except IndexError:
+        raise IndexError(f"HDU {hdu} not found in {shear_cat_path}")
     
     # Convert to pandas DataFrame with generic column names
-    shear_df = pd.DataFrame({
-        'coord1': shear_catalog[coord1_col],
-        'coord2': shear_catalog[coord2_col],
-        'g1': shear_catalog[g1_col],
-        'g2': shear_catalog[g2_col],
-    })
+    try:
+        shear_df = pd.DataFrame({
+            'coord1': shear_catalog[coord1_col],
+            'coord2': shear_catalog[coord2_col],
+            'g1': shear_catalog[g1_col],
+            'g2': shear_catalog[g2_col],
+        })
+    except KeyError as e:
+        raise KeyError(f"Column {e} not found in HDU {hdu}. Available columns: {shear_catalog.colnames}")
     
     # Add weights (unit weights if not specified)
     if weight_col is None:

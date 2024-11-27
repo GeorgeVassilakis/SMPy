@@ -4,6 +4,7 @@
 general:
   # Input/Output paths
   input_path: "/home/wslgeorgios/SMPy/examples/data/forecast_lum_annular.fits"
+  input_hdu: 1  # FITS extension number to read data from
   output_directory: "/home/wslgeorgios/SMPy/examples/outputs/"
   output_base_name: "simulation_testing"
   save_fits: false  # Currently not supported

@@ -22,11 +22,12 @@ def create_convergence_map(config):
         coord_config['coord2'],
         config['g1_col'],
         config['g2_col'],
-        config['weight_col']
+        config['weight_col'],
+        config['input_hdu']
     )
     
     
-    # Calculate boundaries before any transformations
+    # Calculate true and scaled boundaries
     scaled_boundaries, true_boundaries = coord_system.calculate_boundaries(
         shear_df['coord1'],
         shear_df['coord2']

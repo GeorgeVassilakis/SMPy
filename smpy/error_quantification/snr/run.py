@@ -38,7 +38,8 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
         coord_config['coord2'],
         config['g1_col'],
         config['g2_col'],
-        config['weight_col']
+        config['weight_col'],
+        config['input_hdu']
     )
     
     # Transform coordinates
