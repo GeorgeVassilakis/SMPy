@@ -28,12 +28,12 @@ affiliations:
  - name: Northeastern University, USA
    index: 1
 date: 7 December 2024
-bibliography: paper/paper.bib
+bibliography: paper.bib
 ---
 
 # Summary
 
-Understanding the universe's structure, particularly the nature of dark matter, is a central challnge in modern astrophysics. A key approach to this problem is the study of weak gravitational lensing, where light from distant galaxies is bent as it passes though the gravitational field of a massive object, like a galaxy cluster. Measuring this slight (weak) beinging of light over thousands of galaxies allows astrophysicists to infer the distribution of matter, including dark matter, through the reconstrution of convergence maps. For a comprehensive review of weak gravitational lensing, plese refer to [@Umetsu2020]. 
+Understanding the universe's structure, particularly the nature of dark matter, is a central challenge in modern astrophysics. A key approach to this problem is the study of weak gravitational lensing, where light from distant galaxies is bent as it passes though the gravitational field of a massive object, like a galaxy cluster. Measuring this slight (weak) bending of light over thousands of galaxies allows astrophysicists to infer the distribution of matter, including dark matter, through the reconstruction of convergence maps. For a comprehensive review of weak gravitational lensing, please refer to [@Umetsu2020]. 
 
 # Statement of Need
 
