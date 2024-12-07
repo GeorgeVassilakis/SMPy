@@ -12,7 +12,6 @@ jobs:
         uses: openjournals/openjournals-draft-action@master
         with:
           journal: joss
-          # Specify the path to the Markdown file for the paper.
           paper-path: paper/paper.md
 
       - name: Upload PDF Artifact
@@ -20,3 +19,11 @@ jobs:
         with:
           name: paper
           path: paper/paper.pdf
+
+      - name: Commit and Push PDF
+        run: |
+          git config --local user.email "90641828+GeorgeVassilakis@users.noreply.github.com"
+          git config --local user.name "GeorgeVassilakis"
+          git add paper/paper.pdf
+          git commit -m "Update PDF" || echo "No changes to commit"
+          git push

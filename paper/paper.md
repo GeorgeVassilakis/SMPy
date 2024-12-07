@@ -25,7 +25,7 @@ authors:
     corresponding: false
     affiliation: 1
 affiliations:
- - name: Northeastern University, USA
+ - name: Department of Physics, Northeastern University, USA
    index: 1
 date: 7 December 2024
 bibliography: paper.bib
