@@ -33,15 +33,19 @@ bibliography: paper.bib
 
 # Summary
 
-Understanding the universe's structure, particularly the nature of dark matter, is a central challenge in modern astrophysics. A key approach to this problem is the study of weak gravitational lensing, where light from distant galaxies is bent as it passes though the gravitational field of a massive object, like a galaxy cluster. Measuring this slight (weak) bending of light over thousands of galaxies allows astrophysicists to infer the distribution of matter, including dark matter. 
+Understanding the universe's large-scale distribution of dark matter is a central objective in the era of precision cosmology. A key tool for the study of dark matter is weak gravitational lensing; a phenomenon where light from distant galaxies is sheared as it passes though the gravitational field of a massive object, like a galaxy cluster. Measuring this slight (weak) distortion of shapes over thousands of galaxies allows astrophysicists to infer the distribution of total matter, which includes both luminous and dark matter. 
 
-A common tool for analyzing these distortions on large scales is convergence mapping. Convergence ($\kappa$) quantifies how much light from distant galaxies converge due to lensing, resulting in a magnification or distortion of their images. For a comprehensive review of weak gravitational lensing, please refer to [@Umetsu2020]. By mapping convergence across the sky, astronomers can identify areas with high mass concentration based on observed lensing data. Regions showing significant convergence but little visible matter likely indicate the presence of dark matter causing the lensing effect.
+A common tool to infer the matter distribution is the mapping of convergence ($\kappa$), which quantifies how much a gravitational lens converges the light from distant galaxies, resulting in a magnification of their shapes. [Placeholder Sentence for shear]. 
 
-The **Shear Mapping in Python (SMPy)** package provides a standardized, well-documented, and open-source solution for creating convergence maps from weak lensing galaxy shear measurements. `SMPy` was initially developed to support the Superpressure Balloon-borne Imaging Telescope (SuperBIT), which completed its 45-night observing run in spring 2023 with over 30 galaxy cluster observations [@Gill2024]. `SMPy` has evolved into a general-purpose tool suitable for analyzing the weak lensing data from any source of galaxies.
+The **Shear Mapping in Python (SMPy)** package provides a standardized, well-documented, and open-source solution for creating convergence maps from weak lensing galaxy shear measurements. `SMPy` was initially developed to support the Superpressure Balloon-borne Imaging Telescope (SuperBIT), a stratospheric, near-UV to near-IR observing platform which completed its 45-night observing run in spring 2023 with over 30 galaxy cluster observations [@Gill2024]. `SMPy` has since evolved into a general-purpose tool suitable for analyzing the weak lensing data from any source of galaxies.
+
+# Background
+
+For a comprehensive review of weak gravitational lensing, please refer to [@Umetsu2020]. 
 
 # Statement of Need
 
-Mass maps are a critical and key part of many cosmological analyses [@Atacama2020] [@DESY32021] [@HSC2017]. `SMPy` addresses an outstanding need for the lensing community: A robust, well-documented, and open-source tool to construct publication quality mass maps from galaxy shear data. `SMPy` was built with multiple design directions in mind:
+Mass maps are a critical deliverable of many cosmological analyses [@Atacama2020, @DESY32021, @HSC2017]. `SMPy` addresses an outstanding need for the lensing community: A robust, well-documented, and open-source tool to construct publication quality mass maps from galaxy shear data. `SMPy` was built with multiple design directions in mind:
 
 1. **Accessibility:** `SMPy` is written entirely in Python and deliberately relies only on widely-used scientific Python packages (`numpy`, `scipy`, `pandas`, `astropy`, `matplotlib`, and `pyyaml`). This choice of standard dependencies ensures that users can easily install the packages without complex dependency chains, and that the codebase is maintainable and familiar to the scientific Python community.
 
@@ -58,6 +62,7 @@ To our knowledge, `SMPy` is the first open-source, well-documented convergence m
 # Software References
 
 `SMPy` requires and uses the following packages:
+
 - `NumPy`
 - `SciPy`
 - `Pandas`
