@@ -45,7 +45,7 @@ For a comprehensive review of weak gravitational lensing, please refer to [@Umet
 
 # Statement of Need
 
-Mass maps are a critical deliverable of many cosmological analyses [@Atacama2020; @DESY32021; @HSC2017]. `SMPy` addresses an outstanding need for the lensing community: A robust, well-documented, and open-source tool to construct publication quality mass maps from galaxy shear data. `SMPy` was built with multiple design directions in mind:
+Mass maps are a critical deliverable of many cosmological analyses [@Atacama2020], [@DESY32021], [@HSC2017]. `SMPy` addresses an outstanding need for the lensing community: A robust, well-documented, and open-source tool to construct publication quality mass maps from galaxy shear data. `SMPy` was built with multiple design directions in mind:
 
 1. **Accessibility:** `SMPy` is written entirely in Python and deliberately relies only on widely-used scientific Python packages (`numpy`, `scipy`, `pandas`, `astropy`, `matplotlib`, and `pyyaml`). This choice of standard dependencies ensures that users can easily install the packages without complex dependency chains, and that the codebase is maintainable and familiar to the scientific Python community.
 
