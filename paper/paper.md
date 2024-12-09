@@ -47,12 +47,24 @@ Mass maps are a critical and key part of many cosmological analyses [@Atacama202
 
 2. **Extensibility:** `SMPy` is built with a modular architecture that allows for easy implementation of new mass mapping techniques beyond the currently implemented Kaiser-Squires inversion algorithm [@KS1993]. An example convergence map is shown in Figure 1, created from simulated galaxy cluster observations from SuperBIT [@McCleary2023]. Aperture mass mapping [@Leonard2012] and KS+ [@Pires2020] algorithms are currently planned to be added to the codebase. 
 
-3. **Usability:** Creating convergence maps with `SMPy` requires minimal input - users need only provide a catalog of galaxies with their shears (`g1` & `g2`) and coordinates. This straightforward input requirement makes the tool accessible to researchers at all levels.  A flexible configuration system is integrated via a single YAML file that defines file paths, convergence map algorithm settings, plotting parameters, and more.
+3. **Usability:** Creating convergence maps with `SMPy` requires minimal input - users need only provide a catalog of galaxies with their associated shears (`g1` & `g2`) and coordinates. This straightforward input requirement makes the tool accessible to researchers at all levels.  A flexible configuration system is integrated via a single YAML file that defines file paths, convergence map algorithm settings, plotting parameters, and more.
 
-4. **Robustness:** Designed to be mathematically and algorithmically accurate, allowing the user to create convergence maps with any galaxy shear data. The coordinate system abstraction handles both RA/Dec celestial coordinates (with proper spherical geometry corrections) or pixel-based coordinates through a unified interface. Signal-to-noise maps can be generated using either spatial shuffling (randomizing galaxy positions while preserving shear values) or orientation shuffling (randomizing shear orientations while preserving positions) to distinguish real signals from noise.
+4. **Robustness:** Designed to be mathematically and algorithmically accurate, allowing the user to create convergence maps with any galaxy shear data. The coordinate system abstraction handles both RA/Dec celestial coordinates (with proper spherical geometry approximations) or pixel-based coordinates through a unified interface. Signal-to-noise maps can be generated using either spatial shuffling (randomizing galaxy positions while preserving shear values) or orientation shuffling (randomizing shear orientations while preserving positions) to distinguish real signals from noise.
 
 ![Example convergence map created with SMPy showing the mass distribution of a simulated galaxy cluster. The map was generated using the Kaiser-Squires inversion method on simulated weak lensing data from SuperBIT. The color scale represents the dimensionless surface mass density (convergence), with brighter regions indicating higher mass concentrations.](KS_convergence_map.png)
+
+To our knowledge, `SMPy` is the first open-source, well-documented convergence mapping software that can compute convergence in either astrometric or pixel space. [NEEDS EDIT/EXPANSION]
+
 # Software References
+
+`SMPy` requires and uses the following packages:
+- `NumPy`
+- `SciPy`
+- `Pandas`
+- `Astropy`
+- `Matplotlib`
+- `PyYAML`
+
 
 # Acknowledgements
 
