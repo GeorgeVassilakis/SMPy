@@ -1,22 +1,26 @@
 from scipy.ndimage import gaussian_filter
 
 def apply_filter(data, filter_config):
-    """
-    Apply the specified filter to the input data.
+    """Apply filtering to input data.
     
     Parameters
     ----------
-    data : numpy.ndarray
-        Input data to be filtered
-    filter_config : dict
-        Configuration dictionary containing:
-        - 'type': str, type of filter to apply
-        - Additional parameters specific to each filter type
+    data : `numpy.ndarray`
+        Input data array to be filtered
+    filter_config : `dict`
+        Filter configuration containing:
+        - type: type of filter ('gaussian' or None)
+        - sigma: smoothing scale (for gaussian)
         
     Returns
     -------
     numpy.ndarray
-        Filtered data
+        Filtered data array
+        
+    Raises
+    ------
+    ValueError
+        If unknown filter type specified
     """
     if filter_config is None or filter_config.get('type') is None:
         return data

@@ -5,10 +5,41 @@ from smpy.plotting import plot, filters
 from smpy.coordinates import get_coordinate_system
 
 def read_config(file_path):
+    """Read configuration from YAML file.
+
+    Parameters
+    ----------
+    file_path : `str`
+        Path to configuration file
+
+    Returns
+    -------
+    dict
+        Configuration dictionary
+    """
     with open(file_path, 'r') as file:
         return yaml.safe_load(file)
 
 def create_convergence_map(config):
+    """Create convergence maps using Kaiser-Squires method.
+
+    Creates both E-mode and B-mode convergence maps from shear data,
+    handles coordinate transformations, and generates visualizations.
+
+    Parameters
+    ----------
+    config : `dict`
+        Configuration dictionary containing all mapping parameters
+
+    Returns
+    -------
+    convergence_maps : `dict`
+        Dictionary containing E/B mode convergence maps
+    scaled_boundaries : `dict`
+        Scaled coordinate boundaries
+    true_boundaries : `dict`
+        True coordinate boundaries
+    """
 
     # Get coordinate system
     coord_system_type = config.get('coordinate_system', 'radec').lower()
@@ -25,7 +56,6 @@ def create_convergence_map(config):
         config['weight_col'],
         config['input_hdu']
     )
-    
     
     # Calculate true and scaled boundaries
     scaled_boundaries, true_boundaries = coord_system.calculate_boundaries(
@@ -72,14 +102,25 @@ def create_convergence_map(config):
         plot_config['plot_title'] = f'{config["plot_title"]} ({mode}-mode)'
         output_name = f"{config['output_directory']}{config['output_base_name']}_kaiser_squires_{mode.lower()}_mode.png"
         plot.plot_convergence(plot_map, scaled_boundaries, true_boundaries, plot_config, output_name)
-        
-        # Save the convergence map as a FITS file if requested
-        if config.get('save_fits', False):
-            output_name = f"{config['output_directory']}{config['output_base_name']}_kaiser_squires_{mode.lower()}_mode.fits"
-            utils.save_convergence_fits(plot_map, scaled_boundaries, true_boundaries, config, output_name)
     
     return convergence_maps, scaled_boundaries, true_boundaries
 
 def run(config_path):
+    """Run Kaiser-Squires mass mapping.
+
+    Parameters
+    ----------
+    config_path : `str`
+        Path to configuration file
+
+    Returns
+    -------
+    convergence_maps : `dict`
+        Dictionary containing E/B mode convergence maps
+    scaled_boundaries : `dict`
+        Scaled coordinate boundaries
+    true_boundaries : `dict`
+        True coordinate boundaries
+    """
     config = read_config(config_path)
     return create_convergence_map(config)

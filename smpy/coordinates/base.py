@@ -2,114 +2,107 @@ from abc import ABC, abstractmethod
 import numpy as np
 
 class CoordinateSystem(ABC):
-    """
-    Abstract base class for coordinate systems in SMPy.
-    Defines the interface for handling different coordinate systems (e.g., RA/Dec, pixel).
+    """Abstract base class for coordinate systems.
+    
+    Provides interface for RA/Dec and pixel coordinate systems used in mass mapping.
+    Each coordinate system must implement methods for creating grids, handling boundaries,
+    and transforming coordinates appropriately.
     """
     
     @abstractmethod
     def get_grid_parameters(self, config):
-        """
-        Get coordinate-system-specific grid parameters from config.
-        
+        """Get grid parameters from config for the specific coordinate system.
+
         Parameters
         ----------
-        config : dict
+        config : `dict`
             Configuration dictionary containing coordinate system parameters
-            
+
         Returns
         -------
         dict
-            Grid parameters specific to this coordinate system:
-            - For RA/Dec: resolution_arcmin
-            - For Pixel: downsample_factor, max_grid_size
+            Grid parameters dictionary:
+            - For RA/Dec: resolution_arcmin for setting grid spacing
+            - For Pixel: downsample_factor and max_grid_size for binning
         """
         pass
     
     @abstractmethod
     def create_grid(self, data_df, boundaries, config):
-        """
-        Create a grid in the coordinate system.
-        
+        """Create a shear grid by binning data in the coordinate system.
+
         Parameters
         ----------
-        data_df : pd.DataFrame
-            DataFrame containing coordinates and shear data with columns:
-            coord1, coord2 (original coordinates)
-            coord1_scaled, coord2_scaled (transformed coordinates)
-            g1, g2 (shear components)
-            weight (optional weights)
-        boundaries : dict
-            Dictionary containing coordinate boundaries
-        config : dict
-            Configuration dictionary containing system-specific parameters
+        data_df : `pandas.DataFrame`
+            DataFrame containing coordinates, shear components and weights.
+            Must include coord1_scaled and coord2_scaled from transform_coordinates.
+        boundaries : `dict`
+            Coordinate boundaries from calculate_boundaries()
+        config : `dict`
+            Configuration dictionary containing system parameters
             
         Returns
         -------
-        tuple
-            (g1_grid, g2_grid) numpy arrays
+        g1_grid, g2_grid : `numpy.ndarray`
+            2D arrays containing binned shear values on regular grid
         """
         pass
     
     @abstractmethod
     def calculate_boundaries(self, coord1, coord2):
-        """
-        Calculate field boundaries in the coordinate system.
-        
+        """Calculate field boundaries and setup coordinate labels.
+
         Parameters
         ----------
-        coord1 : array-like
-            First coordinate values (e.g., RA or X)
-        coord2 : array-like
-            Second coordinate values (e.g., Dec or Y)
+        coord1 : `numpy.ndarray`
+            First coordinate values (RA or X pixel coordinates)
+        coord2 : `numpy.ndarray`
+            Second coordinate values (Dec or Y pixel coordinates)
         
         Returns
         -------
-        tuple
-            (scaled_boundaries, true_boundaries) dictionaries containing:
-            - coord1_min, coord1_max: boundaries in first coordinate
-            - coord2_min, coord2_max: boundaries in second coordinate
-            - coord1_name, coord2_name: names of coordinates
-            - units: coordinate system units
+        scaled_boundaries, true_boundaries : `dict`
+            Dictionaries containing coordinate ranges and labels:
+            coord1_min/max, coord2_min/max, coord1_name, coord2_name, units
         """
         pass
     
     @abstractmethod
     def transform_coordinates(self, data_df):
-        """
-        Transform coordinates if needed (e.g., centering, scaling).
-        
+        """Transform coordinates if needed (e.g., centering, scaling).
+
         Parameters
         ----------
-        data_df : pd.DataFrame
-            DataFrame containing coordinates to transform with columns:
-            coord1, coord2 (original coordinates)
+        data_df : `pandas.DataFrame`
+            DataFrame with original coord1, coord2 coordinate columns
         
         Returns
         -------
-        pd.DataFrame
-            DataFrame with additional columns:
-            coord1_scaled, coord2_scaled (transformed coordinates)
+        transformed_df : `pandas.DataFrame`
+            DataFrame with additional coord1_scaled, coord2_scaled columns
+            containing transformed coordinates ready for gridding
         """
         pass
 
     def _create_shear_grid(self, data_df, idx1, idx2, npix1, npix2):
-        """
-        Helper method to create shear grid from indices.
-        
+        """Create weighted shear grid from binning indices.
+
+        Helper method that bins shear values into a regular grid using provided indices.
+        Handles weighting and normalization of shear values.
+
         Parameters
         ----------
-        data_df : pd.DataFrame
-            DataFrame containing shear data
-        idx1, idx2 : array-like
-            Indices for binning in each dimension
-        npix1, npix2 : int
-            Number of pixels in each dimension
+        data_df : `pandas.DataFrame`
+            DataFrame containing g1, g2 shear components and weights
+        idx1, idx2 : `numpy.ndarray`
+            Bin indices for each dimension of the grid
+        npix1, npix2 : `int`
+            Number of pixels in each dimension of output grid
             
         Returns
         -------
-        tuple
-            (g1_grid, g2_grid) numpy arrays with dimensions (npix1, npix2)
+        g1_grid, g2_grid : `numpy.ndarray`
+            2D arrays of binned, weighted shear values
         """
         # Filter out indices outside the grid
         valid_mask = (idx1 >= 0) & (idx1 < npix2) & (idx2 >= 0) & (idx2 < npix1)
@@ -137,18 +130,25 @@ class CoordinateSystem(ABC):
         return g1_grid, g2_grid
 
     def prepare_data(self, data_df):
-        """
-        Prepare data for gridding by ensuring correct columns exist.
-        
+        """Prepare data for gridding by validating and transforming coordinates.
+
+        Checks that required columns exist and ensures coordinates are transformed
+        before gridding.
+
         Parameters
         ----------
-        data_df : pd.DataFrame
-            Input DataFrame with coordinates and shear data
+        data_df : `pandas.DataFrame`
+            Input DataFrame containing coordinates and shear measurements
             
         Returns
         -------
         pd.DataFrame
-            Processed DataFrame with all required columns
+            Processed DataFrame with all required columns and transformed coordinates
+            
+        Raises
+        ------
+        ValueError
+            If required columns are missing from the input DataFrame
         """
         required_cols = ['coord1', 'coord2', 'g1', 'g2', 'weight']
         if not all(col in data_df.columns for col in required_cols):

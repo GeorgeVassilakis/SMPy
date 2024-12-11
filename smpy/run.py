@@ -3,10 +3,37 @@ from smpy.mapping_methods.kaiser_squires import run as ks_run
 from smpy.error_quantification.snr import run as snr_run
 
 def read_config(file_path):
+    """Read configuration from YAML file.
+
+    Parameters
+    ----------
+    file_path : `str`
+        Path to configuration file
+
+    Returns
+    -------
+    dict
+        Configuration dictionary
+    """    
     with open(file_path, 'r') as file:
         return yaml.safe_load(file)
 
 def run(config_path):
+    """Run mass mapping workflow.
+
+    Creates convergence maps using specified method and optionally
+    generates SNR maps.
+
+    Parameters
+    ----------
+    config_path : `str`
+        Path to configuration file
+        
+    Raises
+    ------
+    ValueError
+        If unknown mapping method specified
+    """
     config = read_config(config_path)
     
     general_config = config['general']

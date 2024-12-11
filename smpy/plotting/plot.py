@@ -7,28 +7,28 @@ from matplotlib.animation import FuncAnimation
 from smpy.utils import find_peaks2d
 
 def _get_center_coordinates(cluster_center, scaled_boundaries, true_boundaries, coord_system_type):
-    """
-    Get center coordinates for plotting based on coordinate system type.
+    """Get center coordinates for plotting.
     
     Parameters
     ----------
-    cluster_center : str, dict, or None
-        Can be:
-        - 'auto' for center of field
-        - dict with 'ra_center'/'dec_center' or 'x_center'/'y_center'
-        - None for no center
-    scaled_boundaries : dict
+    cluster_center : `str` or `dict` or None
+        Center specification:
+        - 'auto': use field center
+        - dict: specific coordinates
+        - None: no center
+    scaled_boundaries : `dict`
         Scaled coordinate boundaries
-    true_boundaries : dict
+    true_boundaries : `dict`
         True coordinate boundaries
-    coord_system_type : str
-        Either 'radec' or 'pixel'
+    coord_system_type : `str`
+        'radec' or 'pixel'
         
     Returns
     -------
-    tuple or None
-        (center_coord1, center_coord2) in scaled coordinates, or None if no center
+    center_coord1, center_coord2 : `float`
+        Center coordinates in scaled system
     """
+
     if cluster_center is None:
         return None, None
         
@@ -66,22 +66,22 @@ def _get_center_coordinates(cluster_center, scaled_boundaries, true_boundaries, 
     return None, None
 
 def plot_convergence(filtered_convergence, scaled_boundaries, true_boundaries, config, output_name):
-    """
-    Make plot of convergence map using appropriate logic for coordinate system.
+    """Create plot of convergence map.
     
     Parameters
     ----------
-    filtered_convergence : numpy.ndarray
-        The convergence map data
-    scaled_boundaries : dict
-        Dictionary containing scaled coordinate boundaries
-    true_boundaries : dict
-        Dictionary containing true coordinate boundaries
-    config : dict
-        Configuration dictionary containing plotting parameters
-    output_name : str
-        Path where to save the plot
+    filtered_convergence : `numpy.ndarray`
+        2D convergence map data
+    scaled_boundaries : `dict`
+        Scaled coordinate boundaries 
+    true_boundaries : `dict`
+        True coordinate boundaries
+    config : `dict`
+        Plot configuration settings
+    output_name : `str`
+        Path for saving plot
     """
+
     # Check coordinate system
     coord_system = config.get('coordinate_system', 'radec').lower()
     
@@ -91,7 +91,13 @@ def plot_convergence(filtered_convergence, scaled_boundaries, true_boundaries, c
         _plot_convergence_pixel(filtered_convergence, scaled_boundaries, true_boundaries, config, output_name)
 
 def _set_plot_params(fontsize=15):
-    """Set common plotting parameters."""
+    """Set standard matplotlib parameters.
+    
+    Parameters
+    ----------
+    fontsize : `int`
+        Base font size for plot elements
+    """
     plt.rcParams.update({
         'axes.linewidth': 1.3,
         'xtick.labelsize': fontsize,
@@ -113,7 +119,22 @@ def _set_plot_params(fontsize=15):
     })
 
 def _plot_convergence_pixel(filtered_convergence, scaled_boundaries, true_boundaries, config, output_name):
-    """Simplified plotting for pixel coordinates."""
+    """Create convergence plot for pixel coordinates.
+    
+    Parameters
+    ----------
+    filtered_convergence : `numpy.ndarray`
+        2D convergence map data
+    scaled_boundaries : `dict`
+        Scaled coordinate boundaries
+    true_boundaries : `dict`
+        True coordinate boundaries
+    config : `dict`
+        Plot configuration settings
+    output_name : `str`
+        Path for saving plot
+    """
+
     _set_plot_params()
     
     # Create figure
@@ -197,7 +218,22 @@ def _plot_convergence_pixel(filtered_convergence, scaled_boundaries, true_bounda
     plt.close(fig)
 
 def _plot_convergence_radec(filtered_convergence, scaled_boundaries, true_boundaries, config, output_name):
-    """Original plotting implementation for RA/Dec coordinates."""
+    """Create convergence plot for RA/Dec coordinates.
+    
+    Parameters
+    ----------
+    filtered_convergence : `numpy.ndarray`
+        2D convergence map data
+    scaled_boundaries : `dict`
+        Scaled coordinate boundaries
+    true_boundaries : `dict`
+        True coordinate boundaries
+    config : `dict`
+        Plot configuration settings
+    output_name : `str`
+        Path for saving plot
+    """
+
     # Set plotting parameters
     _set_plot_params()
 
@@ -319,7 +355,27 @@ def _plot_convergence_radec(filtered_convergence, scaled_boundaries, true_bounda
 
 def plot_animation(convergence, boundaries, config, output_name='animation.mp4', 
                   center_cl=None, smoothing=False, num_frames=50, fps=5):
-    """Animation plotting function [original implementation]"""
+    """Create animation of convergence maps.
+    
+    Parameters
+    ----------
+    convergence : `list`
+        List of 2D convergence maps
+    boundaries : `dict`
+        Coordinate boundaries
+    config : `dict`
+        Plot configuration
+    output_name : `str`
+        Output file path
+    center_cl : `dict` or None
+        Center coordinates
+    smoothing : `bool`
+        Whether to apply smoothing
+    num_frames : `int`
+        Number of animation frames
+    fps : `int`
+        Frames per second
+    """
     _set_plot_params()
 
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=config['figsize'], tight_layout=True)

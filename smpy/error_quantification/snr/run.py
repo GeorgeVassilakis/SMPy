@@ -5,11 +5,43 @@ from smpy.mapping_methods.kaiser_squires import kaiser_squires
 from smpy.plotting import plot, filters
 from smpy.coordinates import get_coordinate_system
 
+"""Signal-to-noise map generation module.
+
+Creates SNR maps by generating random realizations through spatial or orientation shuffling
+to estimate noise properties of the mass maps.
+"""
+
 def read_config(file_path):
+    """Read configuration from YAML file.
+
+    Parameters
+    ----------
+    file_path : `str`
+        Path to configuration file
+
+    Returns
+    -------
+    dict
+        Configuration dictionary
+    """
     with open(file_path, 'r') as file:
         return yaml.safe_load(file)
 
 def ks_inversion_list(grid_list, coord_system_type='radec'):
+    """Perform Kaiser-Squires inversion on list of shear grids.
+
+    Parameters
+    ----------
+    grid_list : `list`
+        List of (g1_grid, g2_grid) tuples
+    coord_system_type : `str`
+        Coordinate system type for setting g2 sign convention
+
+    Returns
+    -------
+    kappa_e_list, kappa_b_list : `list`
+        Lists of E-mode and B-mode convergence maps
+    """
 
     kappa_e_list = []
     kappa_b_list = []
@@ -25,6 +57,22 @@ def ks_inversion_list(grid_list, coord_system_type='radec'):
     return kappa_e_list, kappa_b_list
 
 def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
+    """Create signal-to-noise maps from convergence maps.
+
+    Generates noise realizations through spatial/orientation shuffling and creates
+    SNR maps for E and B modes.
+
+    Parameters
+    ----------
+    config : `dict`
+        Configuration dictionary
+    convergence_maps : `dict`
+        Dictionary containing E/B mode convergence maps
+    scaled_boundaries : `dict`
+        Scaled coordinate boundaries
+    true_boundaries : `dict`
+        True coordinate boundaries
+    """
 
     # Get coordinate system
     coord_system_type = config.get('coordinate_system', 'radec').lower()
@@ -96,5 +144,18 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
             plot.plot_convergence(sn_maps[mode], scaled_boundaries, true_boundaries, plot_config, output_name)
 
 def run(config_path, convergence_maps, scaled_boundaries, true_boundaries):
+    """Run SNR map generation.
+
+    Parameters
+    ----------
+    config_path : `str`
+        Path to configuration file
+    convergence_maps : `dict`
+        Dictionary containing E/B mode convergence maps
+    scaled_boundaries : `dict`
+        Scaled coordinate boundaries
+    true_boundaries : `dict`
+        True coordinate boundaries
+    """
     config = read_config(config_path)
     create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries)

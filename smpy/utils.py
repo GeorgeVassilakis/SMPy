@@ -7,28 +7,36 @@ from astropy.io import fits
 from astropy.wcs import WCS
 
 def load_shear_data(shear_cat_path, coord1_col, coord2_col, g1_col, g2_col, weight_col=None, hdu=0):
-    """
-    Load shear data from a FITS file and return a pandas DataFrame.
-    
+    """Load shear catalog from FITS file.
+
     Parameters
     ----------
-    shear_cat_path : str
-        Path to the FITS file
-    coord1_col : str
-        Column name for first coordinate (RA or X)
-    coord2_col : str
-        Column name for second coordinate (Dec or Y)
-    g1_col : str
-        Column name for first shear component
-    g2_col : str
-        Column name for second shear component
-    weight_col : str, optional
-        Column name for weights, if None uses unit weights
-        
+    shear_cat_path : `str`
+        Path to FITS catalog
+    coord1_col : `str`
+        Name of first coordinate column
+    coord2_col : `str`
+        Name of second coordinate column
+    g1_col : `str`
+        Name of g1 shear column
+    g2_col : `str`
+        Name of g2 shear column
+    weight_col : `str`, optional
+        Name of weight column
+    hdu : `int`
+        HDU number to read
+
     Returns
     -------
-    pd.DataFrame
-        DataFrame with coordinates, shear, and weight columns
+    pandas.DataFrame
+        DataFrame with standardized column names
+        
+    Raises
+    ------
+    IndexError
+        If HDU not found
+    KeyError
+        If required columns not found
     """
     # Read data from FITS file
     try:
@@ -55,91 +63,33 @@ def load_shear_data(shear_cat_path, coord1_col, coord2_col, g1_col, g2_col, weig
     
     return shear_df
 
-def save_convergence_fits(convergence, boundaries, true_boundaries, config, output_name):
-    """
-    Save convergence map as a FITS file with WCS information.
-    
-    Parameters
-    ----------
-    convergence : np.ndarray
-        2D convergence map
-    boundaries : dict
-        Dictionary containing scaled coordinate boundaries
-    true_boundaries : dict
-        Dictionary containing true coordinate boundaries
-    config : dict
-        Configuration dictionary
-    output_name : str
-        Output file path
-    """
-    if not config.get('save_fits', False):
-        return
-    
-    # Create a WCS object
-    wcs = WCS(naxis=2)
-    
-    # Set up the WCS parameters based on coordinate system
-    npix_dec, npix_ra = convergence.shape
-    
-    # Use true boundaries for WCS information
-    wcs.wcs.crpix = [npix_ra / 2, npix_dec / 2]
-    wcs.wcs.cdelt = [
-        (true_boundaries['coord1_max'] - true_boundaries['coord1_min']) / npix_ra,
-        (true_boundaries['coord2_max'] - true_boundaries['coord2_min']) / npix_dec
-    ]
-    wcs.wcs.crval = [
-        (true_boundaries['coord1_max'] + true_boundaries['coord1_min']) / 2,
-        (true_boundaries['coord2_max'] + true_boundaries['coord2_min']) / 2
-    ]
-    
-    # Set coordinate type based on coordinate system
-    if config.get('coordinate_system', 'radec').lower() == 'radec':
-        wcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]
-    else:
-        wcs.wcs.ctype = ["X", "Y"]
-    
-    # Create a FITS header from the WCS information
-    header = wcs.to_header()
-    
-    # Add metadata to header
-    header['AUTHOR'] = 'SMPy'
-    header['CONTENT'] = 'Convergence Map'
-    header['COORDSYS'] = config.get('coordinate_system', 'radec').upper()
-    header['UNIT1'] = true_boundaries.get('units', '')
-    header['UNIT2'] = true_boundaries.get('units', '')
-    
-    # Create HDU and save
-    hdu = fits.PrimaryHDU(convergence, header=header)
-    hdul = fits.HDUList([hdu])
-    hdul.writeto(output_name, overwrite=True)
-    
-    print(f"Convergence map saved as FITS file: {output_name}")
-
 def find_peaks2d(image, threshold=None, verbose=False, true_boundaries=None, scaled_boundaries=None):
     """
     Identify peaks in a 2D array above a specified threshold.
     A peak is a pixel with a value greater than its 8 neighbors.
+    Refactored from cosmostat/lenspack.
 
     Parameters
     ----------
-    image : np.ndarray
-        2D array representing the image
-    threshold : float, optional
-        Minimum pixel value to consider as a peak
-    verbose : bool
-        Whether to print peak information
-    true_boundaries : dict
-        Dictionary containing true coordinate boundaries for coordinate conversion
-    scaled_boundaries : dict
-        Dictionary containing scaled coordinate boundaries for coordinate conversion
+    image : `numpy.ndarray`
+        2D input map
+    threshold : `float`, optional
+        Detection threshold
+    verbose : `bool`
+        Print peak information
+    true_boundaries : `dict`, optional
+        True coordinate boundaries for position conversion
+    scaled_boundaries : `dict`, optional
+        Scaled coordinate boundaries for position conversion
 
     Returns
     -------
-    tuple
-        (X, Y, heights, coords) where:
-        - X, Y are peak indices
-        - heights are peak values
-        - coords are true coordinates (if boundaries provided)
+    X, Y : `numpy.ndarray`
+        Peak pixel indices
+    heights : `numpy.ndarray`
+        Peak values
+    coords : `list`
+        Peak coordinates in true system if boundaries provided
     """
     image = np.atleast_2d(image)
     threshold = threshold if threshold is not None else image.min()
@@ -220,25 +170,23 @@ def find_peaks2d(image, threshold=None, verbose=False, true_boundaries=None, sca
     return X, Y, heights, coords
 
 def g1g2_to_gt_gc(g1, g2, coord1, coord2, center_coord1, center_coord2, pix_coord1=100):
-    """
-    Convert reduced shear to tangential and cross components.
-    Works with either RA/Dec or pixel coordinates.
-    
+    """Convert shear components to tangential/cross components.
+
     Parameters
     ----------
-    g1, g2 : np.ndarray
-        Reduced shear components
-    coord1, coord2 : np.ndarray
-        Coordinates (either RA/Dec or X/Y)
-    center_coord1, center_coord2 : float
+    g1, g2 : `numpy.ndarray`
+        Shear components
+    coord1, coord2 : `numpy.ndarray`
+        Coordinates (RA/Dec or X/Y)
+    center_coord1, center_coord2 : `float`
         Center coordinates
-    pix_coord1 : int
-        Number of pixels in first coordinate dimension
-        
+    pix_coord1 : `int`
+        Grid size in first dimension
+
     Returns
     -------
-    tuple
-        (gt, gc, phi) tangential shear, cross shear, and polar angle
+    gt, gc, phi : `numpy.ndarray`
+        Tangential shear, cross shear, polar angle
     """
     coord1_max = np.max(coord1)
     coord1_min = np.min(coord1)
@@ -265,8 +213,7 @@ def g1g2_to_gt_gc(g1, g2, coord1, coord2, center_coord1, center_coord2, pix_coor
     return gt, gc, phi
 
 def _shuffle_coordinates(shear_df, seed=None):
-    """
-    Shuffle the scaled coordinates of the input DataFrame together.
+    """Shuffle the scaled coordinates of the input DataFrame together.
     
     Parameters
     ----------
@@ -302,8 +249,7 @@ def _shuffle_coordinates(shear_df, seed=None):
     return shuffled_df
 
 def _shuffle_galaxy_rotation(shear_df):
-    """
-    Shuffle the galaxy rotation in the input shear DataFrame.
+    """Shuffle the galaxy rotation in the input shear DataFrame.
     
     Parameters
     ----------
@@ -329,24 +275,28 @@ def _shuffle_galaxy_rotation(shear_df):
     return shuffled_df
 
 def generate_multiple_shear_dfs(og_shear_df, num_shuffles=100, shuffle_type='spatial', seed=0):
-    """
-    Generate multiple shuffled versions of the input DataFrame.
-    
+    """Generate shuffled versions of shear catalog.
+
     Parameters
     ----------
-    og_shear_df : pd.DataFrame
-        Original shear DataFrame
-    num_shuffles : int
-        Number of shuffled copies to generate
-    shuffle_type : str
-        Type of shuffling ('spatial' or 'orientation')
-    seed : int
-        Starting random seed
+    og_shear_df : `pandas.DataFrame`
+        Original shear catalog
+    num_shuffles : `int`
+        Number of shuffled versions
+    shuffle_type : `str`
+        'spatial' or 'orientation'
+    seed : `int`
+        Random seed
         
     Returns
     -------
     list
         List of shuffled DataFrames
+        
+    Raises
+    ------
+    ValueError
+        If invalid shuffle_type specified
     """
     shuffled_dfs = []
     

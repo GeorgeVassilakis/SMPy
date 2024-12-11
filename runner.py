@@ -2,7 +2,20 @@ from smpy import run
 from argparse import ArgumentParser, ArgumentTypeError
 from pathlib import Path
 
+"""Command line interface for SMPy.
+
+Provides a simple command line tool to run SMPy mass mapping operations
+using configuration files.
+"""
+
 def main(args):
+    """Execute SMPy operation from command line arguments.
+
+    Parameters
+    ----------
+    args : `argparse.Namespace`
+        Parsed command line arguments containing config path
+    """
     run.run(args.config)
 
 if __name__ == "__main__":

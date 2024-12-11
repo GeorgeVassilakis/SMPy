@@ -3,23 +3,22 @@ from .radec import RADecSystem
 from .pixel import PixelSystem
 
 def get_coordinate_system(system_name):
-    """
-    Factory function to get the appropriate coordinate system.
-    
+    """Create the appropriate coordinate system instance.
+
     Parameters
     ----------
-    system_name : str
-        Name of the coordinate system ('radec' or 'pixel')
+    system_name : `str`
+        Name of coordinate system ('radec' or 'pixel')
         
     Returns
     -------
     CoordinateSystem
-        Instance of the requested coordinate system
+        Instance of RADecSystem or PixelSystem
         
     Raises
     ------
     ValueError
-        If system_name is not recognized
+        If system_name is not 'radec' or 'pixel'
     """
     systems = {
         'radec': RADecSystem,

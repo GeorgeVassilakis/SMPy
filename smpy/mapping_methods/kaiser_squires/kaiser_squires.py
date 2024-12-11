@@ -1,8 +1,23 @@
 import numpy as np
 
 def ks_inversion(g1_grid, g2_grid):
-    """
-    Perform the Kaiser-Squires inversion to obtain both E-mode and B-mode convergence maps from shear components.
+    """Perform Kaiser-Squires inversion to get convergence maps.
+
+    Converts shear fields to convergence fields using Fourier space
+    operations, recovering both E-mode (physical) and B-mode (systematic)
+    components.
+
+    Parameters
+    ----------
+    g1_grid : `numpy.ndarray`
+        2D array of first shear component
+    g2_grid : `numpy.ndarray`
+        2D array of second shear component
+
+    Returns
+    -------
+    kappa_e_grid, kappa_b_grid : `numpy.ndarray`
+        E-mode and B-mode convergence maps
     """
     # Get the dimensions of the input grids
     npix_dec, npix_ra = g1_grid.shape

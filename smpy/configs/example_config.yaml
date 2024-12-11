@@ -1,13 +1,12 @@
 # YAML File for SMPy Configuration
 
-# General settings
+#------General settings------#
 general:
   # Input/Output paths
   input_path: "/home/wslgeorgios/SMPy/examples/data/forecast_lum_annular.fits"
   input_hdu: 1  # FITS extension number to read data from
   output_directory: "/home/wslgeorgios/SMPy/examples/outputs/"
   output_base_name: "simulation_testing"
-  save_fits: false  # Currently not supported
 
   # Coordinate system settings
   coordinate_system: "radec"  # 'radec' or 'pixel'
@@ -30,7 +29,7 @@ general:
   create_snr: true  # Whether to create SNR map
   mode: ['E']  # ['E'], ['B'], or ['E', 'B']
 
-# Convergence Map Settings
+#------Convergence Map Settings------#
 convergence:
   smoothing:
     type: 'gaussian'  # 'gaussian' or null
@@ -51,7 +50,7 @@ convergence:
   verbose: null      # Print peak information
   cluster_center: null  # null, 'auto', or {ra/x_center: float, dec/y_center: float}
 
-# SNR Map Settings
+#------SNR Map Settings------#
 snr:
   shuffle_type: 'spatial'  # 'spatial' or 'orientation'
   num_shuffles: 100       # Number of random realizations
