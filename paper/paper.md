@@ -33,17 +33,15 @@ bibliography: paper.bib
 
 # Summary
 
-Understanding the universe's large-scale distribution of dark matter is a central objective in the era of precision cosmology. A key tool for the study of dark matter is weak gravitational lensing; a phenomenon where light from distant galaxies is sheared as it passes though the gravitational field of a massive object, like a galaxy cluster. This shear, which manifests as a slight (weak) distortion of shapes over thousands of galaxies, allows astrophysicists to infer the distribution of total matter, including both luminous and dark matter.
+Understanding the universe's large-scale distribution of dark matter is a central objective in the era of precision cosmology. A key technique for the study of dark matter is weak gravitational lensing; a phenomenon where light from distant galaxies is sheared as it passes through the gravitational field of a massive object, like a galaxy cluster. This shear, which manifests as a slight (weak) distortion of shapes over thousands of galaxies, allows astrophysicists to infer the distribution of total matter, including both luminous and dark matter.
 
-Obtaining a mass distribution from a catalog of galaxy shears requires an intermediate step. A common tool for this step is the mapping of convergence ($\kappa$), which quantifies how much a gravitational lens converges the light from distant galaxies, resulting in a magnification of their shapes. This value is directly proportional to the projected mass density, enabling easy visualization of the overall distribution. For a comprehensive review of weak gravitational lensing, please refer to [@Umetsu2020]. 
+Obtaining a mass distribution from a catalog of galaxy shears requires an intermediate step. A common tool for this step is the mapping of convergence ($\kappa$), which quantifies how much a gravitational lens converges the light from distant galaxies, resulting in a magnification of their shapes. This value is directly proportional to the projected mass density, enabling easy visualization of the overall mass distribution. For a comprehensive review of weak gravitational lensing, please refer to [@Umetsu2020]. 
 
-The **Shear Mapping in Python (SMPy)** package provides a standardized, well-documented, and open-source solution for creating convergence maps from weak lensing galaxy shear measurements. `SMPy` was initially developed to support the Superpressure Balloon-borne Imaging Telescope (SuperBIT), a stratospheric, near-UV to near-IR observing platform which completed its 45-night observing run in spring 2023 with over 30 galaxy cluster observations [@Gill2024]. `SMPy` has since evolved into a general-purpose tool suitable for analyzing the weak lensing data from any source of galaxies.
+The **Shear Mapping in Python (SMPy)** package provides a standardized, well-documented, and open-source solution for creating convergence maps from weak lensing galaxy shear measurements. `SMPy` was initially developed to support the Superpressure Balloon-borne Imaging Telescope (SuperBIT), a stratospheric, near-UV to near-IR observing platform which completed its 45-night observing run in spring 2023 with over 30 galaxy cluster observations [@Gill2024], [@Sirks2023]. `SMPy` has since evolved into a general-purpose tool suitable for analyzing the weak lensing data from any source of galaxies.
 
 # Statement of Need
 
-Mass maps are a critical deliverable of many cosmological analyses [ACTDR62024], [@DESY32021], [@HSC2017]. While some tools exist for mass mapping, such as `lenspack` and `jax-lensing` [@Remy2022], they are either not well documented and and lack algorithmic rigor, or they are highly specialized for specific use cases, such as Neural Score Matching to create Deep Learning-based maps. This leaves a significant gap in the field for a user-friendly, well-documented tool that can handle both astrometric and pixel-space convergence mapping while maintaining mathematical rigor.
-
-`SMPy` fills this void by providing a robust, well-documented, and open-source tool to construct publication-quality mass maps from galaxy shear data. It is, to our knowledge, the first convergence mapping software that combines accessibility with the flexibility to compute convergence in either astrometric or pixel space.
+While mass maps are a critical deliverable of many cosmological analyses [@ACTDR62024] [@DESY32021] [@HSC2017], scientists are often left to make these maps from scratch. Existing tools do exist for mass mapping, such as `lenspack` and `jax-lensing` [@Remy2022]. However, they are either not well-documented and lack algorithmic rigor, or they are highly specialized and inaccessible for general use cases. `SMPy` addresses an outstanding need for the lensing community: a robust, well-documented, and open-source tool to construct publication-quality mass maps from galaxy shear data. It is, to our knowledge, the first convergence mapping software to prioritize both accessibility and advanced features. `SMPy` provides a unified, user-friendly platform that supports multiple coordinate systems and creates a foundation for open-source contribution of new mapping methods.
 
 `SMPy` was built with the following design principles in mind:
 
@@ -72,3 +70,5 @@ Mass maps are a critical deliverable of many cosmological analyses [ACTDR62024],
 # Acknowledgements
 
 This material is based upon work supported by a Northeastern University Undergraduate Research and Fellowships PEAK Summit Award.
+
+# References
