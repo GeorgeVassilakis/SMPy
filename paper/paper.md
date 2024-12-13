@@ -45,6 +45,8 @@ While mass maps are a key deliverable of many cosmological analyses [@ACTDR62024
 
 `SMPy` addresses an outstanding need for the lensing community: an accessible, well-documented, and extensible tool to construct publication-quality mass maps from galaxy shear data. Built on standard scientific Python packages, it provides an easy entry point for researchers new to mass mapping, while also being robust for more senior scientific use. It offers specialized and unique features valuable for mass mapping, such as flexible coordinate system support (both celestial and pixel space) and comprehensive signal-to-noise analysis with multiple noise randomization techniques. Its modular architecture also enables future contributions of new mapping methods. An example convergence map, created from simulated SuperBIT galaxy cluster observations [@McCleary2023], is shown in Figure 1. `SMPy` is, to our knowledge, the first convergence mapping software to prioritize both accessibility and advanced features.
 
+# Software Features
+
 `SMPy` was built with the following design principles in mind:
 
 1. **Accessibility:** `SMPy` is written entirely in Python and deliberately relies only on widely-used scientific Python packages (`numpy`, `scipy`, `pandas`, `astropy`, `matplotlib`, and `pyyaml`). This choice of standard dependencies ensures that users can easily install the packages without complex dependency chains, and that the codebase is maintainable and familiar to the scientific Python community.
