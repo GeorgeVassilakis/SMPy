@@ -3,7 +3,7 @@
 #------General settings------#
 general:
   # Input/Output paths
-  input_path: "/home/wslgeorgios/SMPy/examples/data/forecast_lum_annular.fits"
+  input_path: "/home/wslgeorgios/SMPy/examples/data/forecast_lum_truth.fits"
   input_hdu: 1  # FITS extension number to read data from
   output_directory: "/home/wslgeorgios/SMPy/examples/outputs/"
   output_base_name: "simulation_testing"
@@ -20,27 +20,40 @@ general:
     coord2: 'Y_IMAGE_se'    # Y column name
   
   # Data columns
-  g1_col: 'g1_Rinv'
-  g2_col: 'g2_Rinv'
-  weight_col: 'weight'  # Set to null if no weights
+  #1_col: 'g1_Rinv'
+  g1_col: 'nfw_g1'
+  #g2_col: 'g2_Rinv'
+  g2_col: 'nfw_g2'
+  weight_col: null  # Set to null if no weights
   
   # Analysis settings
-  method: "kaiser_squires"
-  create_snr: true  # Whether to create SNR map
+  method: "aperture_mass"  # "kaiser_squires" or "aperture_mass"
+  create_snr: false  # Whether to create SNR map
   mode: ['E']  # ['E'], ['B'], or ['E', 'B']
 
-#------Convergence Map Settings------#
-convergence:
-  smoothing:
-    type: 'gaussian'  # 'gaussian' or null
-    sigma: 2.0        # Smoothing scale
-    
+#------Method Settings------#
+methods:
+  # Kaiser-Squires settings
+  kaiser_squires:
+    smoothing:
+      type: 'gaussian'  # 'gaussian' or null
+      sigma: 2.0        # Smoothing scale
+
+  # Aperture Mass settings
+  aperture_mass:
+    filter:
+      type: 'gaussian'  # Type of aperture filter
+      scale: 2.0        # Filter scale
+      truncation: 2.0   # Filter truncation radius (in units of scale)
+
+#------Plot Settings------#
+plotting:
   # Basic plotting
   figsize: [20, 10]
   cmap: 'magma'
   xlabel: 'auto'  # 'auto', null, or custom string
   ylabel: 'auto'  # 'auto', null, or custom string
-  plot_title: 'Convergence Map'
+  plot_title: 'Mass Map'  # Method name will be appended
   gridlines: true
   
   # Advanced plotting
@@ -59,17 +72,5 @@ snr:
     type: 'gaussian'  # 'gaussian' or null (null not recommended for SNR)
     sigma: 2.0        # Smoothing scale
   
-  # Basic plotting
-  figsize: [20, 10]
-  cmap: 'magma'
-  xlabel: 'auto'  # 'auto', null, or custom string
-  ylabel: 'auto'  # 'auto', null, or custom string
-  plot_title: 'Signal-to-Noise Map'
-  gridlines: true
-  
-  # Advanced plotting
-  vmax: null
-  vmin: null
-  threshold: null    # Peak detection threshold
-  verbose: null      # Print peak information
-  cluster_center: null  # null, 'auto', or {ra/x_center: float, dec/y_center: float}
+  # SNR plots will use the same settings as defined in plotting section above
+  plot_title: 'Signal-to-Noise Map'  # Overrides plotting.plot_title for SNR maps

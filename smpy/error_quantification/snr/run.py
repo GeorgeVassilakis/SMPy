@@ -1,8 +1,9 @@
 import yaml
 import numpy as np
 from smpy import utils
+from smpy.filters import plotting
 from smpy.mapping_methods.kaiser_squires import kaiser_squires
-from smpy.plotting import plot, filters
+from smpy.plotting import plot
 from smpy.coordinates import get_coordinate_system
 
 """Signal-to-noise map generation module.
@@ -115,8 +116,8 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
 
     # Process maps
     filter_config = config.get('smoothing')
-    processed_kappa_e_list = [filters.apply_filter(k, filter_config) for k in kappa_e_list]
-    processed_kappa_b_list = [filters.apply_filter(k, filter_config) for k in kappa_b_list]
+    processed_kappa_e_list = [plotting.apply_filter(k, filter_config) for k in kappa_e_list]
+    processed_kappa_b_list = [plotting.apply_filter(k, filter_config) for k in kappa_b_list]
     
     # Calculate variance maps
     variance_map_e = np.var(np.stack(processed_kappa_e_list, axis=0), axis=0)
@@ -127,12 +128,12 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
     
     if 'E' in convergence_maps:
         convergence_e = convergence_maps['E']
-        convergence_e = filters.apply_filter(convergence_e, filter_config)
+        convergence_e = plotting.apply_filter(convergence_e, filter_config)
         sn_maps['E'] = convergence_e / np.sqrt(variance_map_e)
     
     if 'B' in convergence_maps:
         convergence_b = convergence_maps['B']
-        convergence_b = filters.apply_filter(convergence_b, filter_config)
+        convergence_b = plotting.apply_filter(convergence_b, filter_config)
         sn_maps['B'] = convergence_b / np.sqrt(variance_map_b)
     
     # Plot SNR maps
