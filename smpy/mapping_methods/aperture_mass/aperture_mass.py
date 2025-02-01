@@ -1,41 +1,8 @@
 """Implementation of aperture mass mapping using Schneider+98 filter."""
 
 import numpy as np
-from ..base import MassMapper
-
-def _u_function(x, scale):
-    """Schneider+98 (s98) aperture mass isotropic filter function U(theta).
-    
-    Parameters
-    ----------
-    x : `numpy.ndarray`
-        Radial distances
-    scale : `float`
-        Scale radius in pixels
-        
-    Returns
-    -------
-    numpy.ndarray
-        Filter values at input radii
-        
-    Notes
-    -----
-    Implements the s98 filter from Schneider et al. 1998, MNRAS 296, 873.
-    The filter includes a normalization factor to match Giocoli et al. 2015.
-    """
-    x = np.atleast_1d(x).astype(float)
-    y = x / scale
-    
-    # s98 filter parameters
-    l = 1  # polynomial order
-    prefactor = np.sqrt(276) / 24  # normalization
-    A = (l + 2) / np.pi / scale**2
-    
-    # Compute filter
-    result = A * np.power(1. - y**2, l) * (1. - (l + 2.) * y**2)
-    result = prefactor * result * np.heaviside(scale - np.abs(x), 0.5)
-    
-    return result
+from smpy.mapping_methods.base import MassMapper
+from smpy.filters.processing import s98_aperture_filter
 
 class ApertureMassMapper(MassMapper):
     """Implementation of aperture mass mapping using S98 filter.
@@ -82,7 +49,7 @@ class ApertureMassMapper(MassMapper):
                 radii = np.sqrt(X + Y)
                 
                 # Get filter values
-                filter_vals = _u_function(radii, scale)
+                filter_vals = s98_aperture_filter(radii, scale)
                 
                 # Calculate tangential/cross shear
                 dx = np.arange(nx) - j
@@ -130,7 +97,7 @@ class ApertureMassMapper(MassMapper):
                 y = abs(np.arange(map_e.shape[0]) - i)
                 X, Y = np.meshgrid(x**2, y**2)
                 radii = np.sqrt(X + Y)
-                filter_vals = _u_function(radii, scale)
+                filter_vals = s98_aperture_filter(radii, scale)
                 noise[i,j] = np.sqrt(np.sum(filter_vals**2 * e_sq))/np.sqrt(2)
         
         # Return signal-to-noise maps
