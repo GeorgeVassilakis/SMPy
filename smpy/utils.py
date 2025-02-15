@@ -310,3 +310,40 @@ def generate_multiple_shear_dfs(og_shear_df, num_shuffles=100, shuffle_type='spa
         shuffled_dfs.append(shuffled_df)
     
     return shuffled_dfs
+
+def save_fits(data, true_boundaries, filename):
+    """
+    Save a 2D array as a FITS file with proper WCS information.
+    
+    Parameters
+    ----------
+    - data: 2D numpy array containing the map.
+    - true_boundaries: Dictionary with 'ra_min', 'ra_max', 'dec_min', 'dec_max'.
+    - filename: Output filename.
+    """
+    hdu = fits.PrimaryHDU(data)
+    header = hdu.header
+
+    ny, nx = data.shape
+    ra_min, ra_max = true_boundaries['ra_min'], true_boundaries['ra_max']
+    dec_min, dec_max = true_boundaries['dec_min'], true_boundaries['dec_max']
+
+    pixel_scale_ra = (ra_max - ra_min) / nx
+    pixel_scale_dec = (dec_max - dec_min) / ny
+
+    header["CTYPE1"] = "RA---TAN"
+    header["CUNIT1"] = "deg"
+    header["CRVAL1"] = (ra_max + ra_min) / 2
+    header["CRPIX1"] = nx / 2
+    header["CD1_1"]  = -pixel_scale_ra
+    header["CD1_2"]  = 0.0
+
+    header["CTYPE2"] = "DEC--TAN"
+    header["CUNIT2"] = "deg"
+    header["CRVAL2"] = (dec_max + dec_min) / 2
+    header["CRPIX2"] = ny / 2
+    header["CD2_1"]  = 0.0
+    header["CD2_2"]  = pixel_scale_dec
+
+    hdu.writeto(filename, overwrite=True)
+    print(f"Saved FITS file: {filename}")
