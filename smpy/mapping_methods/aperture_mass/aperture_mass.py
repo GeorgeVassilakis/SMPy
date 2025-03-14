@@ -40,7 +40,7 @@ class ApertureMassMapper(MassMapper):
         map_e = np.zeros((ny, nx))
         map_b = np.zeros((ny, nx))
         
-        # Compute aperture mass at each position following Equation 7
+        # Compute aperture mass at each position
         for i in range(ny):
             for j in range(nx):
                 # Calculate radius to all pixels (scaled by rs)
