@@ -1,6 +1,7 @@
 """Main run module for mass mapping."""
 
 import yaml
+import time
 from smpy import utils
 from smpy.coordinates import get_coordinate_system
 from smpy.mapping_methods import KaiserSquiresMapper, ApertureMassMapper
@@ -87,8 +88,14 @@ def run_mapping(config):
     else:
         raise ValueError(f"Unknown mapping method: {method}")
     
-    # Run mapping
+    # Run mapping with timing
+    start_time = time.time()
     maps = mapper.run(g1map, g2_sign * g2map, scaled_boundaries, true_boundaries)
+    end_time = time.time()
+    
+    if config.get('print_timing', False):
+        elapsed_time = end_time - start_time
+        print(f"Time taken to create {method} maps: {elapsed_time:.2f} seconds")
     
     return maps, scaled_boundaries, true_boundaries
 
@@ -116,6 +123,8 @@ def run(config_path):
         snr_config = config['general'].copy()
         snr_config.update(config['snr'])
         snr_config.update(config['plotting'])
+        if 'print_timing' in config['general']:
+            snr_config['print_timing'] = config['general']['print_timing']
         snr_run.create_sn_map(snr_config, maps, scaled_boundaries, true_boundaries)
 
 if __name__ == "__main__":

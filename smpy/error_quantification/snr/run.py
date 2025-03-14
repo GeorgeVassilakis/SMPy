@@ -1,5 +1,6 @@
 import yaml
 import numpy as np
+import time
 from smpy import utils
 from smpy.filters import plotting
 from smpy.mapping_methods import KaiserSquiresMapper, ApertureMassMapper
@@ -81,6 +82,8 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
     true_boundaries : `dict`
         True coordinate boundaries
     """
+    # Start timing
+    start_time = time.time()
 
     # Get coordinate system
     coord_system_type = config.get('coordinate_system', 'radec').lower()
@@ -152,6 +155,12 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
             plot_config['plot_title'] = f'{config["plot_title"]} ({mode}-mode)'
             output_name = f"{config['output_directory']}{config['output_base_name']}_{mapping_method}_snr_{mode.lower()}_mode.png"
             plot.plot_convergence(sn_maps[mode], scaled_boundaries, true_boundaries, plot_config, output_name)
+    
+    # End timing
+    end_time = time.time()
+    if config.get('print_timing', False):
+        elapsed_time = end_time - start_time
+        print(f"Time taken to create {mapping_method} SNR maps: {elapsed_time:.2f} seconds")
 
 def run(config_path, convergence_maps, scaled_boundaries, true_boundaries):
     """Run SNR map generation.
