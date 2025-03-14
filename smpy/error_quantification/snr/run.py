@@ -119,7 +119,9 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
         g1_g2_map_list.append((g1map, g2map))
     
     # Calculate kappa for shuffled maps using the specified mapping method
-    mapping_method = config.get('mapping_method', 'kaiser_squires')
+    # First check for 'mapping_method', fallback to 'method', then default to 'kaiser_squires'
+    mapping_method = config.get('mapping_method', config.get('method', 'kaiser_squires'))
+    print(f"Creating SNR maps using {mapping_method} method")
     kappa_e_list, kappa_b_list = perform_mapping(g1_g2_map_list, config, mapping_method)
 
     # Process maps
@@ -149,7 +151,7 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
         if mode in sn_maps:
             plot_config = config.copy()
             plot_config['plot_title'] = f'{config["plot_title"]} ({mode}-mode)'
-            output_name = f"{config['output_directory']}{config['output_base_name']}_snr_{mode.lower()}_mode.png"
+            output_name = f"{config['output_directory']}{config['output_base_name']}_{mapping_method}_snr_{mode.lower()}_mode.png"
             plot.plot_convergence(sn_maps[mode], scaled_boundaries, true_boundaries, plot_config, output_name)
 
 def run(config_path, convergence_maps, scaled_boundaries, true_boundaries):

@@ -25,8 +25,8 @@ general:
   weight_col: 'weight'  # Set to null if no weights
   
   # Analysis settings
-  method: "aperture_mass"  # "kaiser_squires" or "aperture_mass"
-  create_snr: false  # Whether to create SNR map
+  method: "kaiser_squires"  # "kaiser_squires" or "aperture_mass"
+  create_snr: true  # Whether to create SNR map
   mode: ['E']  # ['E'], ['B'], or ['E', 'B']
 
 #------Method Settings------#
