@@ -2,7 +2,7 @@ import yaml
 import numpy as np
 from smpy import utils
 from smpy.filters import plotting
-from smpy.mapping_methods.kaiser_squires import kaiser_squires
+from smpy.mapping_methods import KaiserSquiresMapper, ApertureMassMapper
 from smpy.plotting import plot
 from smpy.coordinates import get_coordinate_system
 
@@ -28,30 +28,37 @@ def read_config(file_path):
     with open(file_path, 'r') as file:
         return yaml.safe_load(file)
 
-def ks_inversion_list(grid_list, coord_system_type='radec'):
-    """Perform Kaiser-Squires inversion on list of shear grids.
+def perform_mapping(grid_list, config, mapping_method='kaiser_squires'):
+    """Perform mass mapping on list of shear grids.
 
     Parameters
     ----------
     grid_list : `list`
         List of (g1_grid, g2_grid) tuples
-    coord_system_type : `str`
-        Coordinate system type for setting g2 sign convention
+    config : `dict`
+        Configuration dictionary for the mapper
+    mapping_method : `str`
+        Mapping method to use ('kaiser_squires' or 'aperture_mass')
 
     Returns
     -------
     kappa_e_list, kappa_b_list : `list`
         Lists of E-mode and B-mode convergence maps
     """
-
     kappa_e_list = []
     kappa_b_list = []
     
-    # Set g2 sign based on coordinate system
-    g2_sign = -1 if coord_system_type == 'radec' else 1
+    # Create the appropriate mapper based on the method
+    if mapping_method.lower() == 'kaiser_squires':
+        mapper = KaiserSquiresMapper(config)
+    elif mapping_method.lower() == 'aperture_mass':
+        mapper = ApertureMassMapper(config)
+    else:
+        raise ValueError(f"Unsupported mapping method: {mapping_method}")
     
+    # Apply the mapping to each grid
     for g1map, g2map in grid_list:
-        kappa_e, kappa_b = kaiser_squires.ks_inversion(g1map, g2_sign * g2map)
+        kappa_e, kappa_b = mapper.create_maps(g1map, g2map)
         kappa_e_list.append(kappa_e)
         kappa_b_list.append(kappa_b)
     
@@ -111,8 +118,9 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
         )
         g1_g2_map_list.append((g1map, g2map))
     
-    # Calculate kappa for shuffled maps
-    kappa_e_list, kappa_b_list = ks_inversion_list(g1_g2_map_list, coord_system_type)
+    # Calculate kappa for shuffled maps using the specified mapping method
+    mapping_method = config.get('mapping_method', 'kaiser_squires')
+    kappa_e_list, kappa_b_list = perform_mapping(g1_g2_map_list, config, mapping_method)
 
     # Process maps
     filter_config = config.get('smoothing')
