@@ -3,10 +3,10 @@
 #------General settings------#
 general:
   # Input/Output paths
-  input_path: "/Users/vassig/research/SMPy/examples/data/forecast_lum_annular.fits"
+  input_path: "/Users/vassig/research/SMPy/examples/data/forecast_lum_truth.fits"
   input_hdu: 1  # FITS extension number to read data from
   output_directory: "/Users/vassig/research/SMPy/examples/outputs/"
-  output_base_name: "simulation_testing"
+  output_base_name: "truth_testing"
 
   # Coordinate system settings
   coordinate_system: "radec"  # 'radec' or 'pixel'
@@ -20,9 +20,9 @@ general:
     coord2: 'Y_IMAGE_se'    # Y column name
   
   # Data columns
-  g1_col: 'g1_Rinv'
-  g2_col: 'g2_Rinv'
-  weight_col: 'weight'  # Set to null if no weights
+  g1_col: 'nfw_g1'
+  g2_col: 'nfw_g2'
+  weight_col: null  # Set to null if no weights
   
   # Analysis settings
   method: "aperture_mass"  # "kaiser_squires" or "aperture_mass"

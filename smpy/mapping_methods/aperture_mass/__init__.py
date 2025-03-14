@@ -1,4 +1,4 @@
-"""Aperture mass mapping implementation using S98 filter."""
+"""Aperture mass mapping implementation using Schirmer filter."""
 
 from .aperture_mass import ApertureMassMapper
 
