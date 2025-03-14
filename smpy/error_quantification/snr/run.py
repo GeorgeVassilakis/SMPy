@@ -121,8 +121,7 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
         )
         g1_g2_map_list.append((g1map, g2map))
     
-    # Calculate kappa for shuffled maps using the specified mapping method
-    # First check for 'mapping_method', fallback to 'method', then default to 'kaiser_squires'
+    # Calculate kappa for shuffled maps
     mapping_method = config.get('mapping_method', config.get('method', 'kaiser_squires'))
     kappa_e_list, kappa_b_list = perform_mapping(g1_g2_map_list, config, mapping_method)
 
