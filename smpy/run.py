@@ -118,6 +118,21 @@ def run(config_path):
     # Run mass mapping
     maps, scaled_boundaries, true_boundaries = run_mapping(method_config)
     
+    # Save maps as FITS files if requested
+    if config['general'].get('save_fits', False):
+        for mode in config['general']['mode']:
+            if mode in maps:
+                output_path = f"{config['general']['output_directory']}{config['general']['output_base_name']}_{method}_{mode.lower()}_mode.fits"
+                # Convert coordinate system to format expected by save_fits
+                if config['general']['coordinate_system'].lower() == 'radec':
+                    fits_boundaries = {
+                        'ra_min': true_boundaries['coord1_min'],
+                        'ra_max': true_boundaries['coord1_max'],
+                        'dec_min': true_boundaries['coord2_min'],
+                        'dec_max': true_boundaries['coord2_max']
+                    }
+                    utils.save_fits(maps[mode], fits_boundaries, output_path)
+    
     # Create SNR map if requested
     if config['general'].get('create_snr', False):
         snr_config = config['general'].copy()
@@ -125,7 +140,22 @@ def run(config_path):
         snr_config.update(config['plotting'])
         if 'print_timing' in config['general']:
             snr_config['print_timing'] = config['general']['print_timing']
-        snr_run.create_sn_map(snr_config, maps, scaled_boundaries, true_boundaries)
+        snr_map = snr_run.create_sn_map(snr_config, maps, scaled_boundaries, true_boundaries)
+        
+        # Save SNR maps as FITS files if requested
+        if config['general'].get('save_fits', False) and snr_map:
+            for mode in config['general']['mode']:
+                if mode in snr_map:
+                    output_path = f"{config['general']['output_directory']}{config['general']['output_base_name']}_{method}_snr_{mode.lower()}_mode.fits"
+                    # Convert coordinate system to format expected by save_fits
+                    if config['general']['coordinate_system'].lower() == 'radec':
+                        fits_boundaries = {
+                            'ra_min': true_boundaries['coord1_min'],
+                            'ra_max': true_boundaries['coord1_max'],
+                            'dec_min': true_boundaries['coord2_min'],
+                            'dec_max': true_boundaries['coord2_max']
+                        }
+                        utils.save_fits(snr_map[mode], fits_boundaries, output_path)
 
 if __name__ == "__main__":
     import sys

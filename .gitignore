@@ -163,3 +163,4 @@ cython_debug/
 .DS_Store
 LSSTDocstringGuide.txt
 apmass_equations.md
+examples/notebooks/.DS_Store

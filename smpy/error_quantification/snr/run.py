@@ -81,6 +81,11 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
         Scaled coordinate boundaries
     true_boundaries : `dict`
         True coordinate boundaries
+        
+    Returns
+    -------
+    dict
+        Dictionary containing E/B mode SNR maps
     """
     # Start timing
     start_time = time.time()
@@ -160,6 +165,8 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
     if config.get('print_timing', False):
         elapsed_time = end_time - start_time
         print(f"Time taken to create {mapping_method} SNR maps: {elapsed_time:.2f} seconds")
+    
+    return sn_maps
 
 def run(config_path, convergence_maps, scaled_boundaries, true_boundaries):
     """Run SNR map generation.
@@ -174,6 +181,11 @@ def run(config_path, convergence_maps, scaled_boundaries, true_boundaries):
         Scaled coordinate boundaries
     true_boundaries : `dict`
         True coordinate boundaries
+        
+    Returns
+    -------
+    dict
+        Dictionary containing E/B mode SNR maps
     """
     config = read_config(config_path)
-    create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries)
+    return create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries)
