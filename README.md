@@ -5,6 +5,7 @@
 
 Key attributes include:
 - Mass reconstruction via Kaiser-Squires inversion in both celestial (RA/Dec) and pixel coordinate systems
+- Aperture mass mapping for localized mass measurements
 - E/B-mode decomposition for systematic error analysis
 - Signal-to-noise ratio quantification through spatial and orientation randomization techniques
 - Peak statistics with customizable detection thresholds and significance estimation
@@ -15,6 +16,7 @@ The package provides a robust implementation supporting both weighted and unweig
 ## Features
 ### Convergence Mapping
 - **Kaiser-Squires Inversion**: Implementation of the classic Kaiser & Squires (1993) method for reconstructing convergence maps from weak lensing shear data
+- **Aperture Mass Mapping**: Direct measurement of the projected mass within apertures using tangential shear
 - **Support for Both E-mode and B-mode**: Generate maps for both E-mode (physical) and B-mode (systematic check) signals
 - **Flexible Coordinate Systems**: 
   - RA/Dec celestial coordinates with accurate spherical geometry handling
@@ -52,7 +54,7 @@ The package provides a robust implementation supporting both weighted and unweig
 - **Multiple Interfaces**: 
   - Command-line interface using a runner script
   - Python API for notebook integration
-- **Modular Design**: Extensible architecture ready for implementing additional mapping methods (aperture mass coming soon 🚧)
+- **Modular Design**: Extensible architecture supporting multiple mapping methods including Kaiser-Squires inversion and aperture mass
 
 ## Installation
 

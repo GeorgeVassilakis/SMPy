@@ -1,44 +1,60 @@
+"""Kaiser-Squires mass mapping implementation."""
+
 import numpy as np
+from ..base import MassMapper
+from smpy.filters import apply_filter
 
-def ks_inversion(g1_grid, g2_grid):
-    """Perform Kaiser-Squires inversion to get convergence maps.
+class KaiserSquiresMapper(MassMapper):
+    """Implementation of Kaiser-Squires mass mapping."""
+    
+    @property
+    def name(self):
+        return "kaiser_squires"
+    
+    def create_maps(self, g1_grid, g2_grid):
+        """Create convergence maps using Kaiser-Squires inversion.
+        
+        Parameters
+        ----------
+        g1_grid : numpy.ndarray
+            First shear component grid
+        g2_grid : numpy.ndarray
+            Second shear component grid
+            
+        Returns
+        -------
+        kappa_e, kappa_b : numpy.ndarray
+            E-mode and B-mode convergence maps
+        """
+        # Get grid dimensions
+        npix_dec, npix_ra = g1_grid.shape
 
-    Converts shear fields to convergence fields using Fourier space
-    operations, recovering both E-mode (physical) and B-mode (systematic)
-    components.
+        # Fourier transform the shear components
+        g1_hat = np.fft.fft2(g1_grid)
+        g2_hat = np.fft.fft2(g2_grid)
 
-    Parameters
-    ----------
-    g1_grid : `numpy.ndarray`
-        2D array of first shear component
-    g2_grid : `numpy.ndarray`
-        2D array of second shear component
+        # Create wavenumber grids
+        k1, k2 = np.meshgrid(np.fft.fftfreq(npix_ra), 
+                            np.fft.fftfreq(npix_dec))
+        k_squared = k1**2 + k2**2
 
-    Returns
-    -------
-    kappa_e_grid, kappa_b_grid : `numpy.ndarray`
-        E-mode and B-mode convergence maps
-    """
-    # Get the dimensions of the input grids
-    npix_dec, npix_ra = g1_grid.shape
+        # Avoid division by zero
+        k_squared = np.where(k_squared == 0, np.finfo(float).eps, k_squared)
 
-    # Fourier transform the shear components
-    g1_hat = np.fft.fft2(g1_grid)
-    g2_hat = np.fft.fft2(g2_grid)
+        # Kaiser-Squires inversion in Fourier space
+        kappa_e_hat = (1 / k_squared) * ((k1**2 - k2**2) * g1_hat + 
+                                        2 * k1 * k2 * g2_hat)
+        kappa_b_hat = (1 / k_squared) * ((k1**2 - k2**2) * g2_hat - 
+                                        2 * k1 * k2 * g1_hat)
 
-    # Create a grid of wave numbers
-    k1, k2 = np.meshgrid(np.fft.fftfreq(npix_ra), np.fft.fftfreq(npix_dec))
-    k_squared = k1**2 + k2**2
+        # Inverse Fourier transform
+        kappa_e = np.real(np.fft.ifft2(kappa_e_hat))
+        kappa_b = np.real(np.fft.ifft2(kappa_b_hat))
 
-    # Avoid division by zero by replacing zero values with a small number
-    k_squared = np.where(k_squared == 0, np.finfo(float).eps, k_squared)
+        # Apply smoothing if configured
+        smoothing_config = self.config.get('smoothing')
+        if smoothing_config:
+            kappa_e = apply_filter(kappa_e, smoothing_config)
+            kappa_b = apply_filter(kappa_b, smoothing_config)
 
-    # Kaiser-Squires inversion in Fourier space
-    kappa_e_hat = (1 / k_squared) * ((k1**2 - k2**2) * g1_hat + 2 * k1 * k2 * g2_hat)
-    kappa_b_hat = (1 / k_squared) * ((k1**2 - k2**2) * g2_hat - 2 * k1 * k2 * g1_hat)
-
-    # Inverse Fourier transform to get the convergence maps
-    kappa_e_grid = np.real(np.fft.ifft2(kappa_e_hat))
-    kappa_b_grid = np.real(np.fft.ifft2(kappa_b_hat))
-
-    return kappa_e_grid, kappa_b_grid
+        return kappa_e, kappa_b

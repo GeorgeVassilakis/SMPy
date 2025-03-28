@@ -1,8 +1,10 @@
 import yaml
 import numpy as np
+import time
 from smpy import utils
-from smpy.mapping_methods.kaiser_squires import kaiser_squires
-from smpy.plotting import plot, filters
+from smpy.filters import plotting
+from smpy.mapping_methods import KaiserSquiresMapper, ApertureMassMapper
+from smpy.plotting import plot
 from smpy.coordinates import get_coordinate_system
 
 """Signal-to-noise map generation module.
@@ -27,30 +29,37 @@ def read_config(file_path):
     with open(file_path, 'r') as file:
         return yaml.safe_load(file)
 
-def ks_inversion_list(grid_list, coord_system_type='radec'):
-    """Perform Kaiser-Squires inversion on list of shear grids.
+def perform_mapping(grid_list, config, mapping_method='kaiser_squires'):
+    """Perform mass mapping on list of shear grids.
 
     Parameters
     ----------
     grid_list : `list`
         List of (g1_grid, g2_grid) tuples
-    coord_system_type : `str`
-        Coordinate system type for setting g2 sign convention
+    config : `dict`
+        Configuration dictionary for the mapper
+    mapping_method : `str`
+        Mapping method to use ('kaiser_squires' or 'aperture_mass')
 
     Returns
     -------
     kappa_e_list, kappa_b_list : `list`
         Lists of E-mode and B-mode convergence maps
     """
-
     kappa_e_list = []
     kappa_b_list = []
     
-    # Set g2 sign based on coordinate system
-    g2_sign = -1 if coord_system_type == 'radec' else 1
+    # Create the appropriate mapper based on the method
+    if mapping_method.lower() == 'kaiser_squires':
+        mapper = KaiserSquiresMapper(config)
+    elif mapping_method.lower() == 'aperture_mass':
+        mapper = ApertureMassMapper(config)
+    else:
+        raise ValueError(f"Unsupported mapping method: {mapping_method}")
     
+    # Apply the mapping to each grid
     for g1map, g2map in grid_list:
-        kappa_e, kappa_b = kaiser_squires.ks_inversion(g1map, g2_sign * g2map)
+        kappa_e, kappa_b = mapper.create_maps(g1map, g2map)
         kappa_e_list.append(kappa_e)
         kappa_b_list.append(kappa_b)
     
@@ -73,6 +82,8 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
     true_boundaries : `dict`
         True coordinate boundaries
     """
+    # Start timing
+    start_time = time.time()
 
     # Get coordinate system
     coord_system_type = config.get('coordinate_system', 'radec').lower()
@@ -111,12 +122,13 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
         g1_g2_map_list.append((g1map, g2map))
     
     # Calculate kappa for shuffled maps
-    kappa_e_list, kappa_b_list = ks_inversion_list(g1_g2_map_list, coord_system_type)
+    mapping_method = config.get('mapping_method', config.get('method', 'kaiser_squires'))
+    kappa_e_list, kappa_b_list = perform_mapping(g1_g2_map_list, config, mapping_method)
 
     # Process maps
     filter_config = config.get('smoothing')
-    processed_kappa_e_list = [filters.apply_filter(k, filter_config) for k in kappa_e_list]
-    processed_kappa_b_list = [filters.apply_filter(k, filter_config) for k in kappa_b_list]
+    processed_kappa_e_list = [plotting.apply_filter(k, filter_config) for k in kappa_e_list]
+    processed_kappa_b_list = [plotting.apply_filter(k, filter_config) for k in kappa_b_list]
     
     # Calculate variance maps
     variance_map_e = np.var(np.stack(processed_kappa_e_list, axis=0), axis=0)
@@ -127,12 +139,12 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
     
     if 'E' in convergence_maps:
         convergence_e = convergence_maps['E']
-        convergence_e = filters.apply_filter(convergence_e, filter_config)
+        convergence_e = plotting.apply_filter(convergence_e, filter_config)
         sn_maps['E'] = convergence_e / np.sqrt(variance_map_e)
     
     if 'B' in convergence_maps:
         convergence_b = convergence_maps['B']
-        convergence_b = filters.apply_filter(convergence_b, filter_config)
+        convergence_b = plotting.apply_filter(convergence_b, filter_config)
         sn_maps['B'] = convergence_b / np.sqrt(variance_map_b)
     
     # Plot SNR maps
@@ -140,8 +152,14 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
         if mode in sn_maps:
             plot_config = config.copy()
             plot_config['plot_title'] = f'{config["plot_title"]} ({mode}-mode)'
-            output_name = f"{config['output_directory']}{config['output_base_name']}_snr_{mode.lower()}_mode.png"
+            output_name = f"{config['output_directory']}{config['output_base_name']}_{mapping_method}_snr_{mode.lower()}_mode.png"
             plot.plot_convergence(sn_maps[mode], scaled_boundaries, true_boundaries, plot_config, output_name)
+    
+    # End timing
+    end_time = time.time()
+    if config.get('print_timing', False):
+        elapsed_time = end_time - start_time
+        print(f"Time taken to create {mapping_method} SNR maps: {elapsed_time:.2f} seconds")
 
 def run(config_path, convergence_maps, scaled_boundaries, true_boundaries):
     """Run SNR map generation.
