@@ -96,15 +96,21 @@ def _create_normalization(scaling, data, vmin=None, vmax=None):
         
     scale_type = scaling.get('type', 'linear')
     
-    # Process percentile-based min/max if specified
-    if 'vmin_percentile' in scaling or 'vmax_percentile' in scaling:
-        vmin_pct = scaling.get('vmin_percentile')
-        vmax_pct = scaling.get('vmax_percentile')
-        
-        if vmin_pct is not None:
-            vmin = np.percentile(data, vmin_pct)
-        if vmax_pct is not None:
-            vmax = np.percentile(data, vmax_pct)
+    # Process percentile-based min/max with new interface
+    percentile = scaling.get('percentile')
+    if percentile is not None:
+        # If percentile is a list or tuple with two values, use them for vmin and vmax
+        if isinstance(percentile, (list, tuple)) and len(percentile) == 2:
+            vmin = np.percentile(data, percentile[0])
+            vmax = np.percentile(data, percentile[1])
+        else:
+            print(f"Warning: 'percentile' should be a list or tuple with two values [min, max]")
+    
+    # For backward compatibility
+    if 'vmin_percentile' in scaling:
+        vmin = np.percentile(data, scaling['vmin_percentile'])
+    if 'vmax_percentile' in scaling:
+        vmax = np.percentile(data, scaling['vmax_percentile'])
     
     # Create normalizer based on type
     if scale_type == 'linear':

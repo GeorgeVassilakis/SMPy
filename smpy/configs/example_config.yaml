@@ -65,12 +65,10 @@ plotting:
   # Scaling options
   scaling:
     type: 'linear'        # 'linear', 'power', or 'symlog'
-    # Optional parameters based on scale type:
-    # vmin_percentile: 5    # Use nth percentile as minimum value instead of absolute vmin
-    # vmax_percentile: 95   # Use nth percentile as maximum value instead of absolute vmax
-    linthresh: 2        # For symlog: threshold for linear region around zero
+    linthresh: 2          # For symlog: threshold for linear region around zero
     linscale: 1.0         # For symlog: scaling factor for linear region
     gamma: 5              # For power: Exponent for power law (<1 boosts faint, >1 boosts bright)
+    percentile: null      # Set to null for regular or [n, m] to use nth and mth percentiles 
 
 #------SNR Map Settings------#
 snr:
