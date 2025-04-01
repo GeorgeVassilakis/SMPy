@@ -29,7 +29,7 @@ general:
   create_snr: true  # Whether to create SNR map
   mode: ['E']  # ['E'], ['B'], or ['E', 'B']
   print_timing: true  # Whether to print timing information for map creation
-  save_fits: true  # Whether to save maps as FITS files
+  save_fits: false  # Whether to save maps as FITS files
 
 #------Method Settings------#
 methods:
@@ -61,6 +61,21 @@ plotting:
   threshold: null    # Peak detection threshold
   verbose: null      # Print peak information
   cluster_center: null  # null, 'auto', or {ra/x_center: float, dec/y_center: float}
+
+  # Scaling options
+  scaling:
+    type: 'linear'        # 'linear', 'power', or 'symlog'
+    # Optional parameters (for nonlinear scaling)
+    gamma: 2              # For power: Exponent for power law (<1 boosts faint, >1 boosts bright)
+    percentile: null      # Set to null for regular or [n, m] to use nth and mth percentiles 
+
+    # Map-specific symlog parameters (optional)
+    convergence:          
+      linthresh: 0.1      # For symlog: threshold for linear region around zero
+      linscale: 1.0       # For symlog: scaling factor for linear region
+    snr:                 
+      linthresh: 5        # For symlog: threshold for linear region around zero
+      linscale: 0.5       # For symlog: scaling factor for linear region
 
 #------SNR Map Settings------#
 snr:

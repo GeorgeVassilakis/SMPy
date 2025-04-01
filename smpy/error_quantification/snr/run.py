@@ -158,7 +158,7 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
             plot_config = config.copy()
             plot_config['plot_title'] = f'{config["plot_title"]} ({mode}-mode)'
             output_name = f"{config['output_directory']}{config['output_base_name']}_{mapping_method}_snr_{mode.lower()}_mode.png"
-            plot.plot_convergence(sn_maps[mode], scaled_boundaries, true_boundaries, plot_config, output_name)
+            plot.plot_convergence(sn_maps[mode], scaled_boundaries, true_boundaries, plot_config, output_name, map_type='snr')
     
     # End timing
     end_time = time.time()
