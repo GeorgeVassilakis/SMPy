@@ -291,7 +291,8 @@ def _plot_convergence_pixel(filtered_convergence, scaled_boundaries, true_bounda
     # Save figure
     if output_name:
         fig.savefig(output_name)
-        print(f"Convergence map saved as PNG file: {output_name}")
+        map_label = "Convergence" if map_type.lower() == "convergence" else "SNR"
+        print(f"{map_label} map saved as PNG file: {output_name}")
     
     plt.close(fig)
 
@@ -438,5 +439,6 @@ def _plot_convergence_radec(filtered_convergence, scaled_boundaries, true_bounda
     # Save figure
     fig.tight_layout()
     fig.savefig(output_name)
-    print(f"Convergence map saved as PNG file: {output_name}")
+    map_label = "Convergence" if map_type.lower() == "convergence" else "SNR"
+    print(f"{map_label} map saved as PNG file: {output_name}")
     plt.close(fig)
