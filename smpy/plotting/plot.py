@@ -65,7 +65,7 @@ def _get_center_coordinates(cluster_center, scaled_boundaries, true_boundaries, 
     print("Warning: Unrecognized cluster_center format")
     return None, None
 
-def _create_normalization(scaling, data, vmin=None, vmax=None):
+def _create_normalization(scaling, data, vmin=None, vmax=None, map_type='convergence'):
     """Create normalization object based on scaling configuration.
     
     Parameters
@@ -81,6 +81,8 @@ def _create_normalization(scaling, data, vmin=None, vmax=None):
         Data to scale
     vmin, vmax : `float` or None
         Min/max values for scaling
+    map_type : `str`
+        Type of map ('convergence' or 'snr')
         
     Returns
     -------
@@ -96,7 +98,7 @@ def _create_normalization(scaling, data, vmin=None, vmax=None):
         
     scale_type = scaling.get('type', 'linear')
     
-    # Process percentile-based min/max with new interface
+    # Process percentile-based min/max
     percentile = scaling.get('percentile')
     if percentile is not None:
         # If percentile is a list or tuple with two values, use them for vmin and vmax
@@ -105,12 +107,6 @@ def _create_normalization(scaling, data, vmin=None, vmax=None):
             vmax = np.percentile(data, percentile[1])
         else:
             print(f"Warning: 'percentile' should be a list or tuple with two values [min, max]")
-    
-    # For backward compatibility
-    if 'vmin_percentile' in scaling:
-        vmin = np.percentile(data, scaling['vmin_percentile'])
-    if 'vmax_percentile' in scaling:
-        vmax = np.percentile(data, scaling['vmax_percentile'])
     
     # Create normalizer based on type
     if scale_type == 'linear':
@@ -122,16 +118,20 @@ def _create_normalization(scaling, data, vmin=None, vmax=None):
         return colors.PowerNorm(gamma=gamma, vmin=vmin, vmax=vmax)
         
     elif scale_type == 'symlog':
-        # Get parameters
-        linthresh = scaling.get('linthresh', 0.1)
-        linscale = scaling.get('linscale', 1.0)
+        # Check for map-specific parameters
+        map_specific_params = scaling.get(map_type, {})
+        
+        # Get parameters with map-specific overrides if they exist
+        linthresh = map_specific_params.get('linthresh', scaling.get('linthresh', 0.1))
+        linscale = map_specific_params.get('linscale', scaling.get('linscale', 1.0))
+        
         return colors.SymLogNorm(linthresh=linthresh, linscale=linscale, vmin=vmin, vmax=vmax)
         
     else:
         print(f"Warning: Unknown scaling type '{scale_type}', falling back to linear")
         return colors.Normalize(vmin=vmin, vmax=vmax)
 
-def plot_convergence(filtered_convergence, scaled_boundaries, true_boundaries, config, output_name):
+def plot_convergence(filtered_convergence, scaled_boundaries, true_boundaries, config, output_name, map_type='convergence'):
     """Create plot of convergence map.
     
     Parameters
@@ -146,15 +146,17 @@ def plot_convergence(filtered_convergence, scaled_boundaries, true_boundaries, c
         Plot configuration settings
     output_name : `str`
         Path for saving plot
+    map_type : `str`
+        Type of map ('convergence' or 'snr')
     """
 
     # Check coordinate system
     coord_system = config.get('coordinate_system', 'radec').lower()
     
     if coord_system == 'radec':
-        _plot_convergence_radec(filtered_convergence, scaled_boundaries, true_boundaries, config, output_name)
+        _plot_convergence_radec(filtered_convergence, scaled_boundaries, true_boundaries, config, output_name, map_type)
     else:
-        _plot_convergence_pixel(filtered_convergence, scaled_boundaries, true_boundaries, config, output_name)
+        _plot_convergence_pixel(filtered_convergence, scaled_boundaries, true_boundaries, config, output_name, map_type)
 
 def _set_plot_params(fontsize=15):
     """Set standard matplotlib parameters.
@@ -184,7 +186,7 @@ def _set_plot_params(fontsize=15):
         'axes.titlesize': fontsize
     })
 
-def _plot_convergence_pixel(filtered_convergence, scaled_boundaries, true_boundaries, config, output_name):
+def _plot_convergence_pixel(filtered_convergence, scaled_boundaries, true_boundaries, config, output_name, map_type='convergence'):
     """Create convergence plot for pixel coordinates.
     
     Parameters
@@ -199,6 +201,8 @@ def _plot_convergence_pixel(filtered_convergence, scaled_boundaries, true_bounda
         Plot configuration settings
     output_name : `str`
         Path for saving plot
+    map_type : `str`
+        Type of map ('convergence' or 'snr')
     """
 
     _set_plot_params()
@@ -214,7 +218,8 @@ def _plot_convergence_pixel(filtered_convergence, scaled_boundaries, true_bounda
         config.get('scaling'),
         filtered_convergence,
         vmin=config.get('vmin'),
-        vmax=config.get('vmax')
+        vmax=config.get('vmax'),
+        map_type=map_type
     )
     
     # Plot convergence map
@@ -290,7 +295,7 @@ def _plot_convergence_pixel(filtered_convergence, scaled_boundaries, true_bounda
     
     plt.close(fig)
 
-def _plot_convergence_radec(filtered_convergence, scaled_boundaries, true_boundaries, config, output_name):
+def _plot_convergence_radec(filtered_convergence, scaled_boundaries, true_boundaries, config, output_name, map_type='convergence'):
     """Create convergence plot for RA/Dec coordinates.
     
     Parameters
@@ -305,6 +310,8 @@ def _plot_convergence_radec(filtered_convergence, scaled_boundaries, true_bounda
         Plot configuration settings
     output_name : `str`
         Path for saving plot
+    map_type : `str`
+        Type of map ('convergence' or 'snr')
     """
 
     # Set plotting parameters
@@ -320,7 +327,8 @@ def _plot_convergence_radec(filtered_convergence, scaled_boundaries, true_bounda
         config.get('scaling'),
         filtered_convergence,
         vmin=config.get('vmin'),
-        vmax=config.get('vmax')
+        vmax=config.get('vmax'),
+        map_type=map_type
     )
     
     # Plot convergence map
@@ -431,78 +439,4 @@ def _plot_convergence_radec(filtered_convergence, scaled_boundaries, true_bounda
     fig.tight_layout()
     fig.savefig(output_name)
     print(f"Convergence map saved as PNG file: {output_name}")
-    plt.close(fig)
-
-def plot_animation(convergence, boundaries, config, output_name='animation.mp4', 
-                  center_cl=None, smoothing=False, num_frames=50, fps=5):
-    """Create animation of convergence maps.
-    
-    Parameters
-    ----------
-    convergence : `list`
-        List of 2D convergence maps
-    boundaries : `dict`
-        Coordinate boundaries
-    config : `dict`
-        Plot configuration
-    output_name : `str`
-        Output file path
-    center_cl : `dict` or None
-        Center coordinates
-    smoothing : `bool`
-        Whether to apply smoothing
-    num_frames : `int`
-        Number of animation frames
-    fps : `int`
-        Frames per second
-    """
-    _set_plot_params()
-
-    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=config['figsize'], tight_layout=True)
-    
-    # Create normalization for the colormap based on scaling config
-    # For animation, calculate once for all frames
-    all_data = np.concatenate([c.flatten() for c in convergence])
-    norm = _create_normalization(
-        config.get('scaling'),
-        all_data,
-        vmin=config.get('vmin'),
-        vmax=config.get('vmax')
-    )
-        
-    def update(frame):
-        if smoothing:
-            filtered_convergence = gaussian_filter(convergence[frame], config['gaussian_kernel'])
-        else:
-            filtered_convergence = convergence[frame]
-            
-        im = ax.imshow(
-            filtered_convergence[:, ::-1], 
-            cmap=config['cmap'],
-            norm=norm,
-            extent=[boundaries['coord1_max'], 
-                    boundaries['coord1_min'], 
-                    boundaries['coord2_min'], 
-                    boundaries['coord2_max']],
-            origin='lower'
-        )  
-        if center_cl is not None:
-            ra_c, dec_c = center_cl["ra_c"], center_cl["dec_c"]
-            ax.plot(ra_c, dec_c, 'rx', markersize=10)
-
-        ax.set_xlabel(config['xlabel'])
-        ax.set_ylabel(config['ylabel'])
-
-        if config['gridlines']:
-            ax.grid(color='black')
-
-        divider = make_axes_locatable(ax)
-        cax = divider.append_axes("right", size="5%", pad=0.07)
-        fig.colorbar(im, cax=cax)
-
-        fig.tight_layout()
-
-    ani = FuncAnimation(fig, update, frames=num_frames, repeat=False)
-    ani.save(output_name, writer='ffmpeg', fps=fps)
-    print(f"Convergence map saved as MP4 file: {output_name}")
     plt.close(fig)
