@@ -1,9 +1,9 @@
+from matplotlib import rc, rcParams, colors
 import matplotlib.pyplot as plt
-from matplotlib import rc, rcParams
+from matplotlib.animation import FuncAnimation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.ndimage import gaussian_filter
 import numpy as np
-from matplotlib.animation import FuncAnimation
 from smpy.utils import find_peaks2d
 
 def _get_center_coordinates(cluster_center, scaled_boundaries, true_boundaries, coord_system_type):
@@ -64,6 +64,66 @@ def _get_center_coordinates(cluster_center, scaled_boundaries, true_boundaries, 
         
     print("Warning: Unrecognized cluster_center format")
     return None, None
+
+def _create_normalization(scaling, data, vmin=None, vmax=None):
+    """Create normalization object based on scaling configuration.
+    
+    Parameters
+    ----------
+    scaling : `dict` or `str` or None
+        Scaling configuration:
+        - None: linear scaling with vmin/vmax
+        - 'linear': linear scaling
+        - 'power': power-law scaling
+        - 'symlog': symmetric logarithmic scaling
+        - dict with type and parameters
+    data : `numpy.ndarray`
+        Data to scale
+    vmin, vmax : `float` or None
+        Min/max values for scaling
+        
+    Returns
+    -------
+    norm : `matplotlib.colors.Normalize`
+        Normalization object
+    """
+    if scaling is None:
+        return colors.Normalize(vmin=vmin, vmax=vmax)
+        
+    # Handle string shortcuts
+    if isinstance(scaling, str):
+        scaling = {'type': scaling}
+        
+    scale_type = scaling.get('type', 'linear')
+    
+    # Process percentile-based min/max if specified
+    if 'vmin_percentile' in scaling or 'vmax_percentile' in scaling:
+        vmin_pct = scaling.get('vmin_percentile')
+        vmax_pct = scaling.get('vmax_percentile')
+        
+        if vmin_pct is not None:
+            vmin = np.percentile(data, vmin_pct)
+        if vmax_pct is not None:
+            vmax = np.percentile(data, vmax_pct)
+    
+    # Create normalizer based on type
+    if scale_type == 'linear':
+        return colors.Normalize(vmin=vmin, vmax=vmax)
+    
+    elif scale_type == 'power':
+        # Get parameters
+        gamma = scaling.get('gamma', 1.0)
+        return colors.PowerNorm(gamma=gamma, vmin=vmin, vmax=vmax)
+        
+    elif scale_type == 'symlog':
+        # Get parameters
+        linthresh = scaling.get('linthresh', 0.1)
+        linscale = scaling.get('linscale', 1.0)
+        return colors.SymLogNorm(linthresh=linthresh, linscale=linscale, vmin=vmin, vmax=vmax)
+        
+    else:
+        print(f"Warning: Unknown scaling type '{scale_type}', falling back to linear")
+        return colors.Normalize(vmin=vmin, vmax=vmax)
 
 def plot_convergence(filtered_convergence, scaled_boundaries, true_boundaries, config, output_name):
     """Create plot of convergence map.
@@ -143,12 +203,19 @@ def _plot_convergence_pixel(filtered_convergence, scaled_boundaries, true_bounda
         figsize=config['figsize']
     )
     
+    # Create normalization for the colormap based on scaling config
+    norm = _create_normalization(
+        config.get('scaling'),
+        filtered_convergence,
+        vmin=config.get('vmin'),
+        vmax=config.get('vmax')
+    )
+    
     # Plot convergence map
     im = ax.imshow(
         filtered_convergence,
         cmap=config['cmap'],
-        vmax=config.get('vmax'),
-        vmin=config.get('vmin'),
+        norm=norm,
         extent=[scaled_boundaries['coord1_min'],
                 scaled_boundaries['coord1_max'],
                 scaled_boundaries['coord2_min'],
@@ -242,12 +309,19 @@ def _plot_convergence_radec(filtered_convergence, scaled_boundaries, true_bounda
         nrows=1, ncols=1, figsize=config['figsize'], tight_layout=True
     )
     
+    # Create normalization for the colormap based on scaling config
+    norm = _create_normalization(
+        config.get('scaling'),
+        filtered_convergence,
+        vmin=config.get('vmin'),
+        vmax=config.get('vmax')
+    )
+    
     # Plot convergence map
     im = ax.imshow(
         filtered_convergence[:, ::-1], 
         cmap=config['cmap'],
-        vmax=config['vmax'], 
-        vmin=config['vmin'],
+        norm=norm,
         extent=[scaled_boundaries['coord1_max'], 
                 scaled_boundaries['coord1_min'], 
                 scaled_boundaries['coord2_min'], 
@@ -379,6 +453,16 @@ def plot_animation(convergence, boundaries, config, output_name='animation.mp4',
     _set_plot_params()
 
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=config['figsize'], tight_layout=True)
+    
+    # Create normalization for the colormap based on scaling config
+    # For animation, calculate once for all frames
+    all_data = np.concatenate([c.flatten() for c in convergence])
+    norm = _create_normalization(
+        config.get('scaling'),
+        all_data,
+        vmin=config.get('vmin'),
+        vmax=config.get('vmax')
+    )
         
     def update(frame):
         if smoothing:
@@ -389,8 +473,7 @@ def plot_animation(convergence, boundaries, config, output_name='animation.mp4',
         im = ax.imshow(
             filtered_convergence[:, ::-1], 
             cmap=config['cmap'],
-            vmax=1.5, 
-            vmin=-1.5,
+            norm=norm,
             extent=[boundaries['coord1_max'], 
                     boundaries['coord1_min'], 
                     boundaries['coord2_min'], 
