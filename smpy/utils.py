@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import random
+import secrets
 
 from astropy.table import Table
 from astropy.io import fits
@@ -248,13 +249,15 @@ def _shuffle_coordinates(shear_df, seed=None):
 
     return shuffled_df
 
-def _shuffle_galaxy_rotation(shear_df):
+def _shuffle_galaxy_rotation(shear_df, rng=None):
     """Shuffle the galaxy rotation in the input shear DataFrame.
     
     Parameters
     ----------
     shear_df : pd.DataFrame
         Input DataFrame with shear components
+    rng : np.random.Generator, optional
+        Random number generator for orientation shuffling
         
     Returns
     -------
@@ -265,7 +268,10 @@ def _shuffle_galaxy_rotation(shear_df):
     
     # Add a random angle to the galaxy rotation
     g1, g2 = shuffled_df['g1'], shuffled_df['g2']
-    angle = np.random.uniform(0, 2 * np.pi, len(g1))
+    if rng is None:
+        angle = np.random.uniform(0, 2 * np.pi, len(g1))
+    else:
+        angle = rng.uniform(0, 2 * np.pi, len(g1))
     g1g2_len = np.sqrt(np.array(g1)**2 + np.array(g2)**2)
     g1g2_angle = np.arctan2(g2, g1) + angle
     
@@ -285,8 +291,9 @@ def generate_multiple_shear_dfs(og_shear_df, num_shuffles=100, shuffle_type='spa
         Number of shuffled versions
     shuffle_type : `str`
         'spatial' or 'orientation'
-    seed : `int`
-        Random seed
+    seed : `int` or `str`
+        Random seed for reproducibility. If 'random', uses cryptographically 
+        secure random number from secrets module.
         
     Returns
     -------
@@ -300,11 +307,30 @@ def generate_multiple_shear_dfs(og_shear_df, num_shuffles=100, shuffle_type='spa
     """
     shuffled_dfs = []
     
+    # Handle 'random' seed option
+    if seed == 'random':
+        seed = secrets.randbits(128)
+        rng = np.random.default_rng(seed)
+        # For orientation shuffling, we'll use NumPy's RNG directly
+        # For spatial shuffling, we still use Python's random module with the seed
+        if shuffle_type == 'spatial':
+            random.seed(seed)
+    
     for i in range(num_shuffles):
         if shuffle_type == 'spatial':
-            shuffled_df = _shuffle_coordinates(og_shear_df, seed=seed+i)
+            if seed != 'random':
+                # Only set seed for each iteration if not using the 'random' option
+                shuffled_df = _shuffle_coordinates(og_shear_df, seed=seed+i)
+            else:
+                # For 'random', we already set the seed once outside the loop
+                shuffled_df = _shuffle_coordinates(og_shear_df, seed=None)
         elif shuffle_type == 'orientation':
-            shuffled_df = _shuffle_galaxy_rotation(og_shear_df)
+            if seed == 'random':
+                # Use NumPy's RNG directly for orientation shuffling with 'random' option
+                shuffled_df = _shuffle_galaxy_rotation(og_shear_df, rng=rng)
+            else:
+                # Standard orientation shuffling
+                shuffled_df = _shuffle_galaxy_rotation(og_shear_df)
         else:
             raise ValueError(f"Invalid shuffle type: {shuffle_type}")
         shuffled_dfs.append(shuffled_df)

@@ -113,7 +113,8 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
     shuffled_dfs = utils.generate_multiple_shear_dfs(
         shear_df,
         config['num_shuffles'],
-        config['shuffle_type']
+        config['shuffle_type'],
+        config.get('seed', 0)
     )
     
     # Create shear grids for shuffled dataframes

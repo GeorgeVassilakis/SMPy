@@ -81,6 +81,7 @@ plotting:
 snr:
   shuffle_type: 'spatial'  # 'spatial' or 'orientation'
   num_shuffles: 100       # Number of random realizations
+  seed: 0                 # Random seed (int or 'random' for cryptographically secure seed)
   
   smoothing:
     type: 'gaussian'  # 'gaussian' or null (null not recommended for SNR)
