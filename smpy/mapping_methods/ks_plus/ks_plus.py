@@ -8,7 +8,7 @@ priors in the DCT domain and wavelet-based power spectrum constraints.
 import numpy as np
 from scipy import fft
 from scipy.ndimage import gaussian_filter, zoom
-import pywt  # PyWavelets package for wavelet transforms
+import pywt
 from ..base import MassMapper
 
 class KSPlusMapper(MassMapper):
@@ -23,7 +23,7 @@ class KSPlusMapper(MassMapper):
     
     @property
     def name(self):
-        """Name of the mapping method."""
+        """Name of the mapping method (`str`, read-only)."""
         return "ks_plus"
     
     def create_maps(self, g1_grid, g2_grid):
@@ -31,15 +31,18 @@ class KSPlusMapper(MassMapper):
         
         Parameters
         ----------
-        g1_grid : numpy.ndarray
+        g1_grid : `numpy.ndarray`
             First reduced shear component grid
-        g2_grid : numpy.ndarray
+        g2_grid : `numpy.ndarray`
             Second reduced shear component grid
             
         Returns
         -------
-        kappa_e, kappa_b : numpy.ndarray
-            E-mode and B-mode convergence maps
+        kappa_e : `numpy.ndarray`
+            E-mode convergence map
+        kappa_b : `numpy.ndarray`
+            B-mode convergence map
+
         """
         # Get dimensions and configuration
         npix_dec, npix_ra = g1_grid.shape
@@ -93,12 +96,14 @@ class KSPlusMapper(MassMapper):
         
         Parameters
         ----------
-        g1_grid, g2_grid : numpy.ndarray
-            Shear component grids
+        g1_grid : `numpy.ndarray`
+            First shear component grid
+        g2_grid : `numpy.ndarray`
+            Second shear component grid
             
         Returns
         -------
-        mask : numpy.ndarray
+        mask : `numpy.ndarray`
             Binary mask (1 where data exists, 0 in gaps)
         """
         # Identify missing data (gaps)
@@ -112,17 +117,23 @@ class KSPlusMapper(MassMapper):
         
         Parameters
         ----------
-        g1_grid, g2_grid : numpy.ndarray
-            Shear component grids
-        mask : numpy.ndarray
+        g1_grid : `numpy.ndarray`
+            First shear component grid
+        g2_grid : `numpy.ndarray`
+            Second shear component grid
+        mask : `numpy.ndarray`
             Binary mask
-        extension_size : int
+        extension_size : `int`
             Size of extension in pixels
             
         Returns
         -------
-        g1_extended, g2_extended, mask_extended : numpy.ndarray
-            Extended fields with zero padding
+        g1_extended : `numpy.ndarray`
+            Extended first shear component grid with zero padding
+        g2_extended : `numpy.ndarray`
+            Extended second shear component grid with zero padding
+        mask_extended : `numpy.ndarray`
+            Extended mask with zero padding
         """
         # Get dimensions
         npix_dec, npix_ra = g1_grid.shape
@@ -150,17 +161,22 @@ class KSPlusMapper(MassMapper):
         
         Parameters
         ----------
-        g1_grid, g2_grid : numpy.ndarray
-            Shear component grids
-        mask : numpy.ndarray
+        g1_grid : `numpy.ndarray`
+            First shear component grid
+        g2_grid : `numpy.ndarray`
+            Second shear component grid
+        mask : `numpy.ndarray`
             Binary mask
-        config : dict
+        config : `dict`
             Configuration dictionary
             
         Returns
         -------
-        kappa_e, kappa_b : numpy.ndarray
-            E-mode and B-mode convergence maps
+        kappa_e : `numpy.ndarray`
+            E-mode convergence map
+        kappa_b : `numpy.ndarray`
+            B-mode convergence map
+
         """
         # Initial KS inversion to estimate convergence
         kappa_e, kappa_b = self._standard_ks_inversion(g1_grid, g2_grid)
@@ -215,13 +231,18 @@ class KSPlusMapper(MassMapper):
         
         Parameters
         ----------
-        g1_grid, g2_grid : numpy.ndarray
-            Shear component grids
+        g1_grid : `numpy.ndarray`
+            First shear component grid
+        g2_grid : `numpy.ndarray`
+            Second shear component grid
             
         Returns
         -------
-        kappa_e, kappa_b : numpy.ndarray
-            E-mode and B-mode convergence maps
+        kappa_e : `numpy.ndarray`
+            E-mode convergence map
+        kappa_b : `numpy.ndarray`
+            B-mode convergence map
+
         """
         # Get dimensions
         npix_dec, npix_ra = g1_grid.shape
@@ -252,13 +273,18 @@ class KSPlusMapper(MassMapper):
         
         Parameters
         ----------
-        kappa_e, kappa_b : numpy.ndarray
-            E-mode and B-mode convergence maps
+        kappa_e : `numpy.ndarray`
+            E-mode convergence map
+        kappa_b : `numpy.ndarray`
+            B-mode convergence map
             
         Returns
         -------
-        gamma1, gamma2 : numpy.ndarray
-            Shear component grids
+        gamma1 : `numpy.ndarray`
+            First shear component grid
+        gamma2 : `numpy.ndarray`
+            Second shear component grid
+            
         """
         # Get dimensions
         npix_dec, npix_ra = kappa_e.shape
@@ -293,13 +319,18 @@ class KSPlusMapper(MassMapper):
         
         Parameters
         ----------
-        gamma1, gamma2 : numpy.ndarray
-            Shear component grids
+        gamma1 : `numpy.ndarray`
+            First shear component grid
+        gamma2 : `numpy.ndarray`
+            Second shear component grid
             
         Returns
         -------
-        kappa_e, kappa_b : numpy.ndarray
-            E-mode and B-mode convergence maps
+        kappa_e : `numpy.ndarray`
+            E-mode convergence map
+        kappa_b : `numpy.ndarray`
+            B-mode convergence map
+
         """
         # This is the standard KS inversion
         return self._standard_ks_inversion(gamma1, gamma2)
@@ -309,15 +340,16 @@ class KSPlusMapper(MassMapper):
         
         Parameters
         ----------
-        kappa : numpy.ndarray
+        kappa : `numpy.ndarray`
             Convergence map
-        mask : numpy.ndarray
+        mask : `numpy.ndarray`
             Binary mask (1 where data exists, 0 in gaps)
             
         Returns
         -------
-        kappa : numpy.ndarray
+        kappa_corrected : `numpy.ndarray`
             Convergence map with corrected power spectrum
+
         """
         # Choose wavelet (Daubechies 4 is often good for astronomical data)
         wavelet = 'db4'
@@ -373,17 +405,20 @@ class KSPlusMapper(MassMapper):
         
         Parameters
         ----------
-        iteration : int
+        iteration : `int`
             Current iteration number
-        max_iterations : int
+        max_iterations : `int`
             Maximum number of iterations
-        lambda_min, lambda_max : float
-            Minimum and maximum threshold values
+        lambda_min : `float`
+            Minimum threshold value
+        lambda_max : `float`
+            Maximum threshold value
             
         Returns
         -------
-        lambda_i : float
+        lambda_i : `float`
             Threshold for current iteration
+
         """
         # Exponential threshold decrease
         alpha = float(iteration) / max_iterations
