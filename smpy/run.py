@@ -4,7 +4,7 @@ import yaml
 import time
 from smpy import utils
 from smpy.coordinates import get_coordinate_system
-from smpy.mapping_methods import KaiserSquiresMapper, ApertureMassMapper
+from smpy.mapping_methods import KaiserSquiresMapper, ApertureMassMapper, KSPlusMapper
 from smpy.error_quantification.snr import run as snr_run
 
 def prepare_method_config(config, method):
@@ -85,6 +85,8 @@ def run_mapping(config):
         mapper = ApertureMassMapper(config)
     elif method == 'kaiser_squires':
         mapper = KaiserSquiresMapper(config)
+    elif method == 'ks_plus':
+        mapper = KSPlusMapper(config)
     else:
         raise ValueError(f"Unknown mapping method: {method}")
     

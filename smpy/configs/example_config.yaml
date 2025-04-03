@@ -25,8 +25,8 @@ general:
   weight_col: 'weight'  # Set to null if no weights
   
   # Analysis settings
-  method: "kaiser_squires"  # "kaiser_squires" or "aperture_mass"
-  create_snr: true  # Whether to create SNR map
+  method: "ks_plus"  # "kaiser_squires", "aperture_mass", or "ks_plus"
+  create_snr: false  # Whether to create SNR map
   mode: ['E']  # ['E'], ['B'], or ['E', 'B']
   print_timing: true  # Whether to print timing information for map creation
   save_fits: false  # Whether to save maps as FITS files
@@ -44,6 +44,19 @@ methods:
     filter:
       type: 'schirmer'  # Type of aperture filter
       scale: 60        # Filter scale
+
+  # KS+ settings
+  ks_plus:
+    extension_size: 50        # Size of field extension to reduce border effects
+    inpainting_iterations: 30  # Number of iterations for inpainting algorithm
+    reduced_shear_iterations: 3 # Number of iterations for reduced shear correction
+    use_wavelet_constraints: true # Apply wavelet-based power spectrum constraints
+    min_threshold: 0.0         # Minimum threshold for DCT coefficients
+    
+    smoothing:
+      type: 'gaussian'  # 'gaussian' or null
+      sigma: 2        # Smoothing scale
+
 
 #------Plot Settings------#
 plotting:

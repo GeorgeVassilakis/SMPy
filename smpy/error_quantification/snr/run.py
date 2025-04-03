@@ -3,7 +3,7 @@ import numpy as np
 import time
 from smpy import utils
 from smpy.filters import plotting
-from smpy.mapping_methods import KaiserSquiresMapper, ApertureMassMapper
+from smpy.mapping_methods import KaiserSquiresMapper, ApertureMassMapper, KSPlusMapper
 from smpy.plotting import plot
 from smpy.coordinates import get_coordinate_system
 
@@ -54,6 +54,8 @@ def perform_mapping(grid_list, config, mapping_method='kaiser_squires'):
         mapper = KaiserSquiresMapper(config)
     elif mapping_method.lower() == 'aperture_mass':
         mapper = ApertureMassMapper(config)
+    elif mapping_method.lower() == 'ks_plus':
+        mapper = KSPlusMapper(config)
     else:
         raise ValueError(f"Unsupported mapping method: {mapping_method}")
     
