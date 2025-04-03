@@ -47,7 +47,7 @@ methods:
 
   # KS+ settings
   ks_plus:
-    extension_size: 512        # Size of field extension to reduce border effects
+    extension_size: 50        # Size of field extension to reduce border effects
     inpainting_iterations: 100  # Number of iterations for inpainting algorithm
     reduced_shear_iterations: 3 # Number of iterations for reduced shear correction
     use_wavelet_constraints: true # Apply wavelet-based power spectrum constraints
