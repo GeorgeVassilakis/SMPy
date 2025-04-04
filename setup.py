@@ -14,7 +14,8 @@ setup(
         'pandas>=1.2.0',
         'matplotlib>=3.4.0',
         'scipy>=1.6.0',
-        'pyyaml>=5.1'
+        'pyyaml>=5.1',
+        'pywavelets>=1.1.0',
     ],
     python_requires='>=3.8',
     author='Georgios N. Vassilakis',
