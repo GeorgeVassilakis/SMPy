@@ -5,7 +5,7 @@ general:
   # Input/Output paths
   input_path: "/Users/vassig/research/SMPy/examples/data/forecast_lum_truth.fits"
   input_hdu: 1  # FITS extension number to read data from
-  output_directory: "/Users/vassig/research/SMPy/examples/outputs/"
+  output_directory: "/Users/vassig/research/SMPy/examples/outputs"
   output_base_name: "truth_testing"
 
   # Coordinate system settings

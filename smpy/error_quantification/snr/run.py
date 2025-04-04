@@ -6,6 +6,7 @@ from smpy.filters import plotting
 from smpy.mapping_methods import KaiserSquiresMapper, ApertureMassMapper, KSPlusMapper
 from smpy.plotting import plot
 from smpy.coordinates import get_coordinate_system
+import os
 
 """Signal-to-noise map generation module.
 
@@ -160,7 +161,12 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
         if mode in sn_maps:
             plot_config = config.copy()
             plot_config['plot_title'] = f'{config["plot_title"]} ({mode}-mode)'
-            output_name = f"{config['output_directory']}{config['output_base_name']}_{mapping_method}_snr_{mode.lower()}_mode.png"
+            
+            # Create method-specific output directory
+            method_output_dir = f"{config['output_directory']}/{mapping_method}"
+            os.makedirs(method_output_dir, exist_ok=True)
+            
+            output_name = f"{config['output_directory']}/{mapping_method}/{config['output_base_name']}_{mapping_method}_snr_{mode.lower()}_mode.png"
             plot.plot_convergence(sn_maps[mode], scaled_boundaries, true_boundaries, plot_config, output_name, map_type='snr')
     
     # End timing

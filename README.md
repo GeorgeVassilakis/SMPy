@@ -109,4 +109,4 @@ The package provides a robust implementation supporting both weighted and unweig
 - If you need support or help using `SMPy`, feel free to contact me via my email: vassilakis.g@northeastern.edu
 
 ## Example Kaiser Squires Convergence Map
-![Kaiser Squires Convergence Map](examples/outputs/simulation_testing_kaiser_squires_e_mode.png)
+![Kaiser Squires Convergence Map](examples/outputs/kaiser_squires/simulation_testing_kaiser_squires_e_mode.png)
