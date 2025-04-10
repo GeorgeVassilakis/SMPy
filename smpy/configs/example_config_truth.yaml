@@ -51,7 +51,9 @@ methods:
     inpainting_iterations: 100  # Number of iterations for inpainting algorithm
     reduced_shear_iterations: 3 # Number of iterations for reduced shear correction
     use_wavelet_constraints: true # Apply wavelet-based power spectrum constraints
-    min_threshold: 0.0         # Minimum threshold for DCT coefficients
+
+    # Advanced settings
+    min_threshold_fraction: 0.0    # Minimum threshold for DCT coefficients as a fraction of the maximum coefficient (default of 0 is advised)
     
     smoothing:
       type: 'gaussian'  # 'gaussian' or null

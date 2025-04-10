@@ -190,7 +190,11 @@ class KSPlusMapper(MassMapper):
         # Calculate initial threshold
         dct_coeffs = fft.dctn(kappa_e)
         lambda_max = np.max(np.abs(dct_coeffs))
-        lambda_min = config.get('min_threshold', 0.0)
+        min_threshold_fraction = config.get('min_threshold_fraction', 0.0)
+        if min_threshold_fraction > 0:
+            lambda_min = lambda_max * min_threshold_fraction
+        else:
+            lambda_min = 0.0
         
         for i in range(max_iterations):
             # 1. DCT thresholding
@@ -351,7 +355,7 @@ class KSPlusMapper(MassMapper):
             Convergence map with corrected power spectrum
 
         """
-        # Choose wavelet (Daubechies 4 is often good for astronomical data)
+        # Choose wavelet
         wavelet = 'db4'
         level = pywt.dwt_max_level(min(kappa.shape), wavelet)
         level = min(level, 5)  # Limit to reasonable depth
