@@ -372,7 +372,7 @@ class KSPlusMapper(MassMapper):
         """
         # Determine number of scales
         min_dim = min(kappa.shape)
-        nscales = int(np.log(min_dim))
+        nscales = int(np.log2(min_dim))
         
         # Decompose into wavelet coefficients
         wavelet_bands = starlet_transform_2d(kappa, nscales)

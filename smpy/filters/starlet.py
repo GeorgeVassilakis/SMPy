@@ -16,6 +16,7 @@ This code draws from the CosmoStat implementation:
 """
 
 import numpy as np
+from scipy.ndimage import convolve1d
 
 def b3spline_filter(step=1):
     """
@@ -44,6 +45,26 @@ def b3spline_filter(step=1):
     
     return kernel
 
+def apply_filter(data, kernel):
+    """
+    Apply separable convolution with the given kernel.
+    
+    Parameters
+    ----------
+    data : ndarray
+        Input 2D image
+    kernel : ndarray
+        1D convolution kernel
+    
+    Returns
+    -------
+    smoothed : ndarray
+        Smoothed 2D image
+    """
+    # Apply filter along rows, then columns
+    temp = convolve1d(data, kernel, axis=0, mode='mirror')
+    return convolve1d(temp, kernel, axis=1, mode='mirror')
+
 def starlet_transform_2d(data, nscales):
     """
     Compute the isotropic undecimated wavelet transform (starlet transform) of an image.
@@ -66,8 +87,8 @@ def starlet_transform_2d(data, nscales):
     data = np.float64(data)
     
     # Initialize arrays
-    nx, ny = data.shape
-    wavelet_bands = np.zeros((nscales, nx, ny))
+    ny, nx = data.shape
+    wavelet_bands = np.zeros((nscales, ny, nx))
     
     # Initialize smoothed data
     smoothed_data = data.copy()
@@ -79,7 +100,7 @@ def starlet_transform_2d(data, nscales):
         kernel = b3spline_filter(step)
         
         # Smooth data using convolution with the filter
-        smoothed_j_plus_1 = smooth_with_filter(smoothed_data, kernel)
+        smoothed_j_plus_1 = apply_filter(smoothed_data, kernel)
         
         # Wavelet coefficients = detail signal between two scales
         wavelet_bands[j] = smoothed_data - smoothed_j_plus_1
@@ -92,42 +113,10 @@ def starlet_transform_2d(data, nscales):
     
     return wavelet_bands
 
-def smooth_with_filter(data, kernel):
-    """
-    Apply separable convolution with the given kernel.
-    
-    Parameters
-    ----------
-    data : ndarray
-        Input 2D image
-    kernel : ndarray
-        1D convolution kernel
-    
-    Returns
-    -------
-    smoothed : ndarray
-        Smoothed 2D image
-    """
-    # Pad for border handling (mirror padding)
-    pad_width = len(kernel) // 2
-    padded = np.pad(data, pad_width, mode='reflect')
-    
-    # Apply filter along rows
-    temp = np.zeros_like(padded)
-    for i in range(padded.shape[0]):
-        temp[i] = np.convolve(padded[i], kernel, mode='same')
-    
-    # Apply filter along columns
-    smoothed = np.zeros_like(padded)
-    for j in range(padded.shape[1]):
-        smoothed[:, j] = np.convolve(temp[:, j], kernel, mode='same')
-    
-    # Remove padding
-    return smoothed[pad_width:-pad_width, pad_width:-pad_width]
-
 def inverse_starlet_transform_2d(wavelet_bands):
     """
-    Reconstruct an image from its starlet transform coefficients.
+    Reconstruct an image from its starlet transform coefficients using
+    the second generation reconstruction algorithm.
     
     Parameters
     ----------
@@ -139,36 +128,23 @@ def inverse_starlet_transform_2d(wavelet_bands):
     reconstructed : ndarray
         Reconstructed 2D image
     """
-    # Simple reconstruction by adding all bands
-    return np.sum(wavelet_bands, axis=0)
-
-def get_wavelet_variance(wavelet_bands, mask=None):
-    """
-    Calculate variance at each wavelet scale.
+    nscales, ny, nx = wavelet_bands.shape
     
-    Parameters
-    ----------
-    wavelet_bands : ndarray
-        Wavelet coefficients from starlet_transform_2d
-    mask : ndarray, optional
-        Binary mask (1 for valid data, 0 for masked data)
+    # Start with the coarsest scale
+    reconstructed = np.copy(wavelet_bands[nscales-1])
     
-    Returns
-    -------
-    variances : ndarray
-        Variance at each scale
-    """
-    nscales = wavelet_bands.shape[0]
-    variances = np.zeros(nscales)
+    # Process each detail band from coarse to fine
+    for j in range(nscales-2, -1, -1):
+        # Calculate step size for the filter
+        step = 2**(j)
+        
+        # Get filter for current scale
+        kernel = b3spline_filter(step)
+        
+        # Apply filter to current reconstruction
+        filtered = apply_filter(reconstructed, kernel)
+        
+        # Add the wavelet coefficients
+        reconstructed = filtered + wavelet_bands[j]
     
-    for j in range(nscales):
-        if mask is not None:
-            # Calculate variance of unmasked regions
-            values = wavelet_bands[j][mask > 0]
-            if len(values) > 0:
-                variances[j] = np.var(values)
-        else:
-            # Calculate variance of entire band
-            variances[j] = np.var(wavelet_bands[j])
-    
-    return variances
+    return reconstructed
