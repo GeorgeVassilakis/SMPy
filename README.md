@@ -15,12 +15,7 @@ The package provides a robust implementation supporting both weighted and unweig
 
 ## Features
 ### Convergence Mapping
-- **Kaiser-Squires Inversion**: Implementation of the classic [Kaiser & Squires (1993)](https://ui.adsabs.harvard.edu/abs/1993ApJ...404..441K/abstract) method for reconstructing convergence maps from weak lensing shear data
-- **KS+**: Enhanced Kaiser-Squires implementation from [Pires et al. (2020)](https://www.aanda.org/articles/aa/abs/2020/06/aa36865-19/aa36865-19.html) that:
-  - Corrects for missing data using DCT-domain sparsity priors
-  - Reduces field border effects through automatic field extension
-  - Iteratively corrects for the reduced shear approximation
-  - Preserves statistical properties using wavelet-based power spectrum constraints
+- **Kaiser-Squires Inversion**: Implementation of the classic Kaiser & Squires (1993) method for reconstructing convergence maps from weak lensing shear data
 - **Aperture Mass Mapping**: Direct measurement of the projected mass within apertures using tangential shear
 - **Support for Both E-mode and B-mode**: Generate maps for both E-mode (physical) and B-mode (systematic check) signals
 - **Flexible Coordinate Systems**: 
@@ -59,7 +54,7 @@ The package provides a robust implementation supporting both weighted and unweig
 - **Multiple Interfaces**: 
   - Command-line interface using a runner script
   - Python API for notebook integration
-- **Modular Design**: Extensible architecture supporting multiple mapping methods including Kaiser-Squires inversion, KS+, and aperture mass
+- **Modular Design**: Extensible architecture supporting multiple mapping methods including Kaiser-Squires inversion and aperture mass
 
 ## Installation
 
@@ -114,4 +109,4 @@ The package provides a robust implementation supporting both weighted and unweig
 - If you need support or help using `SMPy`, feel free to contact me via my email: vassilakis.g@northeastern.edu
 
 ## Example Kaiser Squires Convergence Map
-![Kaiser Squires Convergence Map](examples/outputs/kaiser_squires/simulation_testing_kaiser_squires_e_mode.png)
+![Kaiser Squires Convergence Map](examples/outputs/simulation_testing_kaiser_squires_e_mode.png)

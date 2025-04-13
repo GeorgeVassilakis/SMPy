@@ -3,10 +3,9 @@ import numpy as np
 import time
 from smpy import utils
 from smpy.filters import plotting
-from smpy.mapping_methods import KaiserSquiresMapper, ApertureMassMapper, KSPlusMapper
+from smpy.mapping_methods import KaiserSquiresMapper, ApertureMassMapper
 from smpy.plotting import plot
 from smpy.coordinates import get_coordinate_system
-import os
 
 """Signal-to-noise map generation module.
 
@@ -55,8 +54,6 @@ def perform_mapping(grid_list, config, mapping_method='kaiser_squires'):
         mapper = KaiserSquiresMapper(config)
     elif mapping_method.lower() == 'aperture_mass':
         mapper = ApertureMassMapper(config)
-    elif mapping_method.lower() == 'ks_plus':
-        mapper = KSPlusMapper(config)
     else:
         raise ValueError(f"Unsupported mapping method: {mapping_method}")
     
@@ -161,12 +158,7 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
         if mode in sn_maps:
             plot_config = config.copy()
             plot_config['plot_title'] = f'{config["plot_title"]} ({mode}-mode)'
-            
-            # Create method-specific output directory
-            method_output_dir = f"{config['output_directory']}/{mapping_method}"
-            os.makedirs(method_output_dir, exist_ok=True)
-            
-            output_name = f"{config['output_directory']}/{mapping_method}/{config['output_base_name']}_{mapping_method}_snr_{mode.lower()}_mode.png"
+            output_name = f"{config['output_directory']}{config['output_base_name']}_{mapping_method}_snr_{mode.lower()}_mode.png"
             plot.plot_convergence(sn_maps[mode], scaled_boundaries, true_boundaries, plot_config, output_name, map_type='snr')
     
     # End timing

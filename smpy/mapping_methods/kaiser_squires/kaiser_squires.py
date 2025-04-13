@@ -34,15 +34,18 @@ class KaiserSquiresMapper(MassMapper):
         g2_hat = np.fft.fft2(g2_grid)
 
         # Create wavenumber grids
-        k1, k2 = np.meshgrid(np.fft.fftfreq(npix_ra), np.fft.fftfreq(npix_dec))
+        k1, k2 = np.meshgrid(np.fft.fftfreq(npix_ra), 
+                            np.fft.fftfreq(npix_dec))
         k_squared = k1**2 + k2**2
 
         # Avoid division by zero
         k_squared = np.where(k_squared == 0, np.finfo(float).eps, k_squared)
 
         # Kaiser-Squires inversion in Fourier space
-        kappa_e_hat = (1 / k_squared) * ((k1**2 - k2**2) * g1_hat + 2 * k1 * k2 * g2_hat)
-        kappa_b_hat = (1 / k_squared) * ((k1**2 - k2**2) * g2_hat - 2 * k1 * k2 * g1_hat)
+        kappa_e_hat = (1 / k_squared) * ((k1**2 - k2**2) * g1_hat + 
+                                        2 * k1 * k2 * g2_hat)
+        kappa_b_hat = (1 / k_squared) * ((k1**2 - k2**2) * g2_hat - 
+                                        2 * k1 * k2 * g1_hat)
 
         # Inverse Fourier transform
         kappa_e = np.real(np.fft.ifft2(kappa_e_hat))

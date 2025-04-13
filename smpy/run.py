@@ -4,9 +4,9 @@ import yaml
 import time
 from smpy import utils
 from smpy.coordinates import get_coordinate_system
-from smpy.mapping_methods import KaiserSquiresMapper, ApertureMassMapper, KSPlusMapper
+from smpy.mapping_methods import KaiserSquiresMapper, ApertureMassMapper
 from smpy.error_quantification.snr import run as snr_run
-import os
+
 def prepare_method_config(config, method):
     """Prepare method-specific configuration with plotting settings.
     
@@ -85,8 +85,6 @@ def run_mapping(config):
         mapper = ApertureMassMapper(config)
     elif method == 'kaiser_squires':
         mapper = KaiserSquiresMapper(config)
-    elif method == 'ks_plus':
-        mapper = KSPlusMapper(config)
     else:
         raise ValueError(f"Unknown mapping method: {method}")
     
@@ -122,13 +120,9 @@ def run(config_path):
     
     # Save maps as FITS files if requested
     if config['general'].get('save_fits', False):
-
-        method_output_dir = f"{config['general']['output_directory']}/{method}"
-        os.makedirs(method_output_dir, exist_ok=True)
-        
         for mode in config['general']['mode']:
             if mode in maps:
-                output_path = f"{method_output_dir}/{config['general']['output_base_name']}_{method}_{mode.lower()}_mode.fits"
+                output_path = f"{config['general']['output_directory']}{config['general']['output_base_name']}_{method}_{mode.lower()}_mode.fits"
                 # Convert coordinate system to format expected by save_fits
                 if config['general']['coordinate_system'].lower() == 'radec':
                     fits_boundaries = {
@@ -150,12 +144,9 @@ def run(config_path):
         
         # Save SNR maps as FITS files if requested
         if config['general'].get('save_fits', False) and snr_map:
-            method_output_dir = f"{config['general']['output_directory']}/{method}"
-            os.makedirs(method_output_dir, exist_ok=True)
-            
             for mode in config['general']['mode']:
                 if mode in snr_map:
-                    output_path = f"{method_output_dir}/{config['general']['output_base_name']}_{method}_snr_{mode.lower()}_mode.fits"
+                    output_path = f"{config['general']['output_directory']}{config['general']['output_base_name']}_{method}_snr_{mode.lower()}_mode.fits"
                     # Convert coordinate system to format expected by save_fits
                     if config['general']['coordinate_system'].lower() == 'radec':
                         fits_boundaries = {
