@@ -7,9 +7,9 @@ priors in the DCT domain and wavelet-based power spectrum constraints.
 
 import numpy as np
 from scipy import fft
-from scipy.ndimage import gaussian_filter, zoom
-import pywt
+from scipy.ndimage import gaussian_filter
 from ..base import MassMapper
+from smpy.filters.starlet import starlet_transform_2d, inverse_starlet_transform_2d
 
 class KSPlusMapper(MassMapper):
     """Implementation of Kaiser-Squires Plus mass mapping.
@@ -213,7 +213,7 @@ class KSPlusMapper(MassMapper):
             lambda_min = 0.0
         
         for i in range(max_iterations):
-            # 1. DCT thresholding
+            # DCT thresholding
             kappa_e_dct = fft.dctn(np.real(kappa_complex))
             kappa_b_dct = fft.dctn(np.imag(kappa_complex))
             
@@ -228,12 +228,12 @@ class KSPlusMapper(MassMapper):
             kappa_e = fft.idctn(kappa_e_dct)
             kappa_b = fft.idctn(kappa_b_dct)
             
-            # 2. Wavelet-based power spectrum constraints
+            # Wavelet-based power spectrum constraints
             if config.get('use_wavelet_constraints', True):
                 kappa_e = self._apply_wavelet_constraints(kappa_e, mask)
                 kappa_b = self._apply_wavelet_constraints(kappa_b, mask)
             
-            # 3. Enforce consistency with observed data
+            # Enforce consistency with observed data
             gamma1, gamma2 = self._kappa_to_gamma(kappa_e, kappa_b)
             
             # Replace with observed data outside the mask
@@ -356,7 +356,7 @@ class KSPlusMapper(MassMapper):
         return self._standard_ks_inversion(gamma1, gamma2)
     
     def _apply_wavelet_constraints(self, kappa, mask):
-        """Apply wavelet-based power spectrum constraints using direct wavelet transform.
+        """Apply wavelet-based power spectrum constraints.
         
         Parameters
         ----------
@@ -364,62 +364,39 @@ class KSPlusMapper(MassMapper):
             Convergence map
         mask : `numpy.ndarray`
             Binary mask (1 where data exists, 0 in gaps)
-            
+                
         Returns
         -------
         kappa_corrected : `numpy.ndarray`
             Convergence map with corrected power spectrum
         """
-        # Choose wavelet
-        wavelet = 'db4'
-        level = pywt.dwt_max_level(min(kappa.shape), wavelet)
-        level = min(level, 5)  # Limit to reasonable depth
+        # Determine number of scales
+        min_dim = min(kappa.shape)
+        nscales = int(np.log(min_dim))
         
-        # Decompose convergence into wavelet coefficients
-        kappa_coeffs = pywt.wavedec2(kappa, wavelet, level=level)
+        # Decompose into wavelet coefficients
+        wavelet_bands = starlet_transform_2d(kappa, nscales)
         
-        # Decompose mask into wavelet coefficients
-        mask_coeffs = pywt.wavedec2(mask.astype(float), wavelet, level=level)
+        # Also decompose the mask to get proper correspondence at each scale
+        mask_bands = starlet_transform_2d(mask.astype(float), nscales)
         
-        # Process each detail coefficient level
-        for j in range(1, len(kappa_coeffs)):
-            # For each detail coefficient (horizontal, vertical, diagonal)
-            for d in range(3):
-                # Get wavelet coefficient masks at the correct scale
-                mask_wavelet = mask_coeffs[j][d]
+        # Process each scale except the coarsest
+        for j in range(nscales-1):
+            # Create binary mask for this scale
+            scale_mask = mask_bands[j] > 0.5
+            
+            if np.sum(~scale_mask) > 0 and np.sum(scale_mask) > 0:
+                # Calculate standard deviations
+                std_out = np.std(wavelet_bands[j][scale_mask])
+                std_in = np.std(wavelet_bands[j][~scale_mask])
                 
-                # Ensure binary mask (coefficients > 0 treated as data, <= 0 as gaps)
-                mask_resized = (mask_wavelet > 0).astype(float)
-                
-                # Make sure we have both gap and non-gap regions
-                if np.sum(mask_resized > 0) > 0 and np.sum(mask_resized == 0) > 0:
-                    # Calculate standard deviations
-                    std_out = np.std(kappa_coeffs[j][d][mask_resized > 0])
-                    std_in = np.std(kappa_coeffs[j][d][mask_resized == 0])
-                    
-                    if std_in > 0:
-                        # Apply normalization factor
-                        scale_factor = std_out / std_in
-                        
-                        # Get a modifiable copy of the coefficients
-                        coeffs_modified = kappa_coeffs[j][d].copy()
-                        
-                        # Apply scaling only in the gap regions
-                        coeffs_modified[mask_resized == 0] *= scale_factor
-                        
-                        # Update coefficients
-                        kappa_coeffs = list(kappa_coeffs)
-                        kappa_coeffs[j] = list(kappa_coeffs[j])
-                        kappa_coeffs[j][d] = coeffs_modified
-                        kappa_coeffs[j] = tuple(kappa_coeffs[j])
-                        kappa_coeffs = tuple(kappa_coeffs)
+                if std_in > 0:
+                    # Apply normalization factor inside the gaps
+                    scale_factor = std_out / std_in
+                    wavelet_bands[j][~scale_mask] *= scale_factor
         
         # Reconstruct
-        kappa_corrected = pywt.waverec2(kappa_coeffs, wavelet)
-        
-        # Handle potential size changes from wavelet transform
-        if kappa_corrected.shape != kappa.shape:
-            kappa_corrected = kappa_corrected[:kappa.shape[0], :kappa.shape[1]]
+        kappa_corrected = inverse_starlet_transform_2d(wavelet_bands)
         
         return kappa_corrected
     
