@@ -47,13 +47,13 @@ methods:
 
   # KS+ settings
   ks_plus:
-    extension_size: 50        # Size of field extension to reduce border effects
     inpainting_iterations: 100  # Number of iterations for inpainting algorithm
     reduced_shear_iterations: 3 # Number of iterations for reduced shear correction
-    use_wavelet_constraints: true # Apply wavelet-based power spectrum constraints
 
     # Advanced settings
     min_threshold_fraction: 0.0    # Minimum threshold for DCT coefficients as a fraction of the maximum coefficient (default of 0 is advised)
+    extension_size: 'double'    # Size of field extension to reduce border effects ('double' or number of pixels)
+    use_wavelet_constraints: true # Apply wavelet-based power spectrum constraints
     
     smoothing:
       type: 'gaussian'  # 'gaussian' or null

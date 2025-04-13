@@ -56,7 +56,18 @@ class KSPlusMapper(MassMapper):
         mask = self._create_mask(g1_grid, g2_grid)
         
         # Extend field to handle border effects
-        extension_size = config.get('extension_size', npix_ra // 2)
+        extension_config = config.get('extension_size', 'double')
+        if extension_config == 'double':
+            # Double the field size (add half the field width on each side)
+            extension_size = npix_ra // 2
+        else:
+            # Use the specified number of pixels
+            try:
+                extension_size = int(extension_config)
+            except (ValueError, TypeError):
+                print(f"Warning: Invalid extension_size '{extension_config}', using default 'double'")
+                extension_size = npix_ra // 2
+
         g1_extended, g2_extended, mask_extended = self._extend_field(
             g1_grid, g2_grid, mask, extension_size)
         
