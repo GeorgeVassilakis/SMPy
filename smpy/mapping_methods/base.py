@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 import numpy as np
 from smpy.plotting import plot
+import os
 
 class MassMapper(ABC):
     """Abstract base class for mass mapping methods.
@@ -63,12 +64,16 @@ class MassMapper(ABC):
             'B': map_b
         }
         
+        # Create method-specific output directory
+        method_output_dir = f"{self.config['output_directory']}/{self.name}"
+        os.makedirs(method_output_dir, exist_ok=True)
+        
         # Plot maps
         for mode in self.config['mode']:
             plot_map = maps[mode]
             plot_config = self.config.copy()
             plot_config['plot_title'] = f"{self.config['plot_title']} ({mode}-mode)"
-            output_name = (f"{self.config['output_directory']}"
+            output_name = (f"{self.config['output_directory']}/{self.name}/"
                          f"{self.config['output_base_name']}_{self.name}_{mode.lower()}_mode.png")
             plot.plot_convergence(plot_map, scaled_boundaries, true_boundaries, plot_config, output_name)
             
