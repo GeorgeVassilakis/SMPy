@@ -26,7 +26,7 @@ general:
   
   # Analysis settings
   method: "ks_plus"  # "kaiser_squires", "aperture_mass", or "ks_plus"
-  create_snr: false  # Whether to create SNR map
+  create_snr: true  # Whether to create SNR map
   mode: ['E']  # ['E'], ['B'], or ['E', 'B']
   print_timing: true  # Whether to print timing information for map creation
   save_fits: false  # Whether to save maps as FITS files

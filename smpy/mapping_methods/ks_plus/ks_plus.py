@@ -340,7 +340,7 @@ class KSPlusMapper(MassMapper):
         return self._standard_ks_inversion(gamma1, gamma2)
     
     def _apply_wavelet_constraints(self, kappa, mask):
-        """Apply wavelet-based power spectrum constraints.
+        """Apply wavelet-based power spectrum constraints using direct wavelet transform.
         
         Parameters
         ----------
@@ -353,50 +353,53 @@ class KSPlusMapper(MassMapper):
         -------
         kappa_corrected : `numpy.ndarray`
             Convergence map with corrected power spectrum
-
         """
         # Choose wavelet
         wavelet = 'db4'
         level = pywt.dwt_max_level(min(kappa.shape), wavelet)
         level = min(level, 5)  # Limit to reasonable depth
         
-        # Decompose into wavelet coefficients
-        coeffs = pywt.wavedec2(kappa, wavelet, level=level)
+        # Decompose convergence into wavelet coefficients
+        kappa_coeffs = pywt.wavedec2(kappa, wavelet, level=level)
+        
+        # Decompose mask into wavelet coefficients
+        mask_coeffs = pywt.wavedec2(mask.astype(float), wavelet, level=level)
         
         # Process each detail coefficient level
-        for j in range(1, len(coeffs)):
+        for j in range(1, len(kappa_coeffs)):
             # For each detail coefficient (horizontal, vertical, diagonal)
             for d in range(3):
-                # Calculate variance outside the mask (known data)
-                if np.sum(mask == 0) > 0 and np.sum(mask > 0) > 0:
-                    # Resize mask to match current wavelet level if needed
-                    if coeffs[j][d].shape != mask.shape:
-                        # This is an approximation - ideally wavelets would be computed
-                        # on the mask itself to get exact correspondence
-                        mask_resized = gaussian_filter(
-                            mask.astype(float), 
-                            sigma=2**(j-1)
-                        )
-                        mask_resized = (mask_resized > 0.5).astype(float)
-                        mask_resized = zoom(
-                            mask_resized, 
-                            (coeffs[j][d].shape[0]/mask.shape[0], 
-                             coeffs[j][d].shape[1]/mask.shape[1])
-                        )
-                    else:
-                        mask_resized = mask
-                    
+                # Get wavelet coefficient masks at the correct scale
+                mask_wavelet = mask_coeffs[j][d]
+                
+                # Ensure binary mask (coefficients > 0 treated as data, <= 0 as gaps)
+                mask_resized = (mask_wavelet > 0).astype(float)
+                
+                # Make sure we have both gap and non-gap regions
+                if np.sum(mask_resized > 0) > 0 and np.sum(mask_resized == 0) > 0:
                     # Calculate standard deviations
-                    std_out = np.std(coeffs[j][d][mask_resized > 0])
-                    std_in = np.std(coeffs[j][d][mask_resized == 0])
+                    std_out = np.std(kappa_coeffs[j][d][mask_resized > 0])
+                    std_in = np.std(kappa_coeffs[j][d][mask_resized == 0])
                     
                     if std_in > 0:
                         # Apply normalization factor
                         scale_factor = std_out / std_in
-                        coeffs[j][d][mask_resized == 0] *= scale_factor
+                        
+                        # Get a modifiable copy of the coefficients
+                        coeffs_modified = kappa_coeffs[j][d].copy()
+                        
+                        # Apply scaling only in the gap regions
+                        coeffs_modified[mask_resized == 0] *= scale_factor
+                        
+                        # Update coefficients
+                        kappa_coeffs = list(kappa_coeffs)
+                        kappa_coeffs[j] = list(kappa_coeffs[j])
+                        kappa_coeffs[j][d] = coeffs_modified
+                        kappa_coeffs[j] = tuple(kappa_coeffs[j])
+                        kappa_coeffs = tuple(kappa_coeffs)
         
         # Reconstruct
-        kappa_corrected = pywt.waverec2(coeffs, wavelet)
+        kappa_corrected = pywt.waverec2(kappa_coeffs, wavelet)
         
         # Handle potential size changes from wavelet transform
         if kappa_corrected.shape != kappa.shape:
