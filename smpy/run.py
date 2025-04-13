@@ -122,8 +122,6 @@ def run(config_path):
     
     # Save maps as FITS files if requested
     if config['general'].get('save_fits', False):
-        import os
-        method_output_dir = f"{config['general']['output_directory']}/{method}"
         os.makedirs(method_output_dir, exist_ok=True)
         
         for mode in config['general']['mode']:
