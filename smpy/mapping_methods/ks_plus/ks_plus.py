@@ -59,17 +59,19 @@ class KSPlusMapper(MassMapper):
         extension_config = config.get('extension_size', 'double')
         if extension_config == 'double':
             # Double the field size (add half the field width on each side)
-            extension_size = npix_ra // 2
+            extension_size_dec = npix_dec // 2
+            extension_size_ra = npix_ra // 2
         else:
             # Use the specified number of pixels
             try:
-                extension_size = int(extension_config)
+                extension_size_dec = extension_size_ra = int(extension_config)
             except (ValueError, TypeError):
                 print(f"Warning: Invalid extension_size '{extension_config}', using default 'double'")
-                extension_size = npix_ra // 2
+                extension_size_dec = npix_dec // 2
+                extension_size_ra = npix_ra // 2
 
         g1_extended, g2_extended, mask_extended = self._extend_field(
-            g1_grid, g2_grid, mask, extension_size)
+            g1_grid, g2_grid, mask, extension_size_dec, extension_size_ra)
         
         # Reduced shear correction loop
         max_iterations = config.get('reduced_shear_iterations', 3)
@@ -87,11 +89,12 @@ class KSPlusMapper(MassMapper):
                 g1_corrected, g2_corrected, mask_extended, config)
             
             # Extract the central part for next iteration
-            start = extension_size
-            end_ra = start + npix_ra
-            end_dec = start + npix_dec
-            kappa_e = kappa_e_extended[start:end_dec, start:end_ra]
-            kappa_b = kappa_b_extended[start:end_dec, start:end_ra]
+            start_dec = extension_size_dec
+            start_ra = extension_size_ra
+            end_ra = start_ra + npix_ra
+            end_dec = start_dec + npix_dec
+            kappa_e = kappa_e_extended[start_dec:end_dec, start_ra:end_ra]
+            kappa_b = kappa_b_extended[start_dec:end_dec, start_ra:end_ra]
             
             # Apply smoothing if configured
             smoothing_config = self.config.get('smoothing')
@@ -123,7 +126,7 @@ class KSPlusMapper(MassMapper):
         mask[(g1_grid == 0) & (g2_grid == 0)] = 0
         return mask
     
-    def _extend_field(self, g1_grid, g2_grid, mask, extension_size):
+    def _extend_field(self, g1_grid, g2_grid, mask, extension_size_dec, extension_size_ra):
         """Extend field to reduce border effects.
         
         Parameters
@@ -134,8 +137,10 @@ class KSPlusMapper(MassMapper):
             Second shear component grid
         mask : `numpy.ndarray`
             Binary mask
-        extension_size : `int`
-            Size of extension in pixels
+        extension_size_dec : `int`
+            Size of extension in declination (vertical) pixels
+        extension_size_ra : `int`
+            Size of extension in right ascension (horizontal) pixels
             
         Returns
         -------
@@ -150,20 +155,20 @@ class KSPlusMapper(MassMapper):
         npix_dec, npix_ra = g1_grid.shape
         
         # Create extended grids
-        new_dec = npix_dec + 2 * extension_size
-        new_ra = npix_ra + 2 * extension_size
+        new_dec = npix_dec + 2 * extension_size_dec
+        new_ra = npix_ra + 2 * extension_size_ra
         
         g1_extended = np.zeros((new_dec, new_ra))
         g2_extended = np.zeros((new_dec, new_ra))
         mask_extended = np.zeros((new_dec, new_ra))
         
         # Insert original field in center
-        g1_extended[extension_size:extension_size+npix_dec, 
-                   extension_size:extension_size+npix_ra] = g1_grid
-        g2_extended[extension_size:extension_size+npix_dec, 
-                   extension_size:extension_size+npix_ra] = g2_grid
-        mask_extended[extension_size:extension_size+npix_dec, 
-                     extension_size:extension_size+npix_ra] = mask
+        g1_extended[extension_size_dec:extension_size_dec+npix_dec, 
+                   extension_size_ra:extension_size_ra+npix_ra] = g1_grid
+        g2_extended[extension_size_dec:extension_size_dec+npix_dec, 
+                   extension_size_ra:extension_size_ra+npix_ra] = g2_grid
+        mask_extended[extension_size_dec:extension_size_dec+npix_dec, 
+                     extension_size_ra:extension_size_ra+npix_ra] = mask
         
         return g1_extended, g2_extended, mask_extended
     
