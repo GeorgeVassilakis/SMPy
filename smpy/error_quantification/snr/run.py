@@ -132,7 +132,14 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
     
     # Calculate kappa for shuffled maps
     mapping_method = config.get('mapping_method', config.get('method', 'kaiser_squires'))
-    kappa_e_list, kappa_b_list = perform_mapping(g1_g2_map_list, config, mapping_method)
+    
+    # If the mapping method is KS+, use standard KS for variance calculation
+    if mapping_method.lower() == 'ks_plus':
+        variance_mapping_method = 'kaiser_squires'
+    else:
+        variance_mapping_method = mapping_method
+    
+    kappa_e_list, kappa_b_list = perform_mapping(g1_g2_map_list, config, variance_mapping_method)
 
     # Process maps
     filter_config = config.get('smoothing')
