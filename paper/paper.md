@@ -2,7 +2,7 @@
 title: 'Shear Mapping in Python (SMPy): Modular, Extensible, and Accessible Dark Matter Mapping'
 tags:
   - Python
-  - astronomy
+  - astrophysics
   - gravitational lensing
   - dark matter
   - galaxy shear
