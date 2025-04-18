@@ -42,8 +42,12 @@ methods:
   # Aperture Mass settings
   aperture_mass:
     filter:
-      type: 'schirmer'  # Type of aperture filter
-      scale: 60        # Filter scale
+      type: 'schirmer'  # Type of aperture filter ('schirmer' or 'schneider')
+      scale: 60        # Filter scale (pixels)
+      truncation: 1.0  # Truncation radius
+
+      # Schneider filter settings
+      l: 3  # Polynomial order for Schneider filter
 
   # KS+ settings
   ks_plus:
