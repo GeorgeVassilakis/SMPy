@@ -51,7 +51,7 @@ While mass maps are a key deliverable of many cosmological analyses [@ACTDR62024
 
 1. **Accessibility:** `SMPy` is written entirely in Python and deliberately relies only on widely-used scientific Python packages (`numpy`, `scipy`, `pandas`, `astropy`, `matplotlib`, and `pyyaml`). This choice of standard dependencies ensures that users can easily install the packages without complex dependency chains, and that the codebase is maintainable and familiar to the scientific Python community.
 
-2. **Extensibility:** `SMPy` is built with a modular architecture that facilitates easy implementation of new mass mapping techniques, encouraginig open-source contribution. The framework's standardized abstract base class architecture allows for the integration of different mapping methods with minimal effort.
+2. **Extensibility:** `SMPy` is built with a modular architecture that facilitates easy implementation of new mass mapping techniques, encouraging open-source contribution. The framework's standardized abstract base class architecture allows for the integration of different mapping methods with minimal effort.
 
 3. **Usability:** Creating convergence maps with `SMPy` requires minimal input—users need to only provide a catalog of galaxies with their associated shear components and coordinates. This straightforward input requirement makes the tool accessible to researchers at all levels. A flexible configuration system is integrated via a single YAML file that defines file paths, convergence map algorithm settings, plotting parameters, and more. With this configuration file, the user can create convergence & SNR maps with one line, either via terminal or within code.
 
