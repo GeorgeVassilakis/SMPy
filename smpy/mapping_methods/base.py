@@ -35,7 +35,6 @@ class MassMapper(ABC):
         map_e, map_b : numpy.ndarray
             E-mode and B-mode mass maps
         """
-        pass
         
     def run(self, g1_grid, g2_grid, scaled_boundaries, true_boundaries):
         """Run mass mapping pipeline.
@@ -82,4 +81,3 @@ class MassMapper(ABC):
     @abstractmethod
     def name(self):
         """Name of the mapping method."""
-        pass

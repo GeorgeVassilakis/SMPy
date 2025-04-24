@@ -25,7 +25,6 @@ class CoordinateSystem(ABC):
             - For RA/Dec: resolution_arcmin for setting grid spacing
             - For Pixel: downsample_factor and max_grid_size for binning
         """
-        pass
     
     @abstractmethod
     def create_grid(self, data_df, boundaries, config):
@@ -46,7 +45,6 @@ class CoordinateSystem(ABC):
         g1_grid, g2_grid : `numpy.ndarray`
             2D arrays containing binned shear values on regular grid
         """
-        pass
     
     @abstractmethod
     def calculate_boundaries(self, coord1, coord2):
@@ -65,7 +63,6 @@ class CoordinateSystem(ABC):
             Dictionaries containing coordinate ranges and labels:
             coord1_min/max, coord2_min/max, coord1_name, coord2_name, units
         """
-        pass
     
     @abstractmethod
     def transform_coordinates(self, data_df):
@@ -82,7 +79,6 @@ class CoordinateSystem(ABC):
             DataFrame with additional coord1_scaled, coord2_scaled columns
             containing transformed coordinates ready for gridding
         """
-        pass
 
     def _create_shear_grid(self, data_df, idx1, idx2, npix1, npix2):
         """Create weighted shear grid from binning indices.
