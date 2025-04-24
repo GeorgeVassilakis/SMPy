@@ -128,7 +128,7 @@ def inverse_starlet_transform_2d(wavelet_bands):
     reconstructed : ndarray
         Reconstructed 2D image
     """
-    nscales, ny, nx = wavelet_bands.shape
+    nscales, _, _ = wavelet_bands.shape
     
     # Start with the coarsest scale
     reconstructed = np.copy(wavelet_bands[nscales-1])

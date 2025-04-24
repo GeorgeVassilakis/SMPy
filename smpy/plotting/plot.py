@@ -245,7 +245,7 @@ def _plot_convergence_pixel(filtered_convergence, scaled_boundaries, true_bounda
     # Add peaks if threshold specified
     threshold = config.get('threshold')
     if threshold is not None:
-        X, Y, heights, coords = find_peaks2d(filtered_convergence, 
+        X, Y, _, _ = find_peaks2d(filtered_convergence, 
                                            threshold=threshold,
                                            verbose=config.get('verbose', False),
                                            true_boundaries=true_boundaries,
@@ -345,7 +345,7 @@ def _plot_convergence_radec(filtered_convergence, scaled_boundaries, true_bounda
     # Plot peaks if threshold specified
     threshold = config.get('threshold')
     if threshold is not None:
-        X, Y, heights, coords = find_peaks2d(filtered_convergence, 
+        X, Y, _, _ = find_peaks2d(filtered_convergence, 
                                            threshold=threshold,
                                            verbose=config.get('verbose', False),
                                            true_boundaries=true_boundaries,
