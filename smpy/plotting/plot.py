@@ -1,8 +1,6 @@
-from matplotlib import rc, rcParams, colors
+from matplotlib import colors
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from scipy.ndimage import gaussian_filter
 import numpy as np
 from smpy.utils import find_peaks2d
 

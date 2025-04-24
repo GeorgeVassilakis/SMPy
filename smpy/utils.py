@@ -5,7 +5,6 @@ import secrets
 
 from astropy.table import Table
 from astropy.io import fits
-from astropy.wcs import WCS
 
 def load_shear_data(shear_cat_path, coord1_col, coord2_col, g1_col, g2_col, weight_col=None, hdu=0):
     """Load shear catalog from FITS file.

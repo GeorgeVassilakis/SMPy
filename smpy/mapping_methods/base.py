@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-import numpy as np
 from smpy.plotting import plot
 import os
 
