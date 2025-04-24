@@ -8,8 +8,7 @@ from smpy.plotting import plot
 from smpy.coordinates import get_coordinate_system
 import os
 
-"""Signal-to-noise map generation module.
-
+"""
 Creates SNR maps by generating random realizations through spatial or orientation shuffling
 to estimate noise properties of the mass maps.
 """
