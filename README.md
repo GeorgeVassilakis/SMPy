@@ -6,11 +6,10 @@
 # SMPy (Shear Mapping in Python)
 
 ## Overview
-**SMPy (Shear Mapping in Python)** is a mass reconstruction toolkit for weak gravitational lensing analysis, primarily focused on mapping total matter distributions from galaxy shear data. The package implements the Kaiser-Squires inversion technique (Kaiser & Squires 1993) to reconstruct the dimensionless surface mass density (convergence) field from weak lensing shear measurements. This non-parametric reconstruction method enables direct mapping of both dark and baryonic matter distributions from the observed distortions in background galaxy shapes.
+**SMPy (Shear Mapping in Python)** is a mass reconstruction toolkit for weak gravitational lensing analysis, primarily focused on mapping total matter distributions from galaxy shear data. The package implements various techniques, including Kaiser-Squires inversion (Kaiser & Squires 1993), KS+ (Pires et al. 2020), and Aperture Mass, to reconstruct the dimensionless surface mass density (convergence) field from weak lensing shear measurements. These non-parametric reconstruction methods enable direct mapping of both dark and baryonic matter distributions from the observed distortions in background galaxy shapes.
 
 Key attributes include:
-- Mass reconstruction via Kaiser-Squires inversion in both celestial (RA/Dec) and pixel coordinate systems
-- Aperture mass mapping for localized mass measurements
+- Mass reconstruction via Kaiser-Squires, KS+, and Aperture Mass methods in both celestial (RA/Dec) and pixel coordinate systems
 - E/B-mode decomposition for systematic error analysis
 - Signal-to-noise ratio quantification through spatial and orientation randomization techniques
 - Peak statistics with customizable detection thresholds and significance estimation
@@ -118,5 +117,10 @@ The package provides a robust implementation supporting both weighted and unweig
 - If there are issues or bugs in the software, feel free to raise an issue in GitHub's issues tab or create a GitHub discussion, and request @GeorgeVassilakis for review.
 - If you need support or help using `SMPy`, feel free to contact me via my email: vassilakis.g@northeastern.edu
 
-## Example Kaiser Squires Convergence Map
+## Example Convergence Maps
+### Kaiser-Squires
 ![Kaiser Squires Convergence Map](examples/outputs/kaiser_squires/simulation_testing_kaiser_squires_e_mode.png)
+### KS+
+![KS+ Convergence Map](examples/outputs/ks_plus/simulation_testing_ks_plus_e_mode.png)
+### Aperture Mass
+![Aperture Mass Convergence Map](examples/outputs/aperture_mass/simulation_testing_aperture_mass_e_mode.png)
