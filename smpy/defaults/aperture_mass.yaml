@@ -1,0 +1,22 @@
+# Aperture Mass Method Specific Configuration
+# This file contains overrides specific to the Aperture Mass method
+
+#------General settings------#
+general:
+  method: "aperture_mass"
+
+#------Method Settings------#
+methods:
+  aperture_mass:
+    filter:
+      type: 'schirmer'  # Type of aperture filter ('schirmer' or 'schneider')
+      scale: 60        # Filter scale (pixels)
+      truncation: 1.0  # Truncation radius
+
+      # Schneider filter settings
+      l: 3  # Polynomial order for Schneider filter
+
+#------Plot Settings------#
+plotting:
+  plot_title: 'Aperture Mass Map'
+  cmap: 'plasma'

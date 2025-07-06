@@ -1,25 +1,28 @@
 """Main run module for mass mapping."""
 
-import yaml
+import os
 import time
+from pathlib import Path
+
+import yaml
+
 from smpy import utils
 from smpy.coordinates import get_coordinate_system
-from smpy.mapping_methods import KaiserSquiresMapper, ApertureMassMapper, KSPlusMapper
 from smpy.error_quantification.snr import run as snr_run
-import os
+from smpy.mapping_methods import ApertureMassMapper, KaiserSquiresMapper, KSPlusMapper
 def prepare_method_config(config, method):
     """Prepare method-specific configuration with plotting settings.
     
     Parameters
     ----------
-    config : dict
+    config : `dict`
         Full configuration dictionary
-    method : str
+    method : `str`
         Method name
         
     Returns
     -------
-    dict
+    combined_config : `dict`
         Combined configuration for specified method
     """
     method_config = config['general'].copy()
@@ -32,16 +35,16 @@ def run_mapping(config):
     
     Parameters
     ----------
-    config : dict
+    config : `dict`
         Configuration dictionary
         
     Returns
     -------
-    maps : dict
+    maps : `dict`
         Dictionary containing mass maps
-    scaled_boundaries : dict
+    scaled_boundaries : `dict`
         Scaled coordinate boundaries
-    true_boundaries : dict
+    true_boundaries : `dict`
         True coordinate boundaries
     """
     # Get coordinate system
@@ -101,17 +104,37 @@ def run_mapping(config):
     
     return maps, scaled_boundaries, true_boundaries
 
-def run(config_path):
+def run(config_input):
     """Run mass mapping workflow.
     
     Parameters
     ----------
-    config_path : str
-        Path to configuration file
+    config_input : `str`, `pathlib.Path`, `dict`, or `Config`
+        Configuration input. Can be:
+        - Path to configuration file (str or Path)
+        - Configuration dictionary (dict)
+        - Config object
+    
+    Returns
+    -------
+    result : `dict`
+        Dictionary containing mass maps and metadata
     """
-    # Read configuration
-    with open(config_path, 'r') as f:
-        config = yaml.safe_load(f)
+    from .config import Config
+    
+    # Handle different input types
+    if isinstance(config_input, (str, Path)):
+        # Load from file
+        with open(config_input, 'r') as f:
+            config = yaml.safe_load(f)
+    elif isinstance(config_input, Config):
+        # Extract dictionary from Config object
+        config = config_input.to_dict()
+    elif isinstance(config_input, dict):
+        # Use dictionary directly
+        config = config_input
+    else:
+        raise TypeError(f"config_input must be str, Path, dict, or Config object, got {type(config_input)}")
     
     # Get method and prepare config
     method = config['general']['method']
@@ -165,6 +188,19 @@ def run(config_path):
                             'dec_max': true_boundaries['coord2_max']
                         }
                         utils.save_fits(snr_map[mode], fits_boundaries, output_path)
+    
+    # Return results
+    result = {
+        'maps': maps,
+        'scaled_boundaries': scaled_boundaries,
+        'true_boundaries': true_boundaries
+    }
+    
+    # Add SNR map if created
+    if config['general'].get('create_snr', False) and 'snr_map' in locals():
+        result['snr_maps'] = snr_map
+    
+    return result
 
 if __name__ == "__main__":
     import sys

@@ -1,11 +1,11 @@
-from smpy import run
+"""Provides a simple command line tool to run SMPy mass mapping operations
+using configuration files.
+"""
+
 from argparse import ArgumentParser, ArgumentTypeError
 from pathlib import Path
 
-"""
-Provides a simple command line tool to run SMPy mass mapping operations
-using configuration files.
-"""
+import smpy
 
 def main(args):
     """Execute SMPy operation from command line arguments.
@@ -15,7 +15,7 @@ def main(args):
     args : `argparse.Namespace`
         Parsed command line arguments containing config path
     """
-    run.run(args.config)
+    smpy.run(args.config)
 
 if __name__ == "__main__":
     parser = ArgumentParser(description='Runner script for SMPy operations.')

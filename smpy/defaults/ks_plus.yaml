@@ -1,0 +1,26 @@
+# KS+ Method Specific Configuration
+# This file contains overrides specific to the KS+ method
+
+#------General settings------#
+general:
+  method: "ks_plus"
+
+#------Method Settings------#
+methods:
+  ks_plus:
+    inpainting_iterations: 100  # Number of iterations for inpainting algorithm
+    reduced_shear_iterations: 3 # Number of iterations for reduced shear correction
+
+    # Advanced settings
+    min_threshold_fraction: 0.0    # Minimum threshold for DCT coefficients as a fraction of the maximum coefficient
+    extension_size: 'double'    # Size of field extension to reduce border effects ('double' or number of pixels)
+    use_wavelet_constraints: true # Apply wavelet-based power spectrum constraints
+    
+    smoothing:
+      type: 'gaussian'  # 'gaussian' or null
+      sigma: 2.0        # Smoothing scale
+
+#------Plot Settings------#
+plotting:
+  plot_title: 'KS+ Mass Map'
+  cmap: 'inferno'

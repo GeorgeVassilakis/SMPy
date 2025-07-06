@@ -1,0 +1,110 @@
+# Base SMPy Configuration
+# This file contains sensible defaults for all SMPy parameters
+
+#------General settings------#
+general:
+  # Input/Output paths (will be overridden by user)
+  input_path: ""
+  input_hdu: 1  # FITS extension number to read data from
+  output_directory: "."
+  output_base_name: "smpy_output"
+
+  # Coordinate system settings
+  coordinate_system: "radec"  # 'radec' or 'pixel'
+  radec:
+    resolution: 0.4  # In arcminutes
+    coord1: 'ra'    # RA column name
+    coord2: 'dec'   # Dec column name
+  pixel:
+    downsample_factor: 1  # Grid reduction factor
+    coord1: 'X_IMAGE'    # X column name
+    coord2: 'Y_IMAGE'    # Y column name
+  
+  # Data columns
+  g1_col: 'g1'
+  g2_col: 'g2'
+  weight_col: null  # Set to null if no weights
+  
+  # Analysis settings
+  method: "kaiser_squires"  # "kaiser_squires", "aperture_mass", or "ks_plus"
+  create_snr: false  # Whether to create SNR map
+  mode: ['E']  # ['E'], ['B'], or ['E', 'B']
+  print_timing: false  # Whether to print timing information for map creation
+  save_fits: false  # Whether to save maps as FITS files
+
+#------Method Settings------#
+methods:
+  # Kaiser-Squires settings
+  kaiser_squires:
+    smoothing:
+      type: 'gaussian'  # 'gaussian' or null
+      sigma: 2.0        # Smoothing scale
+
+  # Aperture Mass settings
+  aperture_mass:
+    filter:
+      type: 'schirmer'  # Type of aperture filter ('schirmer' or 'schneider')
+      scale: 60        # Filter scale (pixels)
+      truncation: 1.0  # Truncation radius
+
+      # Schneider filter settings
+      l: 3  # Polynomial order for Schneider filter
+      
+  # KS+ settings
+  ks_plus:
+    inpainting_iterations: 100  # Number of iterations for inpainting algorithm
+    reduced_shear_iterations: 3 # Number of iterations for reduced shear correction
+
+    # Advanced settings
+    min_threshold_fraction: 0.0    # Minimum threshold for DCT coefficients as a fraction of the maximum coefficient
+    extension_size: 'double'    # Size of field extension to reduce border effects ('double' or number of pixels)
+    use_wavelet_constraints: true # Apply wavelet-based power spectrum constraints
+    
+    smoothing:
+      type: 'gaussian'  # 'gaussian' or null
+      sigma: 2.0        # Smoothing scale
+
+#------Plot Settings------#
+plotting:
+  # Basic plotting
+  figsize: [12, 8]
+  cmap: 'viridis'
+  xlabel: 'auto'  # 'auto', null, or custom string
+  ylabel: 'auto'  # 'auto', null, or custom string
+  plot_title: 'Mass Map'  # Method name will be appended
+  gridlines: true
+  
+  # Advanced plotting
+  vmax: null
+  vmin: null
+  threshold: null    # Peak detection threshold
+  verbose: null      # Print peak information
+  cluster_center: null  # null, 'auto', or {ra/x_center: float, dec/y_center: float}
+
+  # Scaling options
+  scaling:
+    type: 'linear'        # 'linear', 'power', or 'symlog'
+    # Optional parameters (for nonlinear scaling)
+    gamma: 2              # For power: Exponent for power law
+    percentile: null      # Set to null for regular or [n, m] to use nth and mth percentiles 
+
+    # Map-specific symlog parameters (optional)
+    convergence:          
+      linthresh: 0.1      # For symlog: threshold for linear region around zero
+      linscale: 1.0       # For symlog: scaling factor for linear region
+    snr:                 
+      linthresh: 5        # For symlog: threshold for linear region around zero
+      linscale: 0.5       # For symlog: scaling factor for linear region
+
+#------SNR Map Settings------#
+snr:
+  shuffle_type: 'spatial'  # 'spatial' or 'orientation'
+  num_shuffles: 100       # Number of random realizations
+  seed: 0                 # Random seed (int or 'random' for cryptographically secure seed)
+  
+  smoothing:
+    type: 'gaussian'  # 'gaussian' or null (null not recommended for SNR)
+    sigma: 2.0        # Smoothing scale
+  
+  # SNR plots will use the same settings as defined in plotting section above
+  plot_title: 'Signal-to-Noise Map'  # Overrides plotting.plot_title for SNR maps
