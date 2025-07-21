@@ -139,17 +139,14 @@ class Config:
         # Handle coordinate system
         if 'coord_system' in kwargs:
             self._ensure_section('general')
-            # Map user-friendly names to internal names
-            coord_system_map = {
-                'ra_dec': 'radec',
-                'pixel': 'pixel'
-            }
-            coord_system = coord_system_map.get(kwargs['coord_system'], kwargs['coord_system'])
+            coord_system = kwargs['coord_system']
+            if coord_system not in ['radec', 'pixel']:
+                raise ValueError(f"Invalid coord_system: {coord_system}")
             self.config['general']['coordinate_system'] = coord_system
             # Mark that coordinate system was explicitly set by user
             self.config['general']['_coord_system_set_by_user'] = True
         
-        # Handle pixel_scale (for ra_dec system)
+        # Handle pixel_scale (for radec system)
         if 'pixel_scale' in kwargs and kwargs['pixel_scale'] is not None:
             self._ensure_section('general')
             self._ensure_section('general', 'radec')

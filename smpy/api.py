@@ -10,7 +10,7 @@ from .config import Config
 def map_mass(
     data,
     method='kaiser_squires',
-    coord_system='ra_dec',
+    coord_system='radec',
     pixel_scale=None,
     downsample_factor=None,
     output_dir='.',
@@ -39,9 +39,9 @@ def map_mass(
         Mass mapping method to use. Options: 'kaiser_squires', 
         'aperture_mass', 'ks_plus'
     coord_system : `str`, optional
-        Coordinate system of input data. Options: 'ra_dec', 'pixel'
+        Coordinate system of input data. Options: 'radec', 'pixel'
     pixel_scale : `float`, optional
-        Pixel scale in arcminutes. Required for 'ra_dec' coordinate system
+        Pixel scale in arcminutes. Required for 'radec' coordinate system
     downsample_factor : `int`, optional
         Downsampling factor for pixel coordinates. Required for 'pixel' 
         coordinate system
@@ -86,7 +86,7 @@ def map_mass(
     
     >>> result = map_mass(
     ...     data='catalog.fits',
-    ...     coord_system='ra_dec',
+    ...     coord_system='radec',
     ...     pixel_scale=0.168
     ... )
     
@@ -95,7 +95,7 @@ def map_mass(
     >>> result = map_mass(
     ...     data='catalog.fits',
     ...     method='ks_plus',
-    ...     coord_system='ra_dec',
+    ...     coord_system='radec',
     ...     pixel_scale=0.168,
     ...     smoothing=1.5,
     ...     create_snr=True,
@@ -135,7 +135,7 @@ def map_mass(
 
 def map_kaiser_squires(
     data,
-    coord_system='ra_dec',
+    coord_system='radec',
     pixel_scale=None,
     downsample_factor=None,
     smoothing=2.0,
@@ -151,9 +151,9 @@ def map_kaiser_squires(
     data : `str` or `pathlib.Path`
         Path to input FITS file containing shear catalog
     coord_system : `str`, optional
-        Coordinate system of input data. Options: 'ra_dec', 'pixel'
+        Coordinate system of input data. Options: 'radec', 'pixel'
     pixel_scale : `float`, optional
-        Pixel scale in arcminutes. Required for 'ra_dec' coordinate system
+        Pixel scale in arcminutes. Required for 'radec' coordinate system
     downsample_factor : `int`, optional
         Downsampling factor for pixel coordinates. Required for 'pixel' 
         coordinate system
@@ -171,7 +171,7 @@ def map_kaiser_squires(
     --------
     >>> result = map_kaiser_squires(
     ...     data='catalog.fits',
-    ...     coord_system='ra_dec',
+    ...     coord_system='radec',
     ...     pixel_scale=0.168
     ... )
     """
@@ -188,7 +188,7 @@ def map_kaiser_squires(
 
 def map_aperture_mass(
     data,
-    coord_system='ra_dec',
+    coord_system='radec',
     pixel_scale=None,
     downsample_factor=None,
     filter_type='schirmer',
@@ -205,9 +205,9 @@ def map_aperture_mass(
     data : `str` or `pathlib.Path`
         Path to input FITS file containing shear catalog
     coord_system : `str`, optional
-        Coordinate system of input data. Options: 'ra_dec', 'pixel'
+        Coordinate system of input data. Options: 'radec', 'pixel'
     pixel_scale : `float`, optional
-        Pixel scale in arcminutes. Required for 'ra_dec' coordinate system
+        Pixel scale in arcminutes. Required for 'radec' coordinate system
     downsample_factor : `int`, optional
         Downsampling factor for pixel coordinates. Required for 'pixel' 
         coordinate system
@@ -227,7 +227,7 @@ def map_aperture_mass(
     --------
     >>> result = map_aperture_mass(
     ...     data='catalog.fits',
-    ...     coord_system='ra_dec',
+    ...     coord_system='radec',
     ...     pixel_scale=0.168,
     ...     filter_scale=80
     ... )
@@ -251,7 +251,7 @@ def map_aperture_mass(
 
 def map_ks_plus(
     data,
-    coord_system='ra_dec',
+    coord_system='radec',
     pixel_scale=None,
     downsample_factor=None,
     smoothing=2.0,
@@ -269,9 +269,9 @@ def map_ks_plus(
     data : `str` or `pathlib.Path`
         Path to input FITS file containing shear catalog
     coord_system : `str`, optional
-        Coordinate system of input data. Options: 'ra_dec', 'pixel'
+        Coordinate system of input data. Options: 'radec', 'pixel'
     pixel_scale : `float`, optional
-        Pixel scale in arcminutes. Required for 'ra_dec' coordinate system
+        Pixel scale in arcminutes. Required for 'radec' coordinate system
     downsample_factor : `int`, optional
         Downsampling factor for pixel coordinates. Required for 'pixel' 
         coordinate system
@@ -293,7 +293,7 @@ def map_ks_plus(
     --------
     >>> result = map_ks_plus(
     ...     data='catalog.fits',
-    ...     coord_system='ra_dec',
+    ...     coord_system='radec',
     ...     pixel_scale=0.168,
     ...     inpainting_iterations=200
     ... )

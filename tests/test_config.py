@@ -62,7 +62,7 @@ class TestConfig(unittest.TestCase):
         
         config.update_from_kwargs(
             data='/path/to/catalog.fits',
-            coord_system='ra_dec',
+            coord_system='radec',
             pixel_scale=0.168,
             output_dir='/output'
         )
@@ -122,7 +122,7 @@ class TestConfig(unittest.TestCase):
             config = Config.from_defaults('kaiser_squires')
             config.update_from_kwargs(
                 data=temp_file,
-                coord_system='ra_dec',
+                coord_system='radec',
                 pixel_scale=0.168
             )
             
@@ -139,13 +139,13 @@ class TestConfig(unittest.TestCase):
         config = Config.from_defaults('kaiser_squires')
         
         # Set a data path and coord system but missing pixel_scale for radec system
-        config.update_from_kwargs(data='/some/fake/path.fits', coord_system='ra_dec')
+        config.update_from_kwargs(data='/some/fake/path.fits', coord_system='radec')
         
         with self.assertRaises(ValueError):
             config.validate()
     
     def test_validation_missing_pixel_scale_for_radec(self):
-        """Test validation fails when pixel_scale missing for ra_dec system."""
+        """Test validation fails when pixel_scale missing for radec system."""
         config = Config.from_defaults('kaiser_squires')
         
         with tempfile.NamedTemporaryFile(mode='w', suffix='.fits', delete=False) as f:
@@ -154,7 +154,7 @@ class TestConfig(unittest.TestCase):
         try:
             config.update_from_kwargs(
                 data=temp_file,
-                coord_system='ra_dec'
+                coord_system='radec'
                 # Missing pixel_scale
             )
             

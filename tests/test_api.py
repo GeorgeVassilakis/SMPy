@@ -38,7 +38,7 @@ class TestAPIConfigGeneration(unittest.TestCase):
             map_mass(
                 data=self.temp_file_path,
                 method='kaiser_squires',
-                coord_system='ra_dec',
+                coord_system='radec',
                 pixel_scale=0.168,
                 output_dir='/test',
                 create_snr=True,
@@ -71,7 +71,7 @@ class TestAPIConfigGeneration(unittest.TestCase):
         with patch('smpy.run.run') as mock_run:
             map_kaiser_squires(
                 data=self.temp_file_path,
-                coord_system='ra_dec',
+                coord_system='radec',
                 pixel_scale=0.168,
                 smoothing=1.5
             )
@@ -90,7 +90,7 @@ class TestAPIConfigGeneration(unittest.TestCase):
         with patch('smpy.run.run') as mock_run:
             map_aperture_mass(
                 data=self.temp_file_path,
-                coord_system='ra_dec',
+                coord_system='radec',
                 pixel_scale=0.168,
                 filter_type='schneider',
                 filter_scale=80
@@ -114,7 +114,7 @@ class TestAPIConfigGeneration(unittest.TestCase):
         with patch('smpy.run.run') as mock_run:
             map_ks_plus(
                 data=self.temp_file_path,
-                coord_system='ra_dec',
+                coord_system='radec',
                 pixel_scale=0.168,
                 smoothing=2.5,
                 inpainting_iterations=150,
@@ -159,7 +159,7 @@ class TestAPIConfigGeneration(unittest.TestCase):
         with patch('smpy.run.run') as mock_run:
             map_mass(
                 data=self.temp_file_path,
-                coord_system='ra_dec',
+                coord_system='radec',
                 pixel_scale=0.168,
                 g1_col='custom_g1',
                 g2_col='custom_g2',
@@ -189,7 +189,7 @@ class TestAPIConfigGeneration(unittest.TestCase):
             with patch('smpy.run.run'):
                 map_mass(
                     data=self.temp_file_path,
-                    coord_system='ra_dec',
+                    coord_system='radec',
                     pixel_scale=0.168
                 )
                 
@@ -202,7 +202,7 @@ class TestAPIConfigGeneration(unittest.TestCase):
         with self.assertRaises(ValueError):
             map_mass(
                 data=self.temp_file_path,
-                coord_system='ra_dec'
+                coord_system='radec'
                 # Missing pixel_scale
             )
         
