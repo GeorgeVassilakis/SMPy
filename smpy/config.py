@@ -315,15 +315,25 @@ class Config:
             raise ValueError(f"Invalid method '{method}'. Must be one of: {valid_methods}")
     
     def validate_file_existence(self):
-        """Warn if input files do not exist on disk.
+        """Validate that input files exist on disk.
         
-        This is separated from the main validate() method to allow
-        configuration validation without requiring files to exist.
+        Raises
+        ------
+        FileNotFoundError
+            If input file does not exist
         """
         input_path = self.config.get('general', {}).get('input_path')
-        if (input_path and input_path != "" and not input_path.startswith('/some/fake') 
-            and not os.path.exists(input_path)):
-            warnings.warn(f"Input file not found: {input_path}", UserWarning)
+        
+        # Skip validation for empty paths or test paths
+        if not input_path or input_path == "" or input_path.startswith('/some/fake'):
+            return
+            
+        # Check if file exists
+        if not os.path.exists(input_path):
+            raise FileNotFoundError(
+                f"Input file not found: {input_path}\n"
+                f"Please check that the file exists and the path is correct."
+            )
     
     def to_dict(self):
         """Return configuration as dictionary.

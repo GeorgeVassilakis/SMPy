@@ -128,9 +128,6 @@ def map_mass(
     # Validate configuration structure
     config.validate()
     
-    # Validate file existence just before execution
-    config.validate_file_existence()
-    
     # Execute the mapping
     from .run import run
     return run(config)

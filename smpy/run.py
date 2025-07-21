@@ -140,6 +140,22 @@ def run(config_input):
     method = config['general']['method']
     method_config = prepare_method_config(config, method)
     
+    # Check file existence right before we need it
+    if isinstance(config_input, Config):
+        # If we have a Config object, use its method
+        config_input.validate_file_existence()
+    else:
+        # If we have a dict, check manually
+        input_path = config['general'].get('input_path')
+        
+        # Check if we have a non-empty path
+        if input_path and input_path != "":
+            if not os.path.exists(input_path):
+                raise FileNotFoundError(
+                    f"Input file not found: {input_path}\n"
+                    f"Please check that the file exists and the path is correct."
+                )
+    
     # Run mass mapping
     maps, scaled_boundaries, true_boundaries = run_mapping(method_config)
     
