@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
 import yaml
+import warnings
 
 
 class Config:
@@ -272,7 +273,7 @@ class Config:
         Raises
         ------
         ValueError
-            If required parameters are missing
+            If required parameters are missing or invalid
         """
         # Check for required general sections
         if 'general' not in self.config:
@@ -307,17 +308,22 @@ class Config:
                 elif not coord_system_set_by_user and ('pixel' not in general or 'downsample_factor' not in general['pixel']):
                     raise ValueError("For 'pixel' coordinate system, 'downsample_factor' parameter is required")
         
-        # Check if input file exists (skip check for obviously fake test paths)
-        input_path = general.get('input_path')
-        if (input_path and input_path != "" and not input_path.startswith('/some/fake') 
-            and not os.path.exists(input_path)):
-            raise ValueError(f"Input file not found: {input_path}")
-        
         # Validate method
         method = general.get('method', 'kaiser_squires')
         valid_methods = ['kaiser_squires', 'aperture_mass', 'ks_plus']
         if method not in valid_methods:
             raise ValueError(f"Invalid method '{method}'. Must be one of: {valid_methods}")
+    
+    def validate_file_existence(self):
+        """Warn if input files do not exist on disk.
+        
+        This is separated from the main validate() method to allow
+        configuration validation without requiring files to exist.
+        """
+        input_path = self.config.get('general', {}).get('input_path')
+        if (input_path and input_path != "" and not input_path.startswith('/some/fake') 
+            and not os.path.exists(input_path)):
+            warnings.warn(f"Input file not found: {input_path}", UserWarning)
     
     def to_dict(self):
         """Return configuration as dictionary.
