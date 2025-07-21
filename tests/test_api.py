@@ -180,21 +180,33 @@ class TestAPIConfigGeneration(unittest.TestCase):
             self.assertEqual(config_dict['general']['save_fits'], True)
             self.assertEqual(config_dict['general']['print_timing'], True)
     
-    def test_config_validation_called(self):
-        """Test that config validation is called."""
+    def test_config_validation_works_correctly(self):
+        """Test that config validation properly validates parameters."""
         from unittest.mock import patch
         
-        # Mock the validation to track if it's called
-        with patch('smpy.config.Config.validate') as mock_validate:
-            with patch('smpy.run.run'):
+        # Test that valid config passes validation (should not raise)
+        with patch('smpy.run.run'):
+            try:
                 map_mass(
                     data=self.temp_file_path,
                     coord_system='radec',
                     pixel_scale=0.168
                 )
-                
-                # Check that validation was called
-                self.assertTrue(mock_validate.called)
+                # If we get here, validation passed (which is expected)
+            except ValueError:
+                self.fail("Valid configuration should not raise ValueError during validation")
+        
+        # Test that invalid config fails validation with specific error
+        with patch('smpy.run.run'):
+            with self.assertRaises(ValueError) as context:
+                map_mass(
+                    data=self.temp_file_path,
+                    coord_system='radec'
+                    # Missing required pixel_scale for radec system
+                )
+            
+            # Verify the error message mentions the missing parameter
+            self.assertIn('pixel_scale', str(context.exception))
     
     def test_invalid_parameters_raise_error(self):
         """Test that invalid parameters raise appropriate errors during validation."""
