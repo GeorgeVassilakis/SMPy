@@ -49,8 +49,8 @@ class KaiserSquiresMapper(MassMapper):
         kappa_b = np.real(np.fft.ifft2(kappa_b_hat))
 
         # Apply smoothing if configured
-        smoothing_config = self.config.get('smoothing')
-        if smoothing_config:
+        smoothing_config = self.method_config['smoothing']
+        if smoothing_config and smoothing_config.get('type'):
             kappa_e = apply_filter(kappa_e, smoothing_config)
             kappa_b = apply_filter(kappa_b, smoothing_config)
 

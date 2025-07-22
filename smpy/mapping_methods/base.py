@@ -15,9 +15,13 @@ class MassMapper(ABC):
         Parameters
         ----------
         config : dict
-            Configuration dictionary
+            Configuration dictionary with nested structure
         """
         self.config = config
+        # Direct access helper properties for nested config
+        self.general_config = config['general']
+        self.method_config = config['methods'][self.name]
+        self.plotting_config = config['plotting']
         
     @abstractmethod
     def create_maps(self, g1_grid, g2_grid):
@@ -63,16 +67,16 @@ class MassMapper(ABC):
         }
         
         # Create method-specific output directory
-        method_output_dir = f"{self.config['output_directory']}/{self.name}"
+        method_output_dir = f"{self.general_config['output_directory']}/{self.name}"
         os.makedirs(method_output_dir, exist_ok=True)
         
         # Plot maps
-        for mode in self.config['mode']:
+        for mode in self.general_config['mode']:
             plot_map = maps[mode]
-            plot_config = self.config.copy()
-            plot_config['plot_title'] = f"{self.config['plot_title']} ({mode}-mode)"
-            output_name = (f"{self.config['output_directory']}/{self.name}/"
-                         f"{self.config['output_base_name']}_{self.name}_{mode.lower()}_mode.png")
+            plot_config = self.plotting_config.copy()
+            plot_config['plot_title'] = f"{self.plotting_config['plot_title']} ({mode}-mode)"
+            output_name = (f"{self.general_config['output_directory']}/{self.name}/"
+                         f"{self.general_config['output_base_name']}_{self.name}_{mode.lower()}_mode.png")
             plot.plot_convergence(plot_map, scaled_boundaries, true_boundaries, plot_config, output_name)
             
         return maps
