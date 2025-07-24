@@ -23,7 +23,7 @@ class PixelSystem(CoordinateSystem):
            - downsample_factor: Factor to reduce grid resolution
            - max_grid_size: Safety limit for grid dimensions
        """
-       pixel_config = config.get('pixel', {})
+       pixel_config = config['general']['pixel']
        if 'downsample_factor' not in pixel_config:
            print("Warning: No downsample_factor specified in pixel config, using default 1")
            
