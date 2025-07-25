@@ -13,10 +13,8 @@ class Config:
     """Manage configuration dictionaries for SMPy mass mapping analysis.
     
     Handle loading, merging, and validating configuration dictionaries from 
-    YAML files and user parameters. Support both nested configuration 
-    structures (from user files) and flattened structures (from default 
-    configurations) to maintain backward compatibility while simplifying 
-    the user experience.
+    YAML files and user parameters. All configurations use consistent nested 
+    structure for clean architecture and reliable error handling.
 
     Parameters
     ----------
@@ -25,24 +23,17 @@ class Config:
 
     Notes
     -----
-    The Config class supports two configuration structures:
+    The Config class uses a consistent nested configuration structure:
 
-    1. **Nested Structure** (from `from_file`):
-       - Has 'general', 'methods', 'plotting', 'snr' sections
-       - Maintains original user file organization
-       - Used for existing user configuration files
+    - **General settings**: ``config['general']`` - Input/output, coordinate system, analysis settings
+    - **Method-specific**: ``config['methods'][method_name]`` - Parameters for each mapping method
+    - **Plotting settings**: ``config['plotting']`` - Visualization parameters
+    - **SNR settings**: ``config['snr']`` - Signal-to-noise map generation parameters
 
-    2. **Flattened Structure** (from `from_defaults`):
-       - Method-specific parameters promoted to top level
-       - Simplified structure for programmatic use
-       - Optimized for mapping method requirements
-
-    The flattened structure ensures each mapping method gets its 
-    configuration in the expected format:
-
-    - **Kaiser-Squires**: ``config['smoothing']`` (top level)
-    - **Aperture Mass**: ``config['filter']`` (top level)  
-    - **KS+**: ``config['ks_plus']`` (nested section)
+    Configuration access follows the fail-fast principle:
+    - Required parameters use direct access: ``config['section']['parameter']``
+    - Optional parameters use ``.get()``: ``config['section'].get('parameter', default)``
+    - Missing required config raises immediate ``KeyError`` for clear debugging
 
     Examples
     --------
@@ -55,6 +46,10 @@ class Config:
 
     >>> config = Config.from_file('my_config.yaml')
     >>> config.show_config(section='general')
+
+    Access method-specific parameters:
+
+    >>> smoothing = config.to_dict()['methods']['kaiser_squires']['smoothing']
 
     Save current configuration:
 
@@ -99,12 +94,11 @@ class Config:
     
     @classmethod
     def from_defaults(cls, method='kaiser_squires'):
-        """Load default configuration for specified method with flattening.
+        """Load default configuration for specified method.
         
-        Load configuration from the single default.yaml file and flatten the 
-        structure to match the access patterns expected by each mapping method.
-        This ensures backward compatibility while simplifying configuration 
-        management.
+        Load configuration from the default.yaml file and return the nested 
+        structure as-is. This provides consistent configuration structure 
+        regardless of loading method.
         
         Parameters
         ----------
@@ -115,8 +109,7 @@ class Config:
         Returns
         -------
         config : `Config`
-            Configuration instance with default settings, properly flattened
-            for the specified method.
+            Configuration instance with default settings in nested structure.
 
         Raises
         ------
@@ -127,98 +120,42 @@ class Config:
 
         Notes
         -----
-        The flattening process promotes method-specific configuration to the 
-        top level while preserving coordinate system structure:
+        Returns the full nested configuration structure:
 
-        - **Kaiser-Squires**: 'smoothing' moved to top level
-        - **Aperture Mass**: 'filter' moved to top level
-        - **KS+**: 'ks_plus' section preserved as nested structure
-        - **All methods**: 'plotting' and 'snr' sections flattened to top level
+        - **General settings**: ``config['general']`` 
+        - **Method-specific**: ``config['methods'][method_name]``
+        - **Plotting settings**: ``config['plotting']``
+        - **SNR settings**: ``config['snr']``
 
         Examples
         --------
         Load Kaiser-Squires defaults:
 
         >>> config = Config.from_defaults('kaiser_squires')
-        >>> smoothing = config.to_dict()['smoothing']
+        >>> smoothing = config.to_dict()['methods']['kaiser_squires']['smoothing']
         >>> print(smoothing['type'])
         gaussian
 
         Load KS+ defaults:
 
         >>> config = Config.from_defaults('ks_plus')
-        >>> ks_config = config.to_dict()['ks_plus']
+        >>> ks_config = config.to_dict()['methods']['ks_plus']
         >>> print(ks_config['inpainting_iterations'])
         100
         """
-        # Load single default.yaml (which has everything!)
+        # Load default.yaml
         defaults_path = Path(__file__).parent / 'defaults' / 'default.yaml'
         if not defaults_path.exists():
             raise FileNotFoundError(f"Default config file not found: {defaults_path}")
         
         with open(defaults_path, 'r') as f:
-            raw_config = yaml.safe_load(f)
+            config = yaml.safe_load(f)
         
         # Set the method in general section
-        raw_config['general']['method'] = method
+        config['general']['method'] = method
         
-        # Flatten the configuration using the same pattern as run.py::prepare_method_config()
-        flattened_config = raw_config['general'].copy()
-        
-        # Special handling for KS+ vs other methods
-        if method == 'ks_plus':
-            # KS+ expects its config nested under 'ks_plus' key
-            flattened_config['ks_plus'] = raw_config['methods']['ks_plus']
-        else:
-            # Other methods expect their config at top level
-            flattened_config.update(raw_config['methods'].get(method, {}))
-        
-        flattened_config.update(raw_config['plotting'])
-        flattened_config.update(raw_config['snr'])
-        
-        # Keep the nested structure for coordinate systems (needed by coordinate modules)
-        flattened_config['radec'] = raw_config['general']['radec']
-        flattened_config['pixel'] = raw_config['general']['pixel']
-        
-        return cls(flattened_config)
+        return cls(config)
 
-    # BACKUP: Original from_defaults() implementation (removed in Phase 2)
-    # @classmethod
-    # def from_defaults_original(cls, method='kaiser_squires'):
-    #     """Load default configuration for specified method.
-    #     
-    #     This is the original implementation that loaded separate method files.
-    #     Kept as backup reference during refactoring.
-    #     """
-    #     # Get the path to the defaults directory
-    #     defaults_dir = Path(__file__).parent / 'defaults'
-    #     
-    #     # Load base default config
-    #     base_config_path = defaults_dir / 'default.yaml'
-    #     if not base_config_path.exists():
-    #         raise FileNotFoundError(f"Default config file not found: {base_config_path}")
-    #     
-    #     with open(base_config_path, 'r') as f:
-    #         base_config = yaml.safe_load(f)
-    #     
-    #     # Load method-specific config if it exists
-    #     method_config_path = defaults_dir / f'{method}.yaml'
-    #     if method_config_path.exists():
-    #         with open(method_config_path, 'r') as f:
-    #             method_config = yaml.safe_load(f)
-    #         # Deep merge method config into base config
-    #         merged_config = cls._deep_merge(base_config, method_config)
-    #     else:
-    #         merged_config = base_config
-    #     
-    #     # Set the method in the config
-    #     merged_config['general']['method'] = method
-    #     
-    #     return cls(merged_config)
-    
-    # REMOVED: _deep_merge() and update() methods (Phase 2)
-    # These methods were removed as part of the configuration simplification.
-    # The complex deep merging is no longer needed with the flattened approach.
     
     def update_from_kwargs(self, **kwargs):
         """Update configuration from keyword arguments.
@@ -279,21 +216,12 @@ class Config:
         
         # Handle smoothing parameter
         if 'smoothing' in kwargs:
-            # Handle both nested and flattened configs
-            if 'general' in self.config:
-                # Nested structure
-                method = self.config.get('general', {}).get('method', 'kaiser_squires')
-                self._ensure_section('methods')
-                self._ensure_section('methods', method)
-                self._ensure_section('methods', method, 'smoothing')
-                self.config['methods'][method]['smoothing']['sigma'] = kwargs['smoothing']
-            else:
-                # Flattened structure - smoothing is at top level
-                if 'smoothing' in self.config and isinstance(self.config['smoothing'], dict):
-                    self.config['smoothing']['sigma'] = kwargs['smoothing']
-                else:
-                    # Create smoothing section if it doesn't exist
-                    self.config['smoothing'] = {'type': 'gaussian', 'sigma': kwargs['smoothing']}
+            # Always nested structure
+            method = self.config['general']['method']
+            self._ensure_section('methods')
+            self._ensure_section('methods', method)
+            self._ensure_section('methods', method, 'smoothing')
+            self.config['methods'][method]['smoothing']['sigma'] = kwargs['smoothing']
         
         # Handle create_snr
         if 'create_snr' in kwargs:
@@ -377,20 +305,15 @@ class Config:
     def validate(self):
         """Validate configuration for required parameters.
         
-        Supports both nested (from_file) and flattened (from_defaults) config structures.
+        Expects nested configuration structure only.
         
         Raises
         ------
         ValueError
             If required parameters are missing or invalid
         """
-        # Handle both nested (with 'general' section) and flattened configs
-        if 'general' in self.config:
-            # Nested structure (from from_file or old configs)
-            general = self.config['general']
-        else:
-            # Flattened structure (from from_defaults)
-            general = self.config
+        # Access nested structure directly
+        general = self.config['general']
         
         # Check for required parameters (only if input_path is actually set to a real value)
         if general.get('input_path') and general['input_path'] != "":
@@ -428,18 +351,15 @@ class Config:
     def validate_file_existence(self):
         """Validate that input files exist on disk.
         
-        Supports both nested (from_file) and flattened (from_defaults) config structures.
+        Expects nested configuration structure only.
         
         Raises
         ------
         FileNotFoundError
             If input file does not exist
         """
-        # Handle both nested and flattened configs
-        if 'general' in self.config:
-            input_path = self.config['general'].get('input_path')
-        else:
-            input_path = self.config.get('input_path')
+        # Access nested structure directly
+        input_path = self.config['general'].get('input_path')
         
         # Skip validation for empty paths or test paths
         if not input_path or input_path == "" or input_path.startswith('/some/fake'):

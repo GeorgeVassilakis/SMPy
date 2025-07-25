@@ -22,7 +22,7 @@ class RADecSystem(CoordinateSystem):
            Grid parameters:
            - resolution_arcmin: Grid spacing in arcminutes
        """
-       radec_config = config.get('radec', {})
+       radec_config = config['general']['radec']
        if 'resolution' not in radec_config:
            print("Warning: No resolution specified in radec config, using default 0.4 arcmin")
            

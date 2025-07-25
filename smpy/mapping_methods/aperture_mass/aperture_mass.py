@@ -86,11 +86,11 @@ class ApertureMassMapper(MassMapper):
             E-mode and B-mode aperture mass maps
         """
         # Get filter configuration
-        filter_config = self.config.get('filter', {})
-        filter_type = filter_config.get('type', 'schirmer').lower()
+        filter_config = self.method_config['filter']
+        filter_type = filter_config['type'].lower()
         l_param = filter_config.get('l', 3) if filter_type == 'schneider' else None
         # Truncation factor for the kernel size
-        truncation = filter_config.get('truncation', 1.0) 
+        truncation = filter_config['truncation'] 
 
         # Create the aperture mass specific convolution kernels
         K1, K2 = self._create_aperture_mass_kernels(rs, filter_type, l_param, truncation)
@@ -121,8 +121,8 @@ class ApertureMassMapper(MassMapper):
             Raw E-mode and B-mode aperture mass maps
         """
         # Get filter scale from config
-        filter_config = self.config.get('filter', {})
-        rs = filter_config.get('scale', 1.0)
+        filter_config = self.method_config['filter']
+        rs = filter_config['scale']
         
         # Compute and return raw aperture mass maps
         return self._compute_aperture_mass(g1_grid, g2_grid, rs)

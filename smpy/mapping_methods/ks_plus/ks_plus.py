@@ -46,7 +46,7 @@ class KSPlusMapper(MassMapper):
         """
         # Get dimensions and configuration
         npix_dec, npix_ra = g1_grid.shape
-        config = self.config.get(self.name, {})
+        config = self.method_config
         
         # Initialize output
         kappa_e = np.zeros_like(g1_grid)
@@ -97,9 +97,9 @@ class KSPlusMapper(MassMapper):
             kappa_b = kappa_b_extended[start_dec:end_dec, start_ra:end_ra]
             
             # Apply smoothing if configured
-            smoothing_config = self.config.get('smoothing')
-            if smoothing_config:
-                sigma = smoothing_config.get('sigma', 1.0)
+            smoothing_config = self.method_config['smoothing']
+            if smoothing_config and smoothing_config.get('type'):
+                sigma = smoothing_config['sigma']
                 kappa_e = gaussian_filter(kappa_e, sigma=sigma)
                 kappa_b = gaussian_filter(kappa_b, sigma=sigma)
         

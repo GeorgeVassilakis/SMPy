@@ -245,9 +245,11 @@ def _plot_convergence_pixel(filtered_convergence, scaled_boundaries, true_bounda
     # Add peaks if threshold specified
     threshold = config.get('threshold')
     if threshold is not None:
+        # Only show verbose peak information for SNR maps
+        verbose_peaks = config.get('verbose', False) and map_type.lower() == 'snr'
         X, Y, _, _ = find_peaks2d(filtered_convergence, 
                                            threshold=threshold,
-                                           verbose=config.get('verbose', False),
+                                           verbose=verbose_peaks,
                                            true_boundaries=true_boundaries,
                                            scaled_boundaries=scaled_boundaries)
         # Convert peak indices to pixel coordinates
@@ -345,9 +347,11 @@ def _plot_convergence_radec(filtered_convergence, scaled_boundaries, true_bounda
     # Plot peaks if threshold specified
     threshold = config.get('threshold')
     if threshold is not None:
+        # Only show verbose peak information for SNR maps
+        verbose_peaks = config.get('verbose', False) and map_type.lower() == 'snr'
         X, Y, _, _ = find_peaks2d(filtered_convergence, 
                                            threshold=threshold,
-                                           verbose=config.get('verbose', False),
+                                           verbose=verbose_peaks,
                                            true_boundaries=true_boundaries,
                                            scaled_boundaries=scaled_boundaries)
         
