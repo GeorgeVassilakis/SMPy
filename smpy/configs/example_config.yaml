@@ -77,8 +77,8 @@ plotting:
   # Advanced plotting
   vmax: null
   vmin: null
-  threshold: null    # Peak detection threshold
-  verbose: null      # Print peak information
+  threshold: 3    # Peak detection threshold
+  verbose: true      # Print peak information
   cluster_center: null  # null, 'auto', or {ra/x_center: float, dec/y_center: float}
 
   # Scaling options
