@@ -97,9 +97,11 @@ class KSPlusMapper(MassMapper):
             kappa_b = kappa_b_extended[start_dec:end_dec, start_ra:end_ra]
             
             # Apply smoothing if configured
-            smoothing_config = self.method_config['smoothing']
+            smoothing_config = self.method_config.get('smoothing')
             if smoothing_config and smoothing_config.get('type'):
-                sigma = smoothing_config['sigma']
+                sigma = smoothing_config.get('sigma')
+                if sigma is None:
+                    raise ValueError("Smoothing enabled but 'sigma' parameter missing. Please specify smoothing.sigma in your configuration.")
                 kappa_e = gaussian_filter(kappa_e, sigma=sigma)
                 kappa_b = gaussian_filter(kappa_b, sigma=sigma)
         
