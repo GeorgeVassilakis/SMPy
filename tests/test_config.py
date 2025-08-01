@@ -3,9 +3,10 @@
 import unittest
 import tempfile
 import os
+import io
+import sys
 from pathlib import Path
 
-import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from smpy.config import Config
@@ -250,8 +251,6 @@ class TestConfig(unittest.TestCase):
         config = Config.from_defaults('kaiser_squires')
         
         # Capture stdout to test output
-        import io
-        import sys
         captured_output = io.StringIO()
         sys.stdout = captured_output
         
@@ -275,8 +274,6 @@ class TestConfig(unittest.TestCase):
         config = Config.from_defaults('kaiser_squires')
         
         # Capture stdout to test output
-        import io
-        import sys
         captured_output = io.StringIO()
         sys.stdout = captured_output
         
@@ -302,8 +299,6 @@ class TestConfig(unittest.TestCase):
         config = Config.from_defaults('kaiser_squires')
         
         # Capture stdout to test output
-        import io
-        import sys
         captured_output = io.StringIO()
         sys.stdout = captured_output
         
@@ -328,8 +323,6 @@ class TestConfig(unittest.TestCase):
         
         try:
             # Capture stdout to test feedback message
-            import io
-            import sys
             captured_output = io.StringIO()
             sys.stdout = captured_output
             
