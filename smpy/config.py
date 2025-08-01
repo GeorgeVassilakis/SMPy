@@ -3,10 +3,9 @@
 import copy
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Dict, Optional
 
 import yaml
-import warnings
 
 
 class Config:
