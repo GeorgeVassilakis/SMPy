@@ -1,3 +1,10 @@
+"""Utility functions for SMPy mass mapping operations.
+
+This module provides core utility functions for data loading, peak detection,
+coordinate transformations, and statistical operations used throughout the
+SMPy package.
+"""
+
 import numpy as np
 import pandas as pd
 import random
@@ -9,34 +16,38 @@ from astropy.io import fits
 def load_shear_data(shear_cat_path, coord1_col, coord2_col, g1_col, g2_col, weight_col=None, hdu=0):
     """Load shear catalog from FITS file.
 
+    Read shear catalog data from a FITS file and return as a pandas DataFrame
+    with standardized column names for use in mass mapping operations.
+
     Parameters
     ----------
     shear_cat_path : `str`
-        Path to FITS catalog
+        Path to FITS catalog file.
     coord1_col : `str`
-        Name of first coordinate column
+        Name of first coordinate column (e.g., 'ra' or 'x').
     coord2_col : `str`
-        Name of second coordinate column
+        Name of second coordinate column (e.g., 'dec' or 'y').
     g1_col : `str`
-        Name of g1 shear column
+        Name of g1 shear component column.
     g2_col : `str`
-        Name of g2 shear column
+        Name of g2 shear component column.
     weight_col : `str`, optional
-        Name of weight column
-    hdu : `int`
-        HDU number to read
+        Name of weight column. If None, unit weights are assigned.
+    hdu : `int`, optional
+        HDU number to read from FITS file.
 
     Returns
     -------
-    pandas.DataFrame
-        DataFrame with standardized column names
-        
+    shear_data : `pandas.DataFrame`
+        DataFrame with standardized column names: 'coord1', 'coord2', 'g1',
+        'g2', 'weight'.
+
     Raises
     ------
     IndexError
-        If HDU not found
+        If specified HDU is not found in the FITS file.
     KeyError
-        If required columns not found
+        If required columns are not found in the catalog.
     """
     # Read data from FITS file
     try:
@@ -64,32 +75,35 @@ def load_shear_data(shear_cat_path, coord1_col, coord2_col, g1_col, g2_col, weig
     return shear_df
 
 def find_peaks2d(image, threshold=None, verbose=False, true_boundaries=None, scaled_boundaries=None):
-    """
-    Identify peaks in a 2D array above a specified threshold.
-    A peak is a pixel with a value greater than its 8 neighbors.
-    Refactored from cosmostat/lenspack.
+    """Identify peaks in a 2D array above a specified threshold.
+
+    Find local maxima in a 2D image where each peak pixel has a value
+    greater than all 8 neighboring pixels. Refactored from cosmostat/lenspack.
 
     Parameters
     ----------
     image : `numpy.ndarray`
-        2D input map
+        2D input map for peak detection.
     threshold : `float`, optional
-        Detection threshold
-    verbose : `bool`
-        Print peak information
+        Detection threshold. If None, uses minimum image value.
+    verbose : `bool`, optional
+        Whether to print peak information.
     true_boundaries : `dict`, optional
-        True coordinate boundaries for position conversion
+        True coordinate boundaries for position conversion.
     scaled_boundaries : `dict`, optional
-        Scaled coordinate boundaries for position conversion
+        Scaled coordinate boundaries for position conversion.
 
     Returns
     -------
-    X, Y : `numpy.ndarray`
-        Peak pixel indices
+    X : `numpy.ndarray`
+        Peak pixel indices in x-direction.
+    Y : `numpy.ndarray`
+        Peak pixel indices in y-direction.
     heights : `numpy.ndarray`
-        Peak values
-    coords : `list`
-        Peak coordinates in true system if boundaries provided
+        Peak values sorted in descending order.
+    coords : `list` or None
+        Peak coordinates in true coordinate system if boundaries provided,
+        otherwise None.
     """
     image = np.atleast_2d(image)
     threshold = threshold if threshold is not None else image.min()
@@ -172,21 +186,34 @@ def find_peaks2d(image, threshold=None, verbose=False, true_boundaries=None, sca
 def g1g2_to_gt_gc(g1, g2, coord1, coord2, center_coord1, center_coord2, pix_coord1=100):
     """Convert shear components to tangential/cross components.
 
+    Transform Cartesian shear components (g1, g2) to tangential and cross
+    shear components relative to a specified center position.
+
     Parameters
     ----------
-    g1, g2 : `numpy.ndarray`
-        Shear components
-    coord1, coord2 : `numpy.ndarray`
-        Coordinates (RA/Dec or X/Y)
-    center_coord1, center_coord2 : `float`
-        Center coordinates
-    pix_coord1 : `int`
-        Grid size in first dimension
+    g1 : `numpy.ndarray`
+        First shear component.
+    g2 : `numpy.ndarray`
+        Second shear component.
+    coord1 : `numpy.ndarray`
+        First coordinates (RA or X).
+    coord2 : `numpy.ndarray`
+        Second coordinates (Dec or Y).
+    center_coord1 : `float`
+        Center position in first coordinate.
+    center_coord2 : `float`
+        Center position in second coordinate.
+    pix_coord1 : `int`, optional
+        Grid size in first dimension.
 
     Returns
     -------
-    gt, gc, phi : `numpy.ndarray`
-        Tangential shear, cross shear, polar angle
+    gt : `numpy.ndarray`
+        Tangential shear component.
+    gc : `numpy.ndarray`
+        Cross shear component.
+    phi : `numpy.ndarray`
+        Polar angle relative to center.
     """
     coord1_max = np.max(coord1)
     coord1_min = np.min(coord1)
@@ -214,18 +241,21 @@ def g1g2_to_gt_gc(g1, g2, coord1, coord2, center_coord1, center_coord2, pix_coor
 
 def _shuffle_coordinates(shear_df, seed=None):
     """Shuffle the scaled coordinates of the input DataFrame together.
-    
+
+    Randomly permute coordinate pairs while maintaining the pairing between
+    coord1_scaled and coord2_scaled columns.
+
     Parameters
     ----------
-    shear_df : pd.DataFrame
-        Input DataFrame with scaled coordinates
-    seed : int, optional
-        Random seed for reproducibility
-        
+    shear_df : `pandas.DataFrame`
+        Input DataFrame with scaled coordinates.
+    seed : `int`, optional
+        Random seed for reproducibility.
+
     Returns
     -------
-    pd.DataFrame
-        DataFrame with shuffled coordinates
+    shuffled_df : `pandas.DataFrame`
+        DataFrame with shuffled coordinate pairs.
     """
     if seed is not None:
         random.seed(seed)
@@ -249,19 +279,22 @@ def _shuffle_coordinates(shear_df, seed=None):
     return shuffled_df
 
 def _shuffle_galaxy_rotation(shear_df, rng=None):
-    """Shuffle the galaxy rotation in the input shear DataFrame.
-    
+    """Shuffle galaxy orientations in the input shear DataFrame.
+
+    Randomly rotate galaxy orientations by adding random angles to the
+    shear components while preserving shear magnitudes.
+
     Parameters
     ----------
-    shear_df : pd.DataFrame
-        Input DataFrame with shear components
-    rng : np.random.Generator, optional
-        Random number generator for orientation shuffling
-        
+    shear_df : `pandas.DataFrame`
+        Input DataFrame with shear components.
+    rng : `numpy.random.Generator`, optional
+        Random number generator for orientation shuffling.
+
     Returns
     -------
-    pd.DataFrame
-        DataFrame with shuffled shear components
+    shuffled_df : `pandas.DataFrame`
+        DataFrame with randomly rotated shear components.
     """
     shuffled_df = shear_df.copy()
     
@@ -282,27 +315,31 @@ def _shuffle_galaxy_rotation(shear_df, rng=None):
 def generate_multiple_shear_dfs(og_shear_df, num_shuffles=100, shuffle_type='spatial', seed=0):
     """Generate shuffled versions of shear catalog.
 
+    Create multiple randomized versions of the input shear catalog for
+    null hypothesis testing and error estimation.
+
     Parameters
     ----------
     og_shear_df : `pandas.DataFrame`
-        Original shear catalog
-    num_shuffles : `int`
-        Number of shuffled versions
-    shuffle_type : `str`
-        'spatial' or 'orientation'
-    seed : `int` or `str`
-        Random seed for reproducibility. If 'random', uses cryptographically 
+        Original shear catalog.
+    num_shuffles : `int`, optional
+        Number of shuffled versions to generate.
+    shuffle_type : `str`, optional
+        Type of shuffling: 'spatial' (randomize positions) or 'orientation'
+        (randomize galaxy orientations).
+    seed : `int` or `str`, optional
+        Random seed for reproducibility. If 'random', uses cryptographically
         secure random number from secrets module.
-        
+
     Returns
     -------
-    list
-        List of shuffled DataFrames
-        
+    shuffled_catalogs : `list` of `pandas.DataFrame`
+        List of shuffled DataFrame copies.
+
     Raises
     ------
     ValueError
-        If invalid shuffle_type specified
+        If invalid shuffle_type is specified.
     """
     shuffled_dfs = []
     
@@ -337,14 +374,25 @@ def generate_multiple_shear_dfs(og_shear_df, num_shuffles=100, shuffle_type='spa
     return shuffled_dfs
 
 def save_fits(data, true_boundaries, filename):
-    """
-    Save a 2D array as a FITS file with proper WCS information.
-    
+    """Save a 2D array as a FITS file with proper WCS information.
+
+    Write mass map data to a FITS file with World Coordinate System (WCS)
+    headers for proper astronomical coordinate handling.
+
     Parameters
     ----------
-    - data: 2D numpy array containing the map.
-    - true_boundaries: Dictionary with 'ra_min', 'ra_max', 'dec_min', 'dec_max'.
-    - filename: Output filename.
+    data : `numpy.ndarray`
+        2D array containing the map data.
+    true_boundaries : `dict`
+        Dictionary with coordinate boundaries containing 'ra_min', 'ra_max',
+        'dec_min', 'dec_max' keys.
+    filename : `str`
+        Output FITS filename.
+
+    Notes
+    -----
+    The WCS information assumes a tangent plane projection (TAN) and sets
+    appropriate pixel scales based on the coordinate boundaries.
     """
     hdu = fits.PrimaryHDU(data)
     header = hdu.header

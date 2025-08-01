@@ -1,30 +1,67 @@
-"""Kaiser-Squires mass mapping implementation."""
+"""Kaiser-Squires mass mapping implementation.
+
+This module implements the Kaiser-Squires direct inversion algorithm for
+reconstructing convergence maps from shear measurements using Fourier
+transforms. The method provides both E-mode and B-mode reconstruction
+with optional Gaussian smoothing.
+"""
 
 import numpy as np
 from ..base import MassMapper
 from smpy.filters import apply_filter
 
 class KaiserSquiresMapper(MassMapper):
-    """Implementation of Kaiser-Squires mass mapping."""
+    """Implementation of Kaiser-Squires mass mapping.
+
+    This class implements the Kaiser-Squires direct inversion method for
+    reconstructing convergence (mass) maps from weak lensing shear data.
+    The algorithm uses Fourier transforms to perform the inversion and
+    supports optional smoothing for noise reduction.
+
+    Notes
+    -----
+    The Kaiser-Squires method directly inverts the shear-convergence relation:
+    kappa = D^(-1) * gamma, where D is the differential operator relating
+    convergence to shear in Fourier space.
+    """
     
     @property
     def name(self):
+        """Name identifier for the Kaiser-Squires method.
+
+        Returns
+        -------
+        method_name : `str`
+            String identifier 'kaiser_squires'.
+        """
         return "kaiser_squires"
     
     def create_maps(self, g1_grid, g2_grid):
         """Create convergence maps using Kaiser-Squires inversion.
-        
+
+        Perform direct inversion of shear components to reconstruct both
+        E-mode and B-mode convergence maps using Fourier transforms.
+        Applies optional smoothing if configured.
+
         Parameters
         ----------
-        g1_grid : numpy.ndarray
-            First shear component grid
-        g2_grid : numpy.ndarray
-            Second shear component grid
-            
+        g1_grid : `numpy.ndarray`
+            First shear component grid.
+        g2_grid : `numpy.ndarray`
+            Second shear component grid.
+
         Returns
         -------
-        kappa_e, kappa_b : numpy.ndarray
-            E-mode and B-mode convergence maps
+        kappa_e : `numpy.ndarray`
+            E-mode convergence map.
+        kappa_b : `numpy.ndarray`
+            B-mode convergence map.
+
+        Notes
+        -----
+        The inversion is performed in Fourier space using the relations:
+        kappa_E = (k1^2 - k2^2) * g1 + 2 * k1 * k2 * g2) / k^2
+        kappa_B = (k1^2 - k2^2) * g2 - 2 * k1 * k2 * g1) / k^2
         """
         # Get grid dimensions
         npix_dec, npix_ra = g1_grid.shape

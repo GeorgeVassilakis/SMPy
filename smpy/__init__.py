@@ -1,8 +1,11 @@
-"""SMPy: Shear Mapping in Python
+"""SMPy: Shear Mapping in Python.
 
-A mass reconstruction toolkit for weak gravitational lensing analysis.
-Provides easy-to-use functions for undergraduates while maintaining
+A mass reconstruction toolkit for weak gravitational lensing analysis that
+provides easy-to-use functions for undergraduates while maintaining
 robustness for senior researchers.
+
+This package provides mass mapping methods including Kaiser-Squires,
+aperture mass, and KS+ algorithms for weak lensing analysis.
 """
 
 # Simple API functions - main entry points for users

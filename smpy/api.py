@@ -26,72 +26,72 @@ def map_mass(
     **kwargs
 ):
     """Perform mass mapping using the specified method.
-    
+
     This is the main entry point for SMPy mass mapping operations.
     It provides a simple interface while maintaining access to all
     underlying functionality.
-    
+
     Parameters
     ----------
     data : `str` or `pathlib.Path`
-        Path to input FITS file containing shear catalog
+        Path to input FITS file containing shear catalog.
     method : `str`, optional
-        Mass mapping method to use. Options: 'kaiser_squires', 
-        'aperture_mass', 'ks_plus'
+        Mass mapping method to use. Options: 'kaiser_squires',
+        'aperture_mass', 'ks_plus'.
     coord_system : `str`, optional
-        Coordinate system of input data. Options: 'radec', 'pixel'
+        Coordinate system of input data. Options: 'radec', 'pixel'.
     pixel_scale : `float`, optional
-        Pixel scale in arcminutes. Required for 'radec' coordinate system
+        Pixel scale in arcminutes. Required for 'radec' coordinate system.
     downsample_factor : `int`, optional
-        Downsampling factor for pixel coordinates. Required for 'pixel' 
-        coordinate system
+        Downsampling factor for pixel coordinates. Required for 'pixel'
+        coordinate system.
     output_dir : `str`, optional
-        Directory to save output files
+        Directory to save output files.
     output_base_name : `str`, optional
-        Base name for output files
+        Base name for output files.
     g1_col : `str`, optional
-        Column name for first shear component
+        Column name for first shear component.
     g2_col : `str`, optional
-        Column name for second shear component
+        Column name for second shear component.
     weight_col : `str`, optional
-        Column name for weights. If None, no weights are used
+        Column name for weights. If None, no weights are used.
     mode : `str` or `list`, optional
-        Shear mode(s) to compute. Options: 'E', 'B', or ['E', 'B']
+        Shear mode(s) to compute. Options: 'E', 'B', or ['E', 'B'].
     create_snr : `bool`, optional
-        Whether to create signal-to-noise ratio map
+        Whether to create signal-to-noise ratio map.
     save_fits : `bool`, optional
-        Whether to save maps as FITS files
+        Whether to save maps as FITS files.
     print_timing : `bool`, optional
-        Whether to print timing information
+        Whether to print timing information.
     smoothing : `float`, optional
-        Smoothing scale in pixels. If None, uses method default
+        Smoothing scale in pixels. If None, uses method default.
     **kwargs
-        Additional method-specific parameters
-    
+        Additional method-specific parameters.
+
     Returns
     -------
     result : `dict`
-        Dictionary containing the computed mass maps
-    
+        Dictionary containing the computed mass maps.
+
     Raises
     ------
     ValueError
-        If required parameters are missing or invalid
+        If required parameters are missing or invalid.
     FileNotFoundError
-        If input file does not exist
-    
+        If input file does not exist.
+
     Examples
     --------
     Basic usage with minimal parameters:
-    
+
     >>> result = map_mass(
     ...     data='catalog.fits',
     ...     coord_system='radec',
     ...     pixel_scale=0.168
     ... )
-    
+
     More advanced usage with custom parameters:
-    
+
     >>> result = map_mass(
     ...     data='catalog.fits',
     ...     method='ks_plus',
@@ -142,31 +142,31 @@ def map_kaiser_squires(
     **kwargs
 ):
     """Perform Kaiser-Squires mass mapping.
-    
+
     This function provides direct access to the Kaiser-Squires method
     with sensible defaults for quick analysis.
-    
+
     Parameters
     ----------
     data : `str` or `pathlib.Path`
-        Path to input FITS file containing shear catalog
+        Path to input FITS file containing shear catalog.
     coord_system : `str`, optional
-        Coordinate system of input data. Options: 'radec', 'pixel'
+        Coordinate system of input data. Options: 'radec', 'pixel'.
     pixel_scale : `float`, optional
-        Pixel scale in arcminutes. Required for 'radec' coordinate system
+        Pixel scale in arcminutes. Required for 'radec' coordinate system.
     downsample_factor : `int`, optional
-        Downsampling factor for pixel coordinates. Required for 'pixel' 
-        coordinate system
+        Downsampling factor for pixel coordinates. Required for 'pixel'
+        coordinate system.
     smoothing : `float`, optional
-        Gaussian smoothing scale in pixels
+        Gaussian smoothing scale in pixels.
     **kwargs
-        Additional parameters passed to map_mass()
-    
+        Additional parameters passed to map_mass().
+
     Returns
     -------
     result : `dict`
-        Dictionary containing the computed mass maps
-    
+        Dictionary containing the computed mass maps.
+
     Examples
     --------
     >>> result = map_kaiser_squires(
@@ -196,33 +196,33 @@ def map_aperture_mass(
     **kwargs
 ):
     """Perform aperture mass mapping.
-    
+
     This function provides direct access to the aperture mass method
     with sensible defaults for quick analysis.
-    
+
     Parameters
     ----------
     data : `str` or `pathlib.Path`
-        Path to input FITS file containing shear catalog
+        Path to input FITS file containing shear catalog.
     coord_system : `str`, optional
-        Coordinate system of input data. Options: 'radec', 'pixel'
+        Coordinate system of input data. Options: 'radec', 'pixel'.
     pixel_scale : `float`, optional
-        Pixel scale in arcminutes. Required for 'radec' coordinate system
+        Pixel scale in arcminutes. Required for 'radec' coordinate system.
     downsample_factor : `int`, optional
-        Downsampling factor for pixel coordinates. Required for 'pixel' 
-        coordinate system
+        Downsampling factor for pixel coordinates. Required for 'pixel'
+        coordinate system.
     filter_type : `str`, optional
-        Type of aperture filter. Options: 'schirmer', 'schneider'
+        Type of aperture filter. Options: 'schirmer', 'schneider'.
     filter_scale : `int`, optional
-        Filter scale in pixels
+        Filter scale in pixels.
     **kwargs
-        Additional parameters passed to map_mass()
-    
+        Additional parameters passed to map_mass().
+
     Returns
     -------
     result : `dict`
-        Dictionary containing the computed mass maps
-    
+        Dictionary containing the computed mass maps.
+
     Examples
     --------
     >>> result = map_aperture_mass(
@@ -260,35 +260,35 @@ def map_ks_plus(
     **kwargs
 ):
     """Perform KS+ mass mapping.
-    
+
     This function provides direct access to the KS+ method
     with sensible defaults for quick analysis.
-    
+
     Parameters
     ----------
     data : `str` or `pathlib.Path`
-        Path to input FITS file containing shear catalog
+        Path to input FITS file containing shear catalog.
     coord_system : `str`, optional
-        Coordinate system of input data. Options: 'radec', 'pixel'
+        Coordinate system of input data. Options: 'radec', 'pixel'.
     pixel_scale : `float`, optional
-        Pixel scale in arcminutes. Required for 'radec' coordinate system
+        Pixel scale in arcminutes. Required for 'radec' coordinate system.
     downsample_factor : `int`, optional
-        Downsampling factor for pixel coordinates. Required for 'pixel' 
-        coordinate system
+        Downsampling factor for pixel coordinates. Required for 'pixel'
+        coordinate system.
     smoothing : `float`, optional
-        Gaussian smoothing scale in pixels
+        Gaussian smoothing scale in pixels.
     inpainting_iterations : `int`, optional
-        Number of iterations for inpainting algorithm
+        Number of iterations for inpainting algorithm.
     reduced_shear_iterations : `int`, optional
-        Number of iterations for reduced shear correction
+        Number of iterations for reduced shear correction.
     **kwargs
-        Additional parameters passed to map_mass()
-    
+        Additional parameters passed to map_mass().
+
     Returns
     -------
     result : `dict`
-        Dictionary containing the computed mass maps
-    
+        Dictionary containing the computed mass maps.
+
     Examples
     --------
     >>> result = map_ks_plus(

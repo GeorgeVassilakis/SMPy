@@ -1,4 +1,9 @@
-"""Tests for SMPy API functions."""
+"""Unit tests for SMPy API functions.
+
+This module contains comprehensive tests for the SMPy public API functions,
+ensuring correct configuration generation, parameter validation, and
+integration with the core mass mapping functionality.
+"""
 
 import unittest
 import tempfile
@@ -13,22 +18,40 @@ from smpy.api import map_mass, map_kaiser_squires, map_aperture_mass, map_ks_plu
 
 
 class TestAPIConfigGeneration(unittest.TestCase):
-    """Test that API functions generate correct configurations."""
+    """Test suite for API function configuration generation.
+    
+    Verify that all public API functions correctly generate configuration
+    objects with appropriate parameters for the underlying mass mapping
+    methods.
+    """
     
     def setUp(self):
-        """Set up temporary files for testing."""
+        """Set up temporary files for testing.
+        
+        Create temporary FITS files needed for API function testing
+        without requiring actual data content.
+        """
         # Create a temporary FITS file for testing
         self.temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.fits', delete=False)
         self.temp_file.close()
         self.temp_file_path = self.temp_file.name
     
     def tearDown(self):
-        """Clean up temporary files."""
+        """Clean up temporary files.
+        
+        Remove temporary files created during test setup to maintain
+        clean test environment.
+        """
         if os.path.exists(self.temp_file_path):
             os.unlink(self.temp_file_path)
     
     def test_map_mass_generates_correct_config(self):
-        """Test that map_mass generates correct configuration structure."""
+        """Test map_mass generates correct configuration structure.
+        
+        Verify that the generic map_mass function properly constructs
+        configuration objects with all specified parameters and default
+        values for the Kaiser-Squires method.
+        """
         # We'll test config generation by catching the config before it's executed
         # This is done by mocking the run function
         from unittest.mock import patch
@@ -65,7 +88,12 @@ class TestAPIConfigGeneration(unittest.TestCase):
             self.assertEqual(config_dict['methods']['kaiser_squires']['smoothing']['sigma'], 3.0)
     
     def test_map_kaiser_squires_sets_correct_method(self):
-        """Test that map_kaiser_squires sets method correctly."""
+        """Test map_kaiser_squires sets method and parameters correctly.
+        
+        Verify that the Kaiser-Squires specific API function generates
+        configurations with the correct method identifier and smoothing
+        parameters.
+        """
         from unittest.mock import patch
         
         with patch('smpy.run.run') as mock_run:
@@ -84,7 +112,11 @@ class TestAPIConfigGeneration(unittest.TestCase):
             self.assertEqual(config_dict['methods']['kaiser_squires']['smoothing']['sigma'], 1.5)
     
     def test_map_aperture_mass_sets_correct_method(self):
-        """Test that map_aperture_mass sets method and parameters correctly."""
+        """Test map_aperture_mass sets method and filter parameters.
+        
+        Verify that the aperture mass API function correctly configures
+        filter types and scales specific to the aperture mass method.
+        """
         from unittest.mock import patch
         
         with patch('smpy.run.run') as mock_run:
@@ -108,7 +140,11 @@ class TestAPIConfigGeneration(unittest.TestCase):
             self.assertEqual(filter_config['scale'], 80)
     
     def test_map_ks_plus_sets_correct_method(self):
-        """Test that map_ks_plus sets method and parameters correctly."""
+        """Test map_ks_plus sets method and iteration parameters.
+        
+        Verify that the KS+ API function correctly configures inpainting
+        iterations and reduced shear iterations specific to the KS+ method.
+        """
         from unittest.mock import patch
         
         with patch('smpy.run.run') as mock_run:
@@ -134,7 +170,12 @@ class TestAPIConfigGeneration(unittest.TestCase):
             self.assertEqual(ks_plus_config['reduced_shear_iterations'], 5)
     
     def test_pixel_coordinate_system(self):
-        """Test API functions work correctly with pixel coordinate system."""
+        """Test API functions work correctly with pixel coordinates.
+        
+        Verify that API functions properly handle pixel coordinate system
+        configuration including downsample factors and coordinate-specific
+        parameters.
+        """
         from unittest.mock import patch
         
         with patch('smpy.run.run') as mock_run:
@@ -153,7 +194,11 @@ class TestAPIConfigGeneration(unittest.TestCase):
             self.assertEqual(config_dict['general']['pixel']['downsample_factor'], 3)
     
     def test_additional_parameters(self):
-        """Test that additional parameters are handled correctly."""
+        """Test additional parameter handling in API functions.
+        
+        Verify that optional parameters like custom column names, modes,
+        and output options are correctly passed through to the configuration.
+        """
         from unittest.mock import patch
         
         with patch('smpy.run.run') as mock_run:
@@ -181,7 +226,11 @@ class TestAPIConfigGeneration(unittest.TestCase):
             self.assertEqual(config_dict['general']['print_timing'], True)
     
     def test_config_validation_works_correctly(self):
-        """Test that config validation properly validates parameters."""
+        """Test configuration validation in API functions.
+        
+        Verify that the API functions properly validate required parameters
+        and raise appropriate errors for missing or invalid configurations.
+        """
         from unittest.mock import patch
         
         # Test that valid config passes validation (should not raise)
@@ -209,7 +258,12 @@ class TestAPIConfigGeneration(unittest.TestCase):
             self.assertIn('pixel_scale', str(context.exception))
     
     def test_invalid_parameters_raise_error(self):
-        """Test that invalid parameters raise appropriate errors during validation."""
+        """Test invalid parameter error handling.
+        
+        Verify that API functions raise ValueError for missing required
+        parameters like pixel_scale for RA/Dec systems and downsample_factor
+        for pixel systems.
+        """
         # Test missing required parameter
         with self.assertRaises(ValueError):
             map_mass(

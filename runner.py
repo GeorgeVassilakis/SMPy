@@ -1,5 +1,8 @@
-"""Provides a simple command line tool to run SMPy mass mapping operations
-using configuration files.
+"""Command line interface for SMPy mass mapping operations.
+
+This module provides a simple command line tool to run SMPy mass mapping
+operations using YAML configuration files. It serves as the primary entry
+point usage within the repository.
 """
 
 from argparse import ArgumentParser, ArgumentTypeError
@@ -10,10 +13,28 @@ import smpy
 def main(args):
     """Execute SMPy operation from command line arguments.
 
+    Load configuration from the specified YAML file and execute the
+    mass mapping operation using the parameters defined in the config.
+
     Parameters
     ----------
     args : `argparse.Namespace`
-        Parsed command line arguments containing config path
+        Parsed command line arguments containing config file path.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the configuration file does not exist.
+    ValueError
+        If the configuration file contains invalid parameters.
+
+    Examples
+    --------
+    Run mass mapping with configuration file:
+
+    >>> import argparse
+    >>> args = argparse.Namespace(config=Path('my_config.yaml'))
+    >>> main(args)
     """
     smpy.run(args.config)
 

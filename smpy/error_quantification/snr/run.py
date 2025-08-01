@@ -1,3 +1,10 @@
+"""SNR map generation through randomized null hypothesis testing.
+
+This module creates signal-to-noise ratio maps by generating random
+realizations through spatial or orientation shuffling to estimate noise
+properties of the mass maps for statistical significance assessment.
+"""
+
 import yaml
 import numpy as np
 import time
@@ -8,23 +15,20 @@ from smpy.plotting import plot
 from smpy.coordinates import get_coordinate_system
 import os
 
-"""
-Creates SNR maps by generating random realizations through spatial or orientation shuffling
-to estimate noise properties of the mass maps.
-"""
-
 def read_config(file_path):
     """Read configuration from YAML file.
+
+    Load and parse the YAML configuration file for SNR computation.
 
     Parameters
     ----------
     file_path : `str`
-        Path to configuration file
+        Path to configuration file.
 
     Returns
     -------
-    dict
-        Configuration dictionary
+    config : `dict`
+        Configuration dictionary.
     """
     with open(file_path, 'r') as file:
         return yaml.safe_load(file)
@@ -32,19 +36,30 @@ def read_config(file_path):
 def perform_mapping(grid_list, config, mapping_method='kaiser_squires'):
     """Perform mass mapping on list of shear grids.
 
+    Apply the specified mass mapping method to multiple shear grids
+    to generate convergence maps for statistical analysis.
+
     Parameters
     ----------
     grid_list : `list`
-        List of (g1_grid, g2_grid) tuples
+        List of (g1_grid, g2_grid) tuples.
     config : `dict`
-        Configuration dictionary for the mapper
-    mapping_method : `str`
-        Mapping method to use ('kaiser_squires' or 'aperture_mass')
+        Configuration dictionary for the mapper.
+    mapping_method : `str`, optional
+        Mapping method to use ('kaiser_squires', 'aperture_mass', or
+        'ks_plus').
 
     Returns
     -------
-    kappa_e_list, kappa_b_list : `list`
-        Lists of E-mode and B-mode convergence maps
+    kappa_e_list : `list`
+        List of E-mode convergence maps.
+    kappa_b_list : `list`
+        List of B-mode convergence maps.
+
+    Raises
+    ------
+    ValueError
+        If unsupported mapping method is specified.
     """
     kappa_e_list = []
     kappa_b_list = []
@@ -70,24 +85,31 @@ def perform_mapping(grid_list, config, mapping_method='kaiser_squires'):
 def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
     """Create signal-to-noise maps from convergence maps.
 
-    Generates noise realizations through spatial/orientation shuffling and creates
-    SNR maps for E and B modes.
+    Generate noise realizations through spatial or orientation shuffling
+    and create SNR maps for E and B modes by comparing signal maps to
+    the variance estimated from randomized null realizations.
 
     Parameters
     ----------
     config : `dict`
-        Configuration dictionary
+        Configuration dictionary.
     convergence_maps : `dict`
-        Dictionary containing E/B mode convergence maps
+        Dictionary containing E/B mode convergence maps.
     scaled_boundaries : `dict`
-        Scaled coordinate boundaries
+        Scaled coordinate boundaries.
     true_boundaries : `dict`
-        True coordinate boundaries
-        
+        True coordinate boundaries.
+
     Returns
     -------
-    dict
-        Dictionary containing E/B mode SNR maps
+    snr_maps : `dict`
+        Dictionary containing E/B mode SNR maps.
+
+    Notes
+    -----
+    The SNR is computed as: SNR = signal / sqrt(variance_from_shuffles)
+    where the variance is estimated from multiple randomized realizations
+    of the input data through spatial or orientation shuffling.
     """
     # Start timing
     start_time = time.time()
@@ -186,21 +208,29 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
 def run(config_path, convergence_maps, scaled_boundaries, true_boundaries):
     """Run SNR map generation.
 
+    Main entry point for signal-to-noise ratio map computation from
+    convergence maps using randomized null hypothesis testing.
+
     Parameters
     ----------
     config_path : `str`
-        Path to configuration file
+        Path to configuration file.
     convergence_maps : `dict`
-        Dictionary containing E/B mode convergence maps
+        Dictionary containing E/B mode convergence maps.
     scaled_boundaries : `dict`
-        Scaled coordinate boundaries
+        Scaled coordinate boundaries.
     true_boundaries : `dict`
-        True coordinate boundaries
-        
+        True coordinate boundaries.
+
     Returns
     -------
-    dict
-        Dictionary containing E/B mode SNR maps
+    snr_maps : `dict`
+        Dictionary containing E/B mode SNR maps.
+
+    Notes
+    -----
+    This function loads the configuration and delegates to create_sn_map
+    for the actual SNR computation and visualization.
     """
     config = read_config(config_path)
     return create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries)

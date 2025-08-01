@@ -1,21 +1,36 @@
+"""Base class for mass mapping methods.
+
+This module defines the abstract base class that all mass mapping
+implementations must inherit from, providing a consistent interface
+for mass mapping operations.
+"""
+
 from abc import ABC, abstractmethod
 from smpy.plotting import plot
 import os
 
 class MassMapper(ABC):
     """Abstract base class for mass mapping methods.
-    
-    All mass mapping implementations should inherit from this class
-    and implement the required abstract methods.
+
+    This class defines the interface that all mass mapping implementations
+    must follow. Subclasses must implement the abstract methods to provide
+    specific mass mapping algorithms.
+
+    Parameters
+    ----------
+    config : `dict`
+        Configuration dictionary with nested structure containing general
+        settings, method-specific parameters, and plotting options.
     """
     
     def __init__(self, config):
-        """Initialize mass mapper.
-        
+        """Initialize mass mapper with configuration.
+
         Parameters
         ----------
-        config : dict
-            Configuration dictionary with nested structure
+        config : `dict`
+            Configuration dictionary with nested structure containing
+            'general', 'methods', and 'plotting' sections.
         """
         self.config = config
         # Direct access helper properties for nested config
@@ -26,36 +41,46 @@ class MassMapper(ABC):
     @abstractmethod
     def create_maps(self, g1_grid, g2_grid):
         """Create mass maps from shear grids.
-        
+
+        This method must be implemented by subclasses to perform the
+        actual mass mapping computation from input shear grids.
+
         Parameters
         ----------
-        g1_grid : numpy.ndarray
-            First shear component grid
-        g2_grid : numpy.ndarray
-            Second shear component grid
-            
+        g1_grid : `numpy.ndarray`
+            First shear component grid.
+        g2_grid : `numpy.ndarray`
+            Second shear component grid.
+
         Returns
         -------
-        map_e, map_b : numpy.ndarray
-            E-mode and B-mode mass maps
+        map_e : `numpy.ndarray`
+            E-mode mass map.
+        map_b : `numpy.ndarray`
+            B-mode mass map.
         """
         
     def run(self, g1_grid, g2_grid, scaled_boundaries, true_boundaries):
-        """Run mass mapping pipeline.
-        
+        """Run complete mass mapping pipeline.
+
+        Execute the mass mapping algorithm and handle output generation
+        including plotting and file saving based on configuration.
+
         Parameters
         ----------
-        g1_grid, g2_grid : numpy.ndarray
-            Shear component grids
-        scaled_boundaries : dict
-            Scaled coordinate boundaries
-        true_boundaries : dict
-            True coordinate boundaries
-            
+        g1_grid : `numpy.ndarray`
+            First shear component grid.
+        g2_grid : `numpy.ndarray`
+            Second shear component grid.
+        scaled_boundaries : `dict`
+            Scaled coordinate boundaries for plotting.
+        true_boundaries : `dict`
+            True coordinate boundaries for WCS information.
+
         Returns
         -------
-        maps : dict
-            Dictionary containing E/B mode maps
+        maps : `dict`
+            Dictionary containing 'E' and 'B' mode mass maps.
         """
         # Create maps
         map_e, map_b = self.create_maps(g1_grid, g2_grid)
@@ -84,4 +109,10 @@ class MassMapper(ABC):
     @property
     @abstractmethod
     def name(self):
-        """Name of the mapping method."""
+        """Name of the mapping method.
+
+        Returns
+        -------
+        method_name : `str`
+            String identifier for the mass mapping method.
+        """

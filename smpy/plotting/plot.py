@@ -1,3 +1,11 @@
+"""Plotting utilities for mass mapping visualization.
+
+This module provides comprehensive plotting functions for convergence and
+SNR maps, supporting both RA/Dec and pixel coordinate systems. Includes
+advanced features like peak detection visualization, center marking, and
+configurable scaling options.
+"""
+
 from matplotlib import colors
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -6,25 +14,35 @@ from smpy.utils import find_peaks2d
 
 def _get_center_coordinates(cluster_center, scaled_boundaries, true_boundaries, coord_system_type):
     """Get center coordinates for plotting.
-    
+
+    Process center specification and convert to scaled coordinates for
+    plotting markers on mass maps.
+
     Parameters
     ----------
     cluster_center : `str` or `dict` or None
         Center specification:
         - 'auto': use field center
-        - dict: specific coordinates
+        - dict: specific coordinates with appropriate keys
         - None: no center
     scaled_boundaries : `dict`
-        Scaled coordinate boundaries
+        Scaled coordinate boundaries.
     true_boundaries : `dict`
-        True coordinate boundaries
+        True coordinate boundaries.
     coord_system_type : `str`
-        'radec' or 'pixel'
-        
+        Coordinate system type ('radec' or 'pixel').
+
     Returns
     -------
-    center_coord1, center_coord2 : `float`
-        Center coordinates in scaled system
+    center_coord1 : `float` or None
+        First coordinate of center in scaled system.
+    center_coord2 : `float` or None
+        Second coordinate of center in scaled system.
+
+    Notes
+    -----
+    For RA/Dec systems, expects 'ra_center' and 'dec_center' keys.
+    For pixel systems, expects 'x_center' and 'y_center' keys.
     """
 
     if cluster_center is None:
@@ -65,27 +83,38 @@ def _get_center_coordinates(cluster_center, scaled_boundaries, true_boundaries, 
 
 def _create_normalization(scaling, data, vmin=None, vmax=None, map_type='convergence'):
     """Create normalization object based on scaling configuration.
-    
+
+    Generate appropriate matplotlib normalization for colormap scaling
+    supporting linear, power-law, and symmetric logarithmic scaling.
+
     Parameters
     ----------
     scaling : `dict` or `str` or None
         Scaling configuration:
         - None: linear scaling with vmin/vmax
         - 'linear': linear scaling
-        - 'power': power-law scaling
+        - 'power': power-law scaling with gamma parameter
         - 'symlog': symmetric logarithmic scaling
         - dict with type and parameters
     data : `numpy.ndarray`
-        Data to scale
-    vmin, vmax : `float` or None
-        Min/max values for scaling
-    map_type : `str`
-        Type of map ('convergence' or 'snr')
-        
+        Data array for percentile-based scaling.
+    vmin : `float` or None, optional
+        Minimum value for scaling.
+    vmax : `float` or None, optional
+        Maximum value for scaling.
+    map_type : `str`, optional
+        Type of map ('convergence' or 'snr') for map-specific parameters.
+
     Returns
     -------
     norm : `matplotlib.colors.Normalize`
-        Normalization object
+        Normalization object for colormap scaling.
+
+    Notes
+    -----
+    Supports percentile-based vmin/vmax calculation and map-specific
+    parameters for symlog scaling (e.g., different thresholds for
+    convergence vs SNR maps).
     """
     if scaling is None:
         return colors.Normalize(vmin=vmin, vmax=vmax)
@@ -131,21 +160,30 @@ def _create_normalization(scaling, data, vmin=None, vmax=None, map_type='converg
 
 def plot_convergence(filtered_convergence, scaled_boundaries, true_boundaries, config, output_name, map_type='convergence'):
     """Create plot of convergence map.
-    
+
+    Generate publication-quality plots of mass maps with configurable
+    styling, coordinate systems, peak detection, and center marking.
+
     Parameters
     ----------
     filtered_convergence : `numpy.ndarray`
-        2D convergence map data
+        2D convergence or SNR map data.
     scaled_boundaries : `dict`
-        Scaled coordinate boundaries 
+        Scaled coordinate boundaries for plotting extent.
     true_boundaries : `dict`
-        True coordinate boundaries
+        True coordinate boundaries for tick labels.
     config : `dict`
-        Plot configuration settings
+        Plot configuration settings including figsize, cmap, scaling options.
     output_name : `str`
-        Path for saving plot
-    map_type : `str`
-        Type of map ('convergence' or 'snr')
+        Path for saving the plot file.
+    map_type : `str`, optional
+        Type of map ('convergence' or 'snr') for appropriate labeling.
+
+    Notes
+    -----
+    Automatically detects coordinate system from config and delegates to
+    appropriate plotting function. Supports both RA/Dec and pixel coordinate
+    systems with different formatting and tick handling.
     """
 
     # Check coordinate system
@@ -158,11 +196,19 @@ def plot_convergence(filtered_convergence, scaled_boundaries, true_boundaries, c
 
 def _set_plot_params(fontsize=15):
     """Set standard matplotlib parameters.
-    
+
+    Configure matplotlib parameters for consistent, publication-quality
+    plot appearance with appropriate tick sizes and styling.
+
     Parameters
     ----------
-    fontsize : `int`
-        Base font size for plot elements
+    fontsize : `int`, optional
+        Base font size for plot elements.
+
+    Notes
+    -----
+    Sets tick parameters, axis line widths, and font sizes for consistent
+    appearance across all mass mapping plots.
     """
     plt.rcParams.update({
         'axes.linewidth': 1.3,
@@ -186,21 +232,29 @@ def _set_plot_params(fontsize=15):
 
 def _plot_convergence_pixel(filtered_convergence, scaled_boundaries, true_boundaries, config, output_name, map_type='convergence'):
     """Create convergence plot for pixel coordinates.
-    
+
+    Generate mass map plots using pixel coordinate system with appropriate
+    axis labels, peak detection, and center marking.
+
     Parameters
     ----------
     filtered_convergence : `numpy.ndarray`
-        2D convergence map data
+        2D convergence or SNR map data.
     scaled_boundaries : `dict`
-        Scaled coordinate boundaries
+        Scaled coordinate boundaries for plotting extent.
     true_boundaries : `dict`
-        True coordinate boundaries
+        True coordinate boundaries for peak detection.
     config : `dict`
-        Plot configuration settings
+        Plot configuration settings.
     output_name : `str`
-        Path for saving plot
-    map_type : `str`
-        Type of map ('convergence' or 'snr')
+        Path for saving the plot file.
+    map_type : `str`, optional
+        Type of map ('convergence' or 'snr') for appropriate labeling.
+
+    Notes
+    -----
+    Handles pixel coordinate specific formatting including axis labels
+    in pixel units and appropriate peak coordinate conversions.
     """
 
     _set_plot_params()
@@ -298,21 +352,30 @@ def _plot_convergence_pixel(filtered_convergence, scaled_boundaries, true_bounda
 
 def _plot_convergence_radec(filtered_convergence, scaled_boundaries, true_boundaries, config, output_name, map_type='convergence'):
     """Create convergence plot for RA/Dec coordinates.
-    
+
+    Generate mass map plots using celestial coordinate system with proper
+    axis formatting, tick spacing, and astronomical coordinate conventions.
+
     Parameters
     ----------
     filtered_convergence : `numpy.ndarray`
-        2D convergence map data
+        2D convergence or SNR map data.
     scaled_boundaries : `dict`
-        Scaled coordinate boundaries
+        Scaled coordinate boundaries accounting for cos(Dec) projection.
     true_boundaries : `dict`
-        True coordinate boundaries
+        True celestial coordinate boundaries for tick labels.
     config : `dict`
-        Plot configuration settings
+        Plot configuration settings.
     output_name : `str`
-        Path for saving plot
-    map_type : `str`
-        Type of map ('convergence' or 'snr')
+        Path for saving the plot file.
+    map_type : `str`, optional
+        Type of map ('convergence' or 'snr') for appropriate labeling.
+
+    Notes
+    -----
+    Handles celestial coordinate specific formatting including automatic
+    tick spacing calculation, coordinate conversion for peaks, and proper
+    axis orientation (RA increases leftward).
     """
 
     # Set plotting parameters

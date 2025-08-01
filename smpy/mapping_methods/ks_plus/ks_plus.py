@@ -13,36 +13,63 @@ from smpy.filters.starlet import starlet_transform_2d, inverse_starlet_transform
 
 class KSPlusMapper(MassMapper):
     """Implementation of Kaiser-Squires Plus mass mapping.
-    
-    The KS+ method extends the standard Kaiser-Squires approach by:
+
+    The KS+ method extends the standard Kaiser-Squires approach with
+    several enhancements for improved mass reconstruction accuracy:
+
     1. Correcting for missing data using DCT-domain sparsity
     2. Reducing field border effects through field extension
-    3. Iteratively correcting for reduced shear
+    3. Iteratively correcting for reduced shear approximation
     4. Preserving proper statistical properties using wavelet constraints
+
+    Notes
+    -----
+    The KS+ algorithm implements the iterative inpainting scheme described
+    in the literature, combining sparsity priors in the DCT domain with
+    wavelet-based power spectrum preservation for robust mass map
+    reconstruction in the presence of missing data and systematic effects.
     """
     
     @property
     def name(self):
-        """Name of the mapping method (`str`, read-only)."""
+        """Name identifier for the KS+ method.
+
+        Returns
+        -------
+        method_name : `str`
+            String identifier 'ks_plus'.
+        """
         return "ks_plus"
     
     def create_maps(self, g1_grid, g2_grid):
         """Create convergence maps using Kaiser-Squires Plus inversion.
-        
+
+        Perform enhanced mass mapping reconstruction with iterative
+        inpainting, reduced shear corrections, and wavelet-based
+        power spectrum preservation.
+
         Parameters
         ----------
         g1_grid : `numpy.ndarray`
-            First reduced shear component grid
+            First reduced shear component grid.
         g2_grid : `numpy.ndarray`
-            Second reduced shear component grid
-            
+            Second reduced shear component grid.
+
         Returns
         -------
         kappa_e : `numpy.ndarray`
-            E-mode convergence map
+            E-mode convergence map.
         kappa_b : `numpy.ndarray`
-            B-mode convergence map
+            B-mode convergence map.
 
+        Notes
+        -----
+        The algorithm performs the following steps:
+        1. Field extension to reduce border effects
+        2. Iterative reduced shear correction
+        3. DCT-domain inpainting with sparsity constraints
+        4. Wavelet-based power spectrum preservation
+        5. Optional Gaussian smoothing
         """
         # Get dimensions and configuration
         npix_dec, npix_ra = g1_grid.shape
@@ -108,19 +135,22 @@ class KSPlusMapper(MassMapper):
         return kappa_e, kappa_b
     
     def _create_mask(self, g1_grid, g2_grid):
-        """Create mask from shear data.
-        
+        """Create binary mask from shear data.
+
+        Identify missing data gaps by detecting NaN values and zero
+        shear measurements in both components.
+
         Parameters
         ----------
         g1_grid : `numpy.ndarray`
-            First shear component grid
+            First shear component grid.
         g2_grid : `numpy.ndarray`
-            Second shear component grid
-            
+            Second shear component grid.
+
         Returns
         -------
         mask : `numpy.ndarray`
-            Binary mask (1 where data exists, 0 in gaps)
+            Binary mask (1 where data exists, 0 in gaps).
         """
         # Identify missing data (gaps)
         mask = np.ones_like(g1_grid)
@@ -130,28 +160,31 @@ class KSPlusMapper(MassMapper):
     
     def _extend_field(self, g1_grid, g2_grid, mask, extension_size_dec, extension_size_ra):
         """Extend field to reduce border effects.
-        
+
+        Pad the input grids with zeros to create extended fields that
+        minimize boundary artifacts during the reconstruction process.
+
         Parameters
         ----------
         g1_grid : `numpy.ndarray`
-            First shear component grid
+            First shear component grid.
         g2_grid : `numpy.ndarray`
-            Second shear component grid
+            Second shear component grid.
         mask : `numpy.ndarray`
-            Binary mask
+            Binary mask.
         extension_size_dec : `int`
-            Size of extension in declination (vertical) pixels
+            Size of extension in declination (vertical) pixels.
         extension_size_ra : `int`
-            Size of extension in right ascension (horizontal) pixels
-            
+            Size of extension in right ascension (horizontal) pixels.
+
         Returns
         -------
         g1_extended : `numpy.ndarray`
-            Extended first shear component grid with zero padding
+            Extended first shear component grid with zero padding.
         g2_extended : `numpy.ndarray`
-            Extended second shear component grid with zero padding
+            Extended second shear component grid with zero padding.
         mask_extended : `numpy.ndarray`
-            Extended mask with zero padding
+            Extended mask with zero padding.
         """
         # Get dimensions
         npix_dec, npix_ra = g1_grid.shape
@@ -176,25 +209,33 @@ class KSPlusMapper(MassMapper):
     
     def _inpainting_reconstruction(self, g1_grid, g2_grid, mask, config):
         """Perform inpainting-based reconstruction.
-        
+
+        Execute the core KS+ inpainting algorithm using DCT-domain
+        sparsity constraints and wavelet-based power spectrum preservation.
+
         Parameters
         ----------
         g1_grid : `numpy.ndarray`
-            First shear component grid
+            First shear component grid.
         g2_grid : `numpy.ndarray`
-            Second shear component grid
+            Second shear component grid.
         mask : `numpy.ndarray`
-            Binary mask
+            Binary mask indicating data locations.
         config : `dict`
-            Configuration dictionary
-            
+            Configuration dictionary with algorithm parameters.
+
         Returns
         -------
         kappa_e : `numpy.ndarray`
-            E-mode convergence map
+            E-mode convergence map.
         kappa_b : `numpy.ndarray`
-            B-mode convergence map
+            B-mode convergence map.
 
+        Notes
+        -----
+        The inpainting algorithm alternates between DCT thresholding
+        and data consistency enforcement, with wavelet-based
+        power spectrum constraints to preserve statistical properties.
         """
         # Initial KS inversion to estimate convergence
         kappa_e, kappa_b = self._standard_ks_inversion(g1_grid, g2_grid)
@@ -250,21 +291,29 @@ class KSPlusMapper(MassMapper):
     
     def _standard_ks_inversion(self, g1_grid, g2_grid):
         """Perform standard Kaiser-Squires inversion.
-        
+
+        Apply the classical Kaiser-Squires Fourier-domain inversion
+        to convert shear components to convergence maps.
+
         Parameters
         ----------
         g1_grid : `numpy.ndarray`
-            First shear component grid
+            First shear component grid.
         g2_grid : `numpy.ndarray`
-            Second shear component grid
-            
+            Second shear component grid.
+
         Returns
         -------
         kappa_e : `numpy.ndarray`
-            E-mode convergence map
+            E-mode convergence map.
         kappa_b : `numpy.ndarray`
-            B-mode convergence map
+            B-mode convergence map.
 
+        Notes
+        -----
+        Uses the standard KS relations in Fourier space:
+        kappa_E = (k1^2 - k2^2) * g1 + 2 * k1 * k2 * g2) / k^2
+        kappa_B = (k1^2 - k2^2) * g2 - 2 * k1 * k2 * g1) / k^2
         """
         # Get dimensions
         npix_dec, npix_ra = g1_grid.shape
@@ -292,21 +341,29 @@ class KSPlusMapper(MassMapper):
     
     def _kappa_to_gamma(self, kappa_e, kappa_b):
         """Convert convergence to shear using Fourier space relation.
-        
+
+        Apply the forward Kaiser-Squires transform to convert convergence
+        maps to shear components for data consistency enforcement.
+
         Parameters
         ----------
         kappa_e : `numpy.ndarray`
-            E-mode convergence map
+            E-mode convergence map.
         kappa_b : `numpy.ndarray`
-            B-mode convergence map
-            
+            B-mode convergence map.
+
         Returns
         -------
         gamma1 : `numpy.ndarray`
-            First shear component grid
+            First shear component grid.
         gamma2 : `numpy.ndarray`
-            Second shear component grid
-            
+            Second shear component grid.
+
+        Notes
+        -----
+        Implements the forward KS transform in Fourier space to ensure
+        consistency between convergence and shear during the iterative
+        inpainting process.
         """
         # Get dimensions
         npix_dec, npix_ra = kappa_e.shape
@@ -338,39 +395,56 @@ class KSPlusMapper(MassMapper):
     
     def _gamma_to_kappa(self, gamma1, gamma2):
         """Convert shear to convergence using Fourier space relation.
-        
+
+        Apply the inverse Kaiser-Squires transform to convert shear
+        components back to convergence maps.
+
         Parameters
         ----------
         gamma1 : `numpy.ndarray`
-            First shear component grid
+            First shear component grid.
         gamma2 : `numpy.ndarray`
-            Second shear component grid
-            
+            Second shear component grid.
+
         Returns
         -------
         kappa_e : `numpy.ndarray`
-            E-mode convergence map
+            E-mode convergence map.
         kappa_b : `numpy.ndarray`
-            B-mode convergence map
+            B-mode convergence map.
 
+        Notes
+        -----
+        This method uses the standard KS inversion to maintain consistency
+        in the forward-backward transform cycle during inpainting.
         """
         # This is the standard KS inversion
         return self._standard_ks_inversion(gamma1, gamma2)
     
     def _apply_wavelet_constraints(self, kappa, mask):
         """Apply wavelet-based power spectrum constraints.
-        
+
+        Preserve statistical properties of the convergence field by
+        normalizing wavelet coefficients in missing data regions to
+        match the statistics of observed regions.
+
         Parameters
         ----------
         kappa : `numpy.ndarray`
-            Convergence map
+            Convergence map.
         mask : `numpy.ndarray`
-            Binary mask (1 where data exists, 0 in gaps)
-                
+            Binary mask (1 where data exists, 0 in gaps).
+
         Returns
         -------
         kappa_corrected : `numpy.ndarray`
-            Convergence map with corrected power spectrum
+            Convergence map with corrected power spectrum.
+
+        Notes
+        -----
+        Uses starlet wavelet decomposition to analyze power at different
+        scales and ensures that the reconstructed field maintains proper
+        statistical properties in both observed and inpainted regions.
         """
         # Determine number of scales
         min_dim = min(kappa.shape)
@@ -404,23 +478,31 @@ class KSPlusMapper(MassMapper):
     
     def _update_threshold(self, iteration, max_iterations, lambda_min, lambda_max):
         """Update threshold following exponential decay.
-        
+
+        Compute the DCT coefficient threshold for the current iteration
+        using exponential decay from maximum to minimum values.
+
         Parameters
         ----------
         iteration : `int`
-            Current iteration number
+            Current iteration number (0-indexed).
         max_iterations : `int`
-            Maximum number of iterations
+            Maximum number of iterations.
         lambda_min : `float`
-            Minimum threshold value
+            Minimum threshold value (final iteration).
         lambda_max : `float`
-            Maximum threshold value
-            
+            Maximum threshold value (first iteration).
+
         Returns
         -------
         lambda_i : `float`
-            Threshold for current iteration
+            Threshold for current iteration.
 
+        Notes
+        -----
+        The threshold decreases exponentially to gradually reduce the
+        sparsity constraint and allow finer details to emerge in the
+        reconstructed convergence field.
         """
         # Exponential threshold decrease
         alpha = float(iteration) / max_iterations

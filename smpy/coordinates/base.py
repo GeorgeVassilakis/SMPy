@@ -1,26 +1,42 @@
+"""Base class for coordinate systems.
+
+This module defines the abstract base class for coordinate systems used
+in mass mapping operations, providing a consistent interface for RA/Dec
+and pixel coordinate transformations and gridding.
+"""
+
 from abc import ABC, abstractmethod
 import numpy as np
 
 class CoordinateSystem(ABC):
     """Abstract base class for coordinate systems.
-    
-    Provides interface for RA/Dec and pixel coordinate systems used in mass mapping.
-    Each coordinate system must implement methods for creating grids, handling boundaries,
-    and transforming coordinates appropriately.
+
+    Provides interface for RA/Dec and pixel coordinate systems used in mass
+    mapping. Each coordinate system must implement methods for creating grids,
+    handling boundaries, and transforming coordinates appropriately.
+
+    Notes
+    -----
+    Subclasses must implement all abstract methods to provide coordinate
+    system specific functionality for gridding shear data and handling
+    coordinate transformations.
     """
     
     @abstractmethod
     def get_grid_parameters(self, config):
         """Get grid parameters from config for the specific coordinate system.
 
+        Extract coordinate system specific parameters needed for grid creation
+        from the configuration dictionary.
+
         Parameters
         ----------
         config : `dict`
-            Configuration dictionary containing coordinate system parameters
+            Configuration dictionary containing coordinate system parameters.
 
         Returns
         -------
-        dict
+        grid_params : `dict`
             Grid parameters dictionary:
             - For RA/Dec: resolution_arcmin for setting grid spacing
             - For Pixel: downsample_factor and max_grid_size for binning
@@ -30,75 +46,95 @@ class CoordinateSystem(ABC):
     def create_grid(self, data_df, boundaries, config):
         """Create a shear grid by binning data in the coordinate system.
 
+        Bin shear measurements onto a regular 2D grid using coordinate system
+        specific binning strategies.
+
         Parameters
         ----------
         data_df : `pandas.DataFrame`
             DataFrame containing coordinates, shear components and weights.
-            Must include coord1_scaled and coord2_scaled from transform_coordinates.
+            Must include coord1_scaled and coord2_scaled from
+            transform_coordinates.
         boundaries : `dict`
-            Coordinate boundaries from calculate_boundaries()
+            Coordinate boundaries from calculate_boundaries().
         config : `dict`
-            Configuration dictionary containing system parameters
-            
+            Configuration dictionary containing system parameters.
+
         Returns
         -------
-        g1_grid, g2_grid : `numpy.ndarray`
-            2D arrays containing binned shear values on regular grid
+        g1_grid : `numpy.ndarray`
+            2D array containing binned first shear component values.
+        g2_grid : `numpy.ndarray`
+            2D array containing binned second shear component values.
         """
     
     @abstractmethod
     def calculate_boundaries(self, coord1, coord2):
         """Calculate field boundaries and setup coordinate labels.
 
+        Determine coordinate ranges and set up appropriate labels and units
+        for the coordinate system.
+
         Parameters
         ----------
         coord1 : `numpy.ndarray`
-            First coordinate values (RA or X pixel coordinates)
+            First coordinate values (RA or X pixel coordinates).
         coord2 : `numpy.ndarray`
-            Second coordinate values (Dec or Y pixel coordinates)
-        
+            Second coordinate values (Dec or Y pixel coordinates).
+
         Returns
         -------
-        scaled_boundaries, true_boundaries : `dict`
-            Dictionaries containing coordinate ranges and labels:
-            coord1_min/max, coord2_min/max, coord1_name, coord2_name, units
+        scaled_boundaries : `dict`
+            Dictionary containing scaled coordinate ranges and labels:
+            coord1_min/max, coord2_min/max, coord1_name, coord2_name, units.
+        true_boundaries : `dict`
+            Dictionary containing true coordinate ranges and labels.
         """
     
     @abstractmethod
     def transform_coordinates(self, data_df):
         """Transform coordinates if needed (e.g., centering, scaling).
 
+        Apply coordinate system specific transformations such as centering
+        or scaling to prepare coordinates for gridding operations.
+
         Parameters
         ----------
         data_df : `pandas.DataFrame`
-            DataFrame with original coord1, coord2 coordinate columns
-        
+            DataFrame with original coord1, coord2 coordinate columns.
+
         Returns
         -------
         transformed_df : `pandas.DataFrame`
             DataFrame with additional coord1_scaled, coord2_scaled columns
-            containing transformed coordinates ready for gridding
+            containing transformed coordinates ready for gridding.
         """
 
     def _create_shear_grid(self, data_df, idx1, idx2, npix1, npix2):
         """Create weighted shear grid from binning indices.
 
-        Helper method that bins shear values into a regular grid using provided indices.
-        Handles weighting and normalization of shear values.
+        Helper method that bins shear values into a regular grid using
+        provided indices. Handles weighting and normalization of shear values.
 
         Parameters
         ----------
         data_df : `pandas.DataFrame`
-            DataFrame containing g1, g2 shear components and weights
-        idx1, idx2 : `numpy.ndarray`
-            Bin indices for each dimension of the grid
-        npix1, npix2 : `int`
-            Number of pixels in each dimension of output grid
-            
+            DataFrame containing g1, g2 shear components and weights.
+        idx1 : `numpy.ndarray`
+            Bin indices for first dimension of the grid.
+        idx2 : `numpy.ndarray`
+            Bin indices for second dimension of the grid.
+        npix1 : `int`
+            Number of pixels in first dimension of output grid.
+        npix2 : `int`
+            Number of pixels in second dimension of output grid.
+
         Returns
         -------
-        g1_grid, g2_grid : `numpy.ndarray`
-            2D arrays of binned, weighted shear values
+        g1_grid : `numpy.ndarray`
+            2D array of binned, weighted first shear component values.
+        g2_grid : `numpy.ndarray`
+            2D array of binned, weighted second shear component values.
         """
         # Filter out indices outside the grid
         valid_mask = (idx1 >= 0) & (idx1 < npix2) & (idx2 >= 0) & (idx2 < npix1)
@@ -128,23 +164,24 @@ class CoordinateSystem(ABC):
     def prepare_data(self, data_df):
         """Prepare data for gridding by validating and transforming coordinates.
 
-        Checks that required columns exist and ensures coordinates are transformed
-        before gridding.
+        Check that required columns exist and ensure coordinates are transformed
+        appropriately before gridding operations.
 
         Parameters
         ----------
         data_df : `pandas.DataFrame`
-            Input DataFrame containing coordinates and shear measurements
-            
+            Input DataFrame containing coordinates and shear measurements.
+
         Returns
         -------
-        pd.DataFrame
-            Processed DataFrame with all required columns and transformed coordinates
-            
+        processed_df : `pandas.DataFrame`
+            Processed DataFrame with all required columns and transformed
+            coordinates.
+
         Raises
         ------
         ValueError
-            If required columns are missing from the input DataFrame
+            If required columns are missing from the input DataFrame.
         """
         required_cols = ['coord1', 'coord2', 'g1', 'g2', 'weight']
         if not all(col in data_df.columns for col in required_cols):

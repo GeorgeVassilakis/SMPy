@@ -1,4 +1,8 @@
-"""Configuration management for SMPy."""
+"""Configuration management for SMPy.
+
+This module provides configuration loading, validation, and management
+for SMPy mass mapping operations.
+"""
 
 import copy
 import os
@@ -10,9 +14,9 @@ import yaml
 
 class Config:
     """Manage configuration dictionaries for SMPy mass mapping analysis.
-    
-    Handle loading, merging, and validating configuration dictionaries from 
-    YAML files and user parameters. All configurations use consistent nested 
+
+    Handle loading, merging, and validating configuration dictionaries from
+    YAML files and user parameters. All configurations use consistent nested
     structure for clean architecture and reliable error handling.
 
     Parameters
@@ -24,15 +28,21 @@ class Config:
     -----
     The Config class uses a consistent nested configuration structure:
 
-    - **General settings**: ``config['general']`` - Input/output, coordinate system, analysis settings
-    - **Method-specific**: ``config['methods'][method_name]`` - Parameters for each mapping method
+    - **General settings**: ``config['general']`` - Input/output, coordinate
+      system, analysis settings
+    - **Method-specific**: ``config['methods'][method_name]`` - Parameters
+      for each mapping method
     - **Plotting settings**: ``config['plotting']`` - Visualization parameters
-    - **SNR settings**: ``config['snr']`` - Signal-to-noise map generation parameters
+    - **SNR settings**: ``config['snr']`` - Signal-to-noise map generation
+      parameters
 
     Configuration access follows the fail-fast principle:
-    - Required parameters use direct access: ``config['section']['parameter']``
-    - Optional parameters use ``.get()``: ``config['section'].get('parameter', default)``
-    - Missing required config raises immediate ``KeyError`` for clear debugging
+    - Required parameters use direct access:
+      ``config['section']['parameter']``
+    - Optional parameters use ``.get()``:
+      ``config['section'].get('parameter', default)``
+    - Missing required config raises immediate ``KeyError`` for clear
+      debugging
 
     Examples
     --------
@@ -48,7 +58,8 @@ class Config:
 
     Access method-specific parameters:
 
-    >>> smoothing = config.to_dict()['methods']['kaiser_squires']['smoothing']
+    >>> cfg_dict = config.to_dict()
+    >>> smoothing = cfg_dict['methods']['kaiser_squires']['smoothing']
 
     Save current configuration:
 
@@ -65,7 +76,7 @@ class Config:
     
     def __init__(self, config_dict=None):
         """Initialize Config with optional configuration dictionary.
-        
+
         Parameters
         ----------
         config_dict : `dict`, optional
@@ -76,16 +87,16 @@ class Config:
     @classmethod
     def from_file(cls, path):
         """Load configuration from YAML file.
-        
+
         Parameters
         ----------
         path : `str` or `pathlib.Path`
-            Path to YAML configuration file
-            
+            Path to YAML configuration file.
+
         Returns
         -------
         config : `Config`
-            Configuration instance loaded from file
+            Configuration instance loaded from file.
         """
         with open(path, 'r') as f:
             config_dict = yaml.safe_load(f)

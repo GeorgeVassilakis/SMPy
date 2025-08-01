@@ -1,4 +1,9 @@
-"""Tests for SMPy configuration system."""
+"""Unit tests for SMPy configuration system.
+
+This module contains comprehensive tests for the Config class functionality,
+ensuring proper default configuration generation, parameter validation,
+YAML serialization, and integration with mass mapping methods.
+"""
 
 import unittest
 import tempfile
@@ -13,10 +18,20 @@ from smpy.config import Config
 
 
 class TestConfig(unittest.TestCase):
-    """Test the Config class functionality."""
+    """Test suite for Config class functionality.
+    
+    Comprehensive tests covering configuration defaults, parameter
+    validation, nested structure handling, and integration with mapping
+    methods.
+    """
     
     def test_from_defaults_kaiser_squires(self):
-        """Test loading default config for Kaiser-Squires method."""
+        """Test Kaiser-Squires default configuration loading.
+        
+        Verify that the Kaiser-Squires method generates proper nested
+        configuration structure with correct smoothing parameters and
+        all required sections.
+        """
         config = Config.from_defaults('kaiser_squires')
         config_dict = config.to_dict()
         
@@ -47,7 +62,11 @@ class TestConfig(unittest.TestCase):
         self.assertIn('pixel', config_dict['general'])
     
     def test_from_defaults_aperture_mass(self):
-        """Test loading default config for aperture mass method."""
+        """Test aperture mass default configuration loading.
+        
+        Verify that the aperture mass method generates proper nested
+        configuration with correct filter parameters and structure.
+        """
         config = Config.from_defaults('aperture_mass')
         config_dict = config.to_dict()
         
@@ -74,7 +93,11 @@ class TestConfig(unittest.TestCase):
         self.assertIn('pixel', config_dict['general'])
     
     def test_from_defaults_ks_plus(self):
-        """Test loading default config for KS+ method."""
+        """Test KS+ default configuration loading.
+        
+        Verify that the KS+ method generates proper nested configuration
+        with correct inpainting and reduced shear iteration parameters.
+        """
         config = Config.from_defaults('ks_plus')
         config_dict = config.to_dict()
         
@@ -102,7 +125,12 @@ class TestConfig(unittest.TestCase):
         self.assertIn('pixel', config_dict['general'])
     
     def test_update_from_kwargs_basic(self):
-        """Test updating config from basic kwargs."""
+        """Test basic parameter updates from keyword arguments.
+        
+        Verify that fundamental parameters like data paths, coordinate
+        systems, and output directories are correctly updated in the
+        configuration structure.
+        """
         config = Config.from_defaults('kaiser_squires')
         
         config.update_from_kwargs(
@@ -121,7 +149,11 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(config_dict['general']['output_directory'], '/output')
     
     def test_update_from_kwargs_pixel_system(self):
-        """Test updating config for pixel coordinate system."""
+        """Test pixel coordinate system parameter updates.
+        
+        Verify that pixel-specific parameters like downsample_factor are
+        correctly set when using pixel coordinate systems.
+        """
         config = Config.from_defaults('kaiser_squires')
         
         config.update_from_kwargs(
@@ -137,7 +169,12 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(config_dict['general']['pixel']['downsample_factor'], 2)
     
     def test_update_from_kwargs_method_specific(self):
-        """Test updating method-specific parameters in nested structure."""
+        """Test method-specific parameter updates in nested structure.
+        
+        Verify that method-specific parameters are correctly updated in
+        their respective nested configuration sections for all mapping
+        methods.
+        """
         config = Config.from_defaults('kaiser_squires')
         
         config.update_from_kwargs(
@@ -156,7 +193,11 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(config_dict['methods']['aperture_mass']['filter']['type'], 'schirmer')
     
     def test_validation_success(self):
-        """Test successful validation with all required parameters."""
+        """Test successful configuration validation.
+        
+        Verify that configurations with all required parameters pass
+        validation without raising exceptions.
+        """
         # Create a temporary file for testing
         with tempfile.NamedTemporaryFile(mode='w', suffix='.fits', delete=False) as f:
             temp_file = f.name
@@ -178,7 +219,11 @@ class TestConfig(unittest.TestCase):
                 os.unlink(temp_file)
     
     def test_validation_missing_required_params(self):
-        """Test validation fails when required parameters are missing."""
+        """Test validation failure for missing required parameters.
+        
+        Verify that configurations missing essential parameters properly
+        fail validation with appropriate error messages.
+        """
         config = Config.from_defaults('kaiser_squires')
         
         # Set a data path and coord system but missing pixel_scale for radec system
@@ -188,7 +233,11 @@ class TestConfig(unittest.TestCase):
             config.validate()
     
     def test_validation_missing_pixel_scale_for_radec(self):
-        """Test validation fails when pixel_scale missing for radec system."""
+        """Test validation failure for missing pixel_scale in RA/Dec.
+        
+        Verify that RA/Dec coordinate systems require pixel_scale
+        parameter and raise ValueError when missing.
+        """
         config = Config.from_defaults('kaiser_squires')
         
         with tempfile.NamedTemporaryFile(mode='w', suffix='.fits', delete=False) as f:
@@ -211,7 +260,11 @@ class TestConfig(unittest.TestCase):
                 os.unlink(temp_file)
     
     def test_validation_missing_downsample_for_pixel(self):
-        """Test validation fails when downsample_factor missing for pixel system."""
+        """Test validation failure for missing downsample_factor in pixel.
+        
+        Verify that pixel coordinate systems require downsample_factor
+        parameter and raise ValueError when missing.
+        """
         config = Config.from_defaults('kaiser_squires')
         
         with tempfile.NamedTemporaryFile(mode='w', suffix='.fits', delete=False) as f:
@@ -234,7 +287,11 @@ class TestConfig(unittest.TestCase):
                 os.unlink(temp_file)
     
     def test_validation_invalid_method(self):
-        """Test validation fails for invalid method."""
+        """Test validation failure for invalid mapping methods.
+        
+        Verify that unsupported method names are properly rejected during
+        configuration validation.
+        """
         config = Config({'general': {'method': 'invalid_method'}})
         
         with self.assertRaises(ValueError) as context:
@@ -247,7 +304,11 @@ class TestConfig(unittest.TestCase):
     # This functionality is no longer needed with the nested config approach.
     
     def test_show_config_full(self):
-        """Test show_config() displays full configuration."""
+        """Test full configuration display functionality.
+        
+        Verify that show_config() properly displays the complete nested
+        configuration structure in readable YAML format.
+        """
         config = Config.from_defaults('kaiser_squires')
         
         # Capture stdout to test output
@@ -270,7 +331,11 @@ class TestConfig(unittest.TestCase):
             sys.stdout = sys.__stdout__
     
     def test_show_config_section(self):
-        """Test show_config() with section parameter."""
+        """Test section-specific configuration display.
+        
+        Verify that show_config() can display individual configuration
+        sections when requested, filtering out other sections.
+        """
         config = Config.from_defaults('kaiser_squires')
         
         # Capture stdout to test output
@@ -295,7 +360,12 @@ class TestConfig(unittest.TestCase):
             sys.stdout = sys.__stdout__
     
     def test_show_config_invalid_section(self):
-        """Test show_config() with invalid section parameter."""
+        """Test error handling for invalid configuration sections.
+        
+        Verify that show_config() properly handles requests for
+        non-existent configuration sections with appropriate error
+        messages.
+        """
         config = Config.from_defaults('kaiser_squires')
         
         # Capture stdout to test output
@@ -314,7 +384,11 @@ class TestConfig(unittest.TestCase):
             sys.stdout = sys.__stdout__
     
     def test_save_config_creates_valid_yaml(self):
-        """Test save_config() creates valid YAML file."""
+        """Test YAML configuration file creation and validation.
+        
+        Verify that save_config() creates valid YAML files that can be
+        reloaded and used to reconstruct equivalent Config objects.
+        """
         config = Config.from_defaults('aperture_mass')
         
         # Create a temporary file
@@ -360,7 +434,11 @@ class TestConfig(unittest.TestCase):
                 os.unlink(temp_file)
     
     def test_from_defaults_nested_structure(self):
-        """Test that from_defaults() creates consistent nested structure."""
+        """Test consistent nested structure creation across methods.
+        
+        Verify that all mapping methods generate configurations with
+        consistent nested structure and proper section organization.
+        """
         # Test all three methods have correct nested structure
         
         # Kaiser-Squires: method-specific config in methods section
@@ -388,7 +466,11 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(ksp_dict['general']['method'], 'ks_plus')
     
     def test_from_defaults_kaiser_squires_smoothing_access(self):
-        """Test Kaiser-Squires has smoothing accessible via nested structure."""
+        """Test Kaiser-Squires smoothing parameter access.
+        
+        Verify that Kaiser-Squires smoothing parameters are properly
+        accessible through the nested configuration structure.
+        """
         config = Config.from_defaults('kaiser_squires')
         config_dict = config.to_dict()
         
@@ -402,7 +484,11 @@ class TestConfig(unittest.TestCase):
         self.assertTrue('smoothing' in config_dict['methods']['kaiser_squires'])
     
     def test_from_defaults_ks_plus_nested_config_access(self):
-        """Test KS+ has config accessible via nested methods section."""
+        """Test KS+ parameter access via nested structure.
+        
+        Verify that KS+ specific parameters are properly accessible
+        through the nested methods configuration section.
+        """
         config = Config.from_defaults('ks_plus')
         config_dict = config.to_dict()
         
@@ -416,7 +502,11 @@ class TestConfig(unittest.TestCase):
         self.assertTrue('ks_plus' in config_dict['methods'])
     
     def test_from_defaults_aperture_mass_filter_access(self):
-        """Test Aperture Mass has filter accessible via nested structure."""
+        """Test aperture mass filter parameter access.
+        
+        Verify that aperture mass filter parameters are properly
+        accessible through the nested configuration structure.
+        """
         config = Config.from_defaults('aperture_mass')
         config_dict = config.to_dict()
         
@@ -431,7 +521,12 @@ class TestConfig(unittest.TestCase):
         self.assertTrue('filter' in config_dict['methods']['aperture_mass'])
     
     def test_nested_structure_consistency(self):
-        """Test that all methods produce consistent nested structure."""
+        """Test nested structure consistency across all methods.
+        
+        Verify that all mapping methods generate configurations with
+        consistent top-level sections and proper method-specific
+        organization.
+        """
         methods = ['kaiser_squires', 'aperture_mass', 'ks_plus']
         
         for method in methods:
@@ -451,7 +546,11 @@ class TestConfig(unittest.TestCase):
                 self.assertIn(method, config_dict['methods'], f"Method '{method}' not found in methods section")
     
     def test_fail_fast_config_access(self):
-        """Test that missing required config raises KeyError immediately."""
+        """Test immediate error handling for missing configuration keys.
+        
+        Verify that accessing non-existent configuration parameters
+        raises KeyError immediately rather than returning default values.
+        """
         config = Config.from_defaults('kaiser_squires')
         config_dict = config.to_dict()
         
@@ -470,7 +569,12 @@ class TestConfig(unittest.TestCase):
             _ = config_dict['methods']['nonexistent_method']
     
     def test_optional_vs_required_parameters(self):
-        """Test distinction between optional and required parameters."""
+        """Test parameter requirement classification.
+        
+        Verify proper distinction between required parameters (direct
+        access) and optional parameters (use .get() method) in the
+        configuration structure.
+        """
         config = Config.from_defaults('kaiser_squires')
         config_dict = config.to_dict()
         
@@ -513,7 +617,12 @@ class TestConfig(unittest.TestCase):
                                f"Missing parameter '{param}' should return default via .get()")
     
     def test_config_actually_works_with_mappers(self):
-        """Test that config structure actually works with real mapper classes."""
+        """Test configuration integration with mapper classes.
+        
+        Verify that generated configurations work correctly with actual
+        mapper implementations, preventing reward hacking by ensuring
+        real-world functionality.
+        """
         # This test prevents "reward hacking" by ensuring the config works in practice
         from smpy.mapping_methods import KaiserSquiresMapper, ApertureMassMapper, KSPlusMapper
         
@@ -602,7 +711,11 @@ class TestConfig(unittest.TestCase):
                         self.fail(f"KS+ mapper failed with valid config: {e}")
     
     def test_config_fails_with_missing_required_sections(self):
-        """Test that mappers fail appropriately when required config sections are missing."""
+        """Test mapper error handling for missing configuration sections.
+        
+        Verify that mapper classes properly detect and report missing
+        required configuration sections with appropriate error messages.
+        """
         import numpy as np
         fake_g1 = np.random.rand(10, 10)
         fake_g2 = np.random.rand(10, 10)

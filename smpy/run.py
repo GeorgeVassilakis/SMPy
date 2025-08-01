@@ -1,4 +1,10 @@
-"""Main run module for mass mapping."""
+"""Main execution module for mass mapping workflows.
+
+This module provides the primary entry point for running mass mapping
+analyses with various reconstruction methods. It handles configuration
+processing, data loading, coordinate system management, and output
+generation for the complete mass mapping pipeline.
+"""
 
 import os
 import time
@@ -13,25 +19,33 @@ from smpy.mapping_methods import ApertureMassMapper, KaiserSquiresMapper, KSPlus
 def prepare_method_config(config, method):
     """Validate method configuration and return nested config unchanged.
     
-    No longer flattens configuration. Returns the full nested config structure
+    Verify that the specified mass mapping method exists in the
+    configuration dictionary. Returns the full nested config structure
     for use with standardized mapper access patterns.
     
     Parameters
     ----------
     config : `dict`
-        Full nested configuration dictionary
+        Full nested configuration dictionary containing method parameters.
     method : `str`
-        Method name
+        Method name to validate ('kaiser_squires', 'ks_plus', or
+        'aperture_mass').
         
     Returns
     -------
     config : `dict`
-        Full nested configuration dictionary (unchanged)
+        Full nested configuration dictionary.
         
     Raises
     ------
     ValueError
-        If method is not found in configuration
+        If method is not found in configuration.
+        
+    Notes
+    -----
+    This function preserves the complete nested configuration
+    structure required by the mapping
+    method implementations.
     """
     # Validate the method exists in config
     if method not in config.get('methods', {}):
@@ -39,21 +53,40 @@ def prepare_method_config(config, method):
     return config  # Return full nested config unchanged
 
 def run_mapping(config):
-    """Run mass mapping with specified method.
+    """Execute mass mapping using the specified reconstruction method.
+    
+    Perform the complete mass mapping workflow including data loading,
+    coordinate system setup, grid creation, and mass reconstruction.
+    Handles timing measurement and coordinate-specific sign corrections.
     
     Parameters
     ----------
     config : `dict`
-        Configuration dictionary
+        Full configuration dictionary containing all method parameters,
+        coordinate system settings, and file paths.
         
     Returns
     -------
     maps : `dict`
-        Dictionary containing mass maps
+        Dictionary containing reconstructed mass maps with keys
+        corresponding to the requested modes ('E', 'B').
     scaled_boundaries : `dict`
-        Scaled coordinate boundaries
+        Coordinate boundaries in the scaled coordinate system used for
+        plotting and grid creation.
     true_boundaries : `dict`
-        True coordinate boundaries
+        Coordinate boundaries in the original coordinate system for
+        astronomical positioning and tick labels.
+        
+    Raises
+    ------
+    ValueError
+        If unknown mapping method is specified.
+        
+    Notes
+    -----
+    The function automatically applies the correct g2 shear component
+    sign convention based on the coordinate system: negative for RA/Dec
+    (celestial) coordinates, positive for pixel coordinates.
     """
     # Get coordinate system
     coord_system_type = config['general']['coordinate_system'].lower()
@@ -113,20 +146,50 @@ def run_mapping(config):
     return maps, scaled_boundaries, true_boundaries
 
 def run(config_input):
-    """Run mass mapping workflow.
+    """Execute the complete mass mapping analysis workflow.
+    
+    Main entry point for mass mapping analysis that handles configuration
+    processing, data validation, mass reconstruction, and optional SNR
+    analysis. Supports multiple input formats and provides comprehensive
+    output including maps and coordinate boundaries.
     
     Parameters
     ----------
     config_input : `str`, `pathlib.Path`, `dict`, or `Config`
-        Configuration input. Can be:
-        - Path to configuration file (str or Path)
-        - Configuration dictionary (dict)
-        - Config object
+        Configuration specification. Supported formats:
+        - `str` or `pathlib.Path`: Path to YAML configuration file
+        - `dict`: Configuration dictionary with required parameters
+        - `Config`: SMPy Config object instance
     
     Returns
     -------
     result : `dict`
-        Dictionary containing mass maps and metadata
+        Complete analysis results containing:
+        - 'maps': Dictionary of reconstructed mass maps by mode
+        - 'scaled_boundaries': Coordinate boundaries for plotting
+        - 'true_boundaries': Original coordinate boundaries
+        - 'snr_maps': SNR maps (if create_snr=True in config)
+        
+    Raises
+    ------
+    TypeError
+        If config_input is not one of the supported types.
+    FileNotFoundError
+        If specified input data file does not exist.
+    ValueError
+        If configuration validation fails or method is not supported.
+        
+    Notes
+    -----
+    The function automatically handles:
+    - File existence validation before processing
+    - FITS file output generation (if save_fits=True)
+    - SNR map creation and output (if create_snr=True)
+    - Method-specific output directory creation
+    - Coordinate system conversions for file output
+    
+    For command-line usage, this function can be called directly with
+    a configuration file path.
     """
     from .config import Config
     
