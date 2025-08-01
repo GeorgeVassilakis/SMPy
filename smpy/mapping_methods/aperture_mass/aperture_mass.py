@@ -86,11 +86,27 @@ class ApertureMassMapper(MassMapper):
             E-mode and B-mode aperture mass maps
         """
         # Get filter configuration
-        filter_config = self.config.get('filter', {})
-        filter_type = filter_config.get('type', 'schirmer').lower()
+        try:
+            filter_config = self.method_config['filter']
+        except KeyError:
+            raise KeyError(
+                f"Missing required 'filter' configuration for {self.name} method. "
+                f"Please add a 'filter' section under methods.{self.name} in your config. "
+                f"Required parameters: type, scale. Optional: truncation, l"
+            )
+        
+        # Required parameters - user must specify these explicitly
+        try:
+            filter_type = filter_config['type'].lower()
+        except KeyError:
+            raise KeyError(
+                f"Missing required parameter 'filter.type' for {self.name} method. "
+                f"Please add 'type: schirmer' (or 'schneider') under methods.{self.name}.filter in your config."
+            )
+        
+        # Optional parameters with reasonable defaults
         l_param = filter_config.get('l', 3) if filter_type == 'schneider' else None
-        # Truncation factor for the kernel size
-        truncation = filter_config.get('truncation', 1.0) 
+        truncation = filter_config.get('truncation', 1.0)
 
         # Create the aperture mass specific convolution kernels
         K1, K2 = self._create_aperture_mass_kernels(rs, filter_type, l_param, truncation)
@@ -120,9 +136,25 @@ class ApertureMassMapper(MassMapper):
         map_e, map_b : `numpy.ndarray`
             Raw E-mode and B-mode aperture mass maps
         """
-        # Get filter scale from config
-        filter_config = self.config.get('filter', {})
-        rs = filter_config.get('scale', 1.0)
+        # Get filter configuration
+        try:
+            filter_config = self.method_config['filter']
+        except KeyError:
+            raise KeyError(
+                f"Missing required 'filter' configuration for {self.name} method. "
+                f"Please add a 'filter' section under methods.{self.name} in your config. "
+                f"Required parameters: type, scale. Optional: truncation, l"
+            )
+        
+        # Required parameter - user must specify scale explicitly
+        try:
+            rs = filter_config['scale']
+        except KeyError:
+            raise KeyError(
+                f"Missing required parameter 'filter.scale' for {self.name} method. "
+                f"Please add 'scale: <value>' under methods.{self.name}.filter in your config. "
+                f"This should be the aperture radius in pixels or physical units."
+            )
         
         # Compute and return raw aperture mass maps
         return self._compute_aperture_mass(g1_grid, g2_grid, rs)

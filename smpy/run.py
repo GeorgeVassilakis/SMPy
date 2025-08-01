@@ -1,63 +1,74 @@
 """Main run module for mass mapping."""
 
-import yaml
+import os
 import time
+from pathlib import Path
+
+import yaml
+
 from smpy import utils
 from smpy.coordinates import get_coordinate_system
-from smpy.mapping_methods import KaiserSquiresMapper, ApertureMassMapper, KSPlusMapper
 from smpy.error_quantification.snr import run as snr_run
-import os
+from smpy.mapping_methods import ApertureMassMapper, KaiserSquiresMapper, KSPlusMapper
 def prepare_method_config(config, method):
-    """Prepare method-specific configuration with plotting settings.
+    """Validate method configuration and return nested config unchanged.
+    
+    No longer flattens configuration. Returns the full nested config structure
+    for use with standardized mapper access patterns.
     
     Parameters
     ----------
-    config : dict
-        Full configuration dictionary
-    method : str
+    config : `dict`
+        Full nested configuration dictionary
+    method : `str`
         Method name
         
     Returns
     -------
-    dict
-        Combined configuration for specified method
+    config : `dict`
+        Full nested configuration dictionary (unchanged)
+        
+    Raises
+    ------
+    ValueError
+        If method is not found in configuration
     """
-    method_config = config['general'].copy()
-    method_config.update(config['methods'].get(method, {}))
-    method_config.update(config['plotting'])
-    return method_config
+    # Validate the method exists in config
+    if method not in config.get('methods', {}):
+        raise ValueError(f"Method '{method}' not found in config")
+    return config  # Return full nested config unchanged
 
 def run_mapping(config):
     """Run mass mapping with specified method.
     
     Parameters
     ----------
-    config : dict
+    config : `dict`
         Configuration dictionary
         
     Returns
     -------
-    maps : dict
+    maps : `dict`
         Dictionary containing mass maps
-    scaled_boundaries : dict
+    scaled_boundaries : `dict`
         Scaled coordinate boundaries
-    true_boundaries : dict
+    true_boundaries : `dict`
         True coordinate boundaries
     """
     # Get coordinate system
-    coord_system_type = config.get('coordinate_system', 'radec').lower()
+    coord_system_type = config['general']['coordinate_system'].lower()
     coord_system = get_coordinate_system(coord_system_type)
-    coord_config = config.get(coord_system_type, {})
+    coord_config = config['general'][coord_system_type]
     
     # Load shear data
     shear_df = utils.load_shear_data(
-        config['input_path'],
+        config['general']['input_path'],
         coord_config['coord1'],
         coord_config['coord2'],
-        config['g1_col'],
-        config['g2_col'],
-        config['weight_col'],
-        config['input_hdu']
+        config['general']['g1_col'],
+        config['general']['g2_col'],
+        config['general']['weight_col'],
+        config['general']['input_hdu']
     )
     
     # Calculate boundaries
@@ -80,7 +91,7 @@ def run_mapping(config):
     g2_sign = -1 if coord_system_type == 'radec' else 1
     
     # Create mass mapper instance
-    method = config['method']
+    method = config['general']['method']
     if method == 'aperture_mass':
         mapper = ApertureMassMapper(config)
     elif method == 'kaiser_squires':
@@ -95,27 +106,63 @@ def run_mapping(config):
     maps = mapper.run(g1map, g2_sign * g2map, scaled_boundaries, true_boundaries)
     end_time = time.time()
     
-    if config.get('print_timing', False):
+    if config['general'].get('print_timing', False):
         elapsed_time = end_time - start_time
         print(f"Time taken to create {method} maps: {elapsed_time:.2f} seconds")
     
     return maps, scaled_boundaries, true_boundaries
 
-def run(config_path):
+def run(config_input):
     """Run mass mapping workflow.
     
     Parameters
     ----------
-    config_path : str
-        Path to configuration file
+    config_input : `str`, `pathlib.Path`, `dict`, or `Config`
+        Configuration input. Can be:
+        - Path to configuration file (str or Path)
+        - Configuration dictionary (dict)
+        - Config object
+    
+    Returns
+    -------
+    result : `dict`
+        Dictionary containing mass maps and metadata
     """
-    # Read configuration
-    with open(config_path, 'r') as f:
-        config = yaml.safe_load(f)
+    from .config import Config
+    
+    # Handle different input types
+    if isinstance(config_input, (str, Path)):
+        # Load from file
+        with open(config_input, 'r') as f:
+            config = yaml.safe_load(f)
+    elif isinstance(config_input, Config):
+        # Extract dictionary from Config object
+        config = config_input.to_dict()
+    elif isinstance(config_input, dict):
+        # Use dictionary directly
+        config = config_input
+    else:
+        raise TypeError(f"config_input must be str, Path, dict, or Config object, got {type(config_input)}")
     
     # Get method and prepare config
     method = config['general']['method']
     method_config = prepare_method_config(config, method)
+    
+    # Check file existence right before we need it
+    if isinstance(config_input, Config):
+        # If we have a Config object, use its method
+        config_input.validate_file_existence()
+    else:
+        # If we have a dict, check manually
+        input_path = config['general'].get('input_path')
+        
+        # Check if we have a non-empty path
+        if input_path and input_path != "":
+            if not os.path.exists(input_path):
+                raise FileNotFoundError(
+                    f"Input file not found: {input_path}\n"
+                    f"Please check that the file exists and the path is correct."
+                )
     
     # Run mass mapping
     maps, scaled_boundaries, true_boundaries = run_mapping(method_config)
@@ -141,12 +188,8 @@ def run(config_path):
     
     # Create SNR map if requested
     if config['general'].get('create_snr', False):
-        snr_config = config['general'].copy()
-        snr_config.update(config['snr'])
-        snr_config.update(config['plotting'])
-        if 'print_timing' in config['general']:
-            snr_config['print_timing'] = config['general']['print_timing']
-        snr_map = snr_run.create_sn_map(snr_config, maps, scaled_boundaries, true_boundaries)
+        # Pass full nested config to SNR module
+        snr_map = snr_run.create_sn_map(config, maps, scaled_boundaries, true_boundaries)
         
         # Save SNR maps as FITS files if requested
         if config['general'].get('save_fits', False) and snr_map:
@@ -165,6 +208,19 @@ def run(config_path):
                             'dec_max': true_boundaries['coord2_max']
                         }
                         utils.save_fits(snr_map[mode], fits_boundaries, output_path)
+    
+    # Return results
+    result = {
+        'maps': maps,
+        'scaled_boundaries': scaled_boundaries,
+        'true_boundaries': true_boundaries
+    }
+    
+    # Add SNR map if created
+    if config['general'].get('create_snr', False) and 'snr_map' in locals():
+        result['snr_maps'] = snr_map
+    
+    return result
 
 if __name__ == "__main__":
     import sys
