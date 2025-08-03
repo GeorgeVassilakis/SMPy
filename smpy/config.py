@@ -154,7 +154,7 @@ class Config:
         100
         """
         # Load default.yaml
-        defaults_path = Path(__file__).parent / 'defaults' / 'default.yaml'
+        defaults_path = Path(__file__).parent / 'configs' / 'default.yaml'
         if not defaults_path.exists():
             raise FileNotFoundError(f"Default config file not found: {defaults_path}")
         

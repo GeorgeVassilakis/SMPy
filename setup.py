@@ -8,6 +8,7 @@ setup(
     name='SMPy',
     version='1.0.0',
     packages=find_packages(),
+    package_data={'smpy': ['configs/*.yaml']},
     install_requires=[
         'numpy>=1.20.0',
         'astropy>=5.0.0',
