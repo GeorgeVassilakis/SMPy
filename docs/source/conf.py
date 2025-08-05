@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.abspath('../..'))  # Path to SMPy root
 project = 'SMPy'
 copyright = '2024, Georgios N. Vassilakis'
 author = 'Georgios N. Vassilakis'
-release = '1.5.0'
+release = '0.5.0'
 
 # -- General configuration ---------------------------------------------------
 

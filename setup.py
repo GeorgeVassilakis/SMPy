@@ -6,7 +6,7 @@ with open('README.md', 'r', encoding='utf-8') as fh:
 
 setup(
     name='SMPy',
-    version='1.0.0',
+    version='0.5.0',
     packages=find_packages(),
     package_data={'smpy': ['configs/*.yaml']},
     install_requires=[
