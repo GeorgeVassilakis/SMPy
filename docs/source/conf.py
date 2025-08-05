@@ -44,6 +44,9 @@ autodoc_default_options = {
     'exclude-members': '__weakref__'
 }
 
+# Autosummary settings
+autosummary_generate = True
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
