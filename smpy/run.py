@@ -14,7 +14,7 @@ import yaml
 
 from smpy import utils
 from smpy.coordinates import get_coordinate_system
-from smpy.error_quantification.snr import run as snr_run
+import smpy.error_quantification.snr.run as snr_mod
 from smpy.mapping_methods import ApertureMassMapper, KaiserSquiresMapper, KSPlusMapper
 def prepare_method_config(config, method):
     """Validate method configuration and return nested config unchanged.
@@ -252,7 +252,7 @@ def run(config_input):
     # Create SNR map if requested
     if config['general'].get('create_snr', False):
         # Pass full nested config to SNR module
-        snr_map = snr_run.create_sn_map(config, maps, scaled_boundaries, true_boundaries)
+        snr_map = snr_mod.create_sn_map(config, maps, scaled_boundaries, true_boundaries)
         
         # Save SNR maps as FITS files if requested
         if config['general'].get('save_fits', False) and snr_map:
