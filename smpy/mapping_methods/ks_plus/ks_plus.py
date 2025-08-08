@@ -312,8 +312,8 @@ class KSPlusMapper(MassMapper):
         Notes
         -----
         Uses the standard KS relations in Fourier space:
-        kappa_E = (k1^2 - k2^2) * g1 + 2 * k1 * k2 * g2) / k^2
-        kappa_B = (k1^2 - k2^2) * g2 - 2 * k1 * k2 * g1) / k^2
+        kappa_E = ((k1^2 - k2^2) * g1 + 2 * k1 * k2 * g2) / k^2
+        kappa_B = ((k1^2 - k2^2) * g2 - 2 * k1 * k2 * g1) / k^2
         """
         # Get dimensions
         npix_dec, npix_ra = g1_grid.shape

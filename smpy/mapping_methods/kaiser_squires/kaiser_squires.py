@@ -60,8 +60,8 @@ class KaiserSquiresMapper(MassMapper):
         Notes
         -----
         The inversion is performed in Fourier space using the relations:
-        kappa_E = (k1^2 - k2^2) * g1 + 2 * k1 * k2 * g2) / k^2
-        kappa_B = (k1^2 - k2^2) * g2 - 2 * k1 * k2 * g1) / k^2
+        kappa_E = ((k1^2 - k2^2) * g1 + 2 * k1 * k2 * g2) / k^2
+        kappa_B = ((k1^2 - k2^2) * g2 - 2 * k1 * k2 * g1) / k^2
         """
         # Get grid dimensions
         npix_dec, npix_ra = g1_grid.shape
