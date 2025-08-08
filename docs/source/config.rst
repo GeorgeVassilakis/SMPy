@@ -117,7 +117,7 @@ Under ``general.radec``:
    * - resolution*
      - float
      - 0.4
-     - Grid resolution in arcminutes
+     - Grid resolution in arcminutes (API: ``pixel_scale``)
    * - coord1
      - string
      - "ra"
@@ -143,7 +143,7 @@ Under ``general.pixel``:
    * - downsample_factor*
      - integer
      - 1
-     - Grid reduction factor
+     - Grid reduction factor (API: ``downsample_factor``)
    * - coord1
      - string
      - "X_IMAGE"
@@ -156,6 +156,18 @@ Under ``general.pixel``:
      - string
      - "catalog"
      - Which axes to use for pixel plots: 'catalog' (input-pixel coordinates) or 'map' (map-pixel indices)
+
+Validation Behavior and Error Messages
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Validation is strict only when ``general.input_path`` is set to a non-empty value. Loading defaults or inspecting configs without a real input path will not trigger hard errors.
+- If ``coordinate_system='radec'`` and the required scale is missing, SMPy raises:
+
+  ``Missing required parameter for coordinate_system='radec'. Provide 'pixel_scale' (API: pixel_scale=..., YAML: general.radec.resolution).``
+
+- If ``coordinate_system='pixel'`` and the required factor is missing, SMPy raises:
+
+  ``Missing required parameter for coordinate_system='pixel'. Provide 'downsample_factor' (API: downsample_factor=..., YAML: general.pixel.downsample_factor).``
 
 Method-Specific Settings
 ~~~~~~~~~~~~~~~~~~~~~~~~

@@ -351,15 +351,15 @@ class Config:
             if coord_system == 'radec':
                 # If coordinate system was set by user, require pixel_scale to also be set by user
                 if coord_system_set_by_user and not general.get('_pixel_scale_set_by_user', False):
-                    raise ValueError("For 'radec' coordinate system, 'pixel_scale' parameter is required")
+                    raise ValueError(self._missing_coord_param_message('radec'))
                 elif not coord_system_set_by_user and ('radec' not in general or 'resolution' not in general['radec']):
-                    raise ValueError("For 'radec' coordinate system, 'pixel_scale' parameter is required")
+                    raise ValueError(self._missing_coord_param_message('radec'))
             elif coord_system == 'pixel':
                 # If coordinate system was set by user, require downsample_factor to also be set by user  
                 if coord_system_set_by_user and not general.get('_downsample_factor_set_by_user', False):
-                    raise ValueError("For 'pixel' coordinate system, 'downsample_factor' parameter is required")
+                    raise ValueError(self._missing_coord_param_message('pixel'))
                 elif not coord_system_set_by_user and ('pixel' not in general or 'downsample_factor' not in general['pixel']):
-                    raise ValueError("For 'pixel' coordinate system, 'downsample_factor' parameter is required")
+                    raise ValueError(self._missing_coord_param_message('pixel'))
                 # Validate optional axis reference if present
                 pixel_cfg = general.get('pixel', {})
                 axis_ref = pixel_cfg.get('pixel_axis_reference')
@@ -371,6 +371,36 @@ class Config:
         valid_methods = ['kaiser_squires', 'aperture_mass', 'ks_plus']
         if method not in valid_methods:
             raise ValueError(f"Invalid method '{method}'. Must be one of: {valid_methods}")
+
+    def _missing_coord_param_message(self, coord_system: str) -> str:
+        """Create a unified, actionable error message for missing parameters.
+
+        Parameters
+        ----------
+        coord_system : `str`
+            The coordinate system specified in the configuration. Expected
+            values are 'radec' or 'pixel'.
+
+        Returns
+        -------
+        message : `str`
+            A clear error message that explains what parameter is missing and
+            how to provide it via the Python API or YAML configuration.
+        """
+        if coord_system == 'radec':
+            return (
+                "Missing required parameter for coordinate_system='radec'. "
+                "Provide 'pixel_scale' (API: pixel_scale=..., YAML: general.radec.resolution)."
+            )
+        if coord_system == 'pixel':
+            return (
+                "Missing required parameter for coordinate_system='pixel'. "
+                "Provide 'downsample_factor' (API: downsample_factor=..., "
+                "YAML: general.pixel.downsample_factor)."
+            )
+        return (
+            "Invalid coordinate_system specified. Expected 'radec' or 'pixel'."
+        )
     
     def validate_file_existence(self):
         """Validate that input files exist on disk.
