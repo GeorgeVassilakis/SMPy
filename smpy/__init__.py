@@ -21,7 +21,7 @@ from .config import Config
 from .run import run
 
 # Version info
-__version__ = "1.0.0"
+__version__ = "0.5.0"
 
 # Define what gets imported with "from smpy import *"
 __all__ = [
