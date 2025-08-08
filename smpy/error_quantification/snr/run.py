@@ -190,6 +190,8 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
             plot_config = config['plotting'].copy()
             # Ensure plotting uses the correct coordinate system
             plot_config['coordinate_system'] = config['general'].get('coordinate_system', 'radec')
+            if plot_config['coordinate_system'] == 'pixel':
+                plot_config['axis_reference'] = config['general']['pixel'].get('pixel_axis_reference', 'catalog')
             plot_config['plot_title'] = f'{config["snr"]["plot_title"]} ({mode}-mode)'
             
             # Create method-specific output directory

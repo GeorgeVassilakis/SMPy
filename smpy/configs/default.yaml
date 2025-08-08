@@ -19,6 +19,7 @@ general:
     downsample_factor: 1  # Grid reduction factor
     coord1: 'X_IMAGE'    # X column name
     coord2: 'Y_IMAGE'    # Y column name
+    pixel_axis_reference: 'catalog'  # 'catalog' or 'map' for plotting axes
   
   # Data columns
   g1_col: 'g1'

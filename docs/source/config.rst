@@ -152,6 +152,10 @@ Under ``general.pixel``:
      - string
      - "Y_IMAGE"
      - Y coordinate column name
+   * - pixel_axis_reference
+     - string
+     - "catalog"
+     - Which axes to use for pixel plots: 'catalog' (input-pixel coordinates) or 'map' (map-pixel indices)
 
 Method-Specific Settings
 ~~~~~~~~~~~~~~~~~~~~~~~~

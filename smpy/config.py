@@ -208,6 +208,15 @@ class Config:
             self.config['general']['pixel']['downsample_factor'] = kwargs['downsample_factor']
             # Mark that downsample_factor was explicitly set by user
             self.config['general']['_downsample_factor_set_by_user'] = True
+
+        # Handle pixel_axis_reference (for pixel plotting)
+        if 'pixel_axis_reference' in kwargs and kwargs['pixel_axis_reference'] is not None:
+            self._ensure_section('general')
+            self._ensure_section('general', 'pixel')
+            axis_ref = kwargs['pixel_axis_reference']
+            if axis_ref not in ['catalog', 'map']:
+                raise ValueError("pixel_axis_reference must be 'catalog' or 'map'")
+            self.config['general']['pixel']['pixel_axis_reference'] = axis_ref
         
         # Handle method
         if 'method' in kwargs:
@@ -351,6 +360,11 @@ class Config:
                     raise ValueError("For 'pixel' coordinate system, 'downsample_factor' parameter is required")
                 elif not coord_system_set_by_user and ('pixel' not in general or 'downsample_factor' not in general['pixel']):
                     raise ValueError("For 'pixel' coordinate system, 'downsample_factor' parameter is required")
+                # Validate optional axis reference if present
+                pixel_cfg = general.get('pixel', {})
+                axis_ref = pixel_cfg.get('pixel_axis_reference')
+                if axis_ref is not None and axis_ref not in ['catalog', 'map']:
+                    raise ValueError("'pixel_axis_reference' must be 'catalog' or 'map' when provided")
         
         # Validate method
         method = general.get('method', 'kaiser_squires')

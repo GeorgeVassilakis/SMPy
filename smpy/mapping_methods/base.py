@@ -101,6 +101,9 @@ class MassMapper(ABC):
             plot_config = self.plotting_config.copy()
             # Ensure plotting knows which coordinate system to use
             plot_config['coordinate_system'] = self.general_config.get('coordinate_system', 'radec')
+            if plot_config['coordinate_system'] == 'pixel':
+                # Surface the axis reference choice from config when in pixel mode
+                plot_config['axis_reference'] = self.config['general']['pixel'].get('pixel_axis_reference', 'catalog')
             plot_config['plot_title'] = f"{self.plotting_config['plot_title']} ({mode}-mode)"
             output_name = (f"{self.general_config['output_directory']}/{self.name}/"
                          f"{self.general_config['output_base_name']}_{self.name}_{mode.lower()}_mode.png")

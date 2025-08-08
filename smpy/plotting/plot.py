@@ -265,6 +265,9 @@ def _plot_convergence_pixel(filtered_convergence, scaled_boundaries, true_bounda
         figsize=config['figsize']
     )
     
+    # Determine pixel-axis reference for plotting
+    axis_reference = str(config.get('axis_reference', 'catalog')).lower()
+
     # Create normalization for the colormap based on scaling config
     norm = _create_normalization(
         config.get('scaling'),
@@ -275,14 +278,24 @@ def _plot_convergence_pixel(filtered_convergence, scaled_boundaries, true_bounda
     )
     
     # Plot convergence map
+    if axis_reference == 'map':
+        # Axes represent map pixel indices (0..width/height)
+        height, width = filtered_convergence.shape
+        extent = [0, width, 0, height]
+    else:
+        # Default: axes represent catalog/input pixel coordinates
+        extent = [
+            scaled_boundaries['coord1_min'],
+            scaled_boundaries['coord1_max'],
+            scaled_boundaries['coord2_min'],
+            scaled_boundaries['coord2_max'],
+        ]
+
     im = ax.imshow(
         filtered_convergence,
         cmap=config['cmap'],
         norm=norm,
-        extent=[scaled_boundaries['coord1_min'],
-                scaled_boundaries['coord1_max'],
-                scaled_boundaries['coord2_min'],
-                scaled_boundaries['coord2_max']],
+        extent=extent,
         origin='lower'
     )
     
@@ -294,6 +307,16 @@ def _plot_convergence_pixel(filtered_convergence, scaled_boundaries, true_bounda
         'pixel')
     
     if center_x is not None:
+        if axis_reference == 'map':
+            # Convert catalog pixel coordinates to map pixel indices
+            height, width = filtered_convergence.shape
+            x_min = scaled_boundaries['coord1_min']
+            x_max = scaled_boundaries['coord1_max']
+            y_min = scaled_boundaries['coord2_min']
+            y_max = scaled_boundaries['coord2_max']
+
+            center_x = (center_x - x_min) / (x_max - x_min) * width
+            center_y = (center_y - y_min) / (y_max - y_min) * height
         ax.plot(center_x, center_y, 'rx', markersize=10)
 
     # Add peaks if threshold specified
@@ -301,18 +324,32 @@ def _plot_convergence_pixel(filtered_convergence, scaled_boundaries, true_bounda
     if threshold is not None:
         # Only show verbose peak information for SNR maps
         verbose_peaks = config.get('verbose', False) and map_type.lower() == 'snr'
-        X, Y, _, _ = find_peaks2d(filtered_convergence, 
-                                           threshold=threshold,
-                                           verbose=verbose_peaks,
-                                           true_boundaries=true_boundaries,
-                                           scaled_boundaries=scaled_boundaries)
-        # Convert peak indices to pixel coordinates
-        peak_x = [scaled_boundaries['coord1_min'] + 
-                 (x + 0.5) * (scaled_boundaries['coord1_max'] - scaled_boundaries['coord1_min']) / 
-                 filtered_convergence.shape[1] for x in X]
-        peak_y = [scaled_boundaries['coord2_min'] + 
-                 (y + 0.5) * (scaled_boundaries['coord2_max'] - scaled_boundaries['coord2_min']) / 
-                 filtered_convergence.shape[0] for y in Y]
+        X, Y, _, _ = find_peaks2d(
+            filtered_convergence,
+            threshold=threshold,
+            verbose=verbose_peaks,
+            true_boundaries=true_boundaries,
+            scaled_boundaries=scaled_boundaries,
+        )
+        # Convert peak indices to plotting coordinates
+        if axis_reference == 'map':
+            peak_x = [x + 0.5 for x in X]
+            peak_y = [y + 0.5 for y in Y]
+        else:
+            peak_x = [
+                scaled_boundaries['coord1_min']
+                + (x + 0.5)
+                * (scaled_boundaries['coord1_max'] - scaled_boundaries['coord1_min'])
+                / filtered_convergence.shape[1]
+                for x in X
+            ]
+            peak_y = [
+                scaled_boundaries['coord2_min']
+                + (y + 0.5)
+                * (scaled_boundaries['coord2_max'] - scaled_boundaries['coord2_min'])
+                / filtered_convergence.shape[0]
+                for y in Y
+            ]
         ax.scatter(peak_x, peak_y, s=100, facecolors='none', edgecolors='g', linewidth=1.5)
     
     # Set labels
@@ -320,12 +357,14 @@ def _plot_convergence_pixel(filtered_convergence, scaled_boundaries, true_bounda
     ylabel = config.get('ylabel')
 
     if xlabel == 'auto':
-        ax.set_xlabel('X (pixels)')
+        label = 'X (map pixels)' if axis_reference == 'map' else 'X (pixels)'
+        ax.set_xlabel(label)
     elif xlabel is not None:
         ax.set_xlabel(xlabel)
         
     if ylabel == 'auto':
-        ax.set_ylabel('Y (pixels)')
+        label = 'Y (map pixels)' if axis_reference == 'map' else 'Y (pixels)'
+        ax.set_ylabel(label)
     elif ylabel is not None:
         ax.set_ylabel(ylabel)
     
