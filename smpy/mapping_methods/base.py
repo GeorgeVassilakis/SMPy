@@ -99,6 +99,8 @@ class MassMapper(ABC):
         for mode in self.general_config['mode']:
             plot_map = maps[mode]
             plot_config = self.plotting_config.copy()
+            # Ensure plotting knows which coordinate system to use
+            plot_config['coordinate_system'] = self.general_config.get('coordinate_system', 'radec')
             plot_config['plot_title'] = f"{self.plotting_config['plot_title']} ({mode}-mode)"
             output_name = (f"{self.general_config['output_directory']}/{self.name}/"
                          f"{self.general_config['output_base_name']}_{self.name}_{mode.lower()}_mode.png")

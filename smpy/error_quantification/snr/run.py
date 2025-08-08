@@ -188,6 +188,8 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
     for mode in config['general']['mode']:
         if mode in sn_maps:
             plot_config = config['plotting'].copy()
+            # Ensure plotting uses the correct coordinate system
+            plot_config['coordinate_system'] = config['general'].get('coordinate_system', 'radec')
             plot_config['plot_title'] = f'{config["snr"]["plot_title"]} ({mode}-mode)'
             
             # Create method-specific output directory
