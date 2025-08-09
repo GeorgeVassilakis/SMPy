@@ -24,12 +24,6 @@ SMPy is a mass reconstruction toolkit for weak gravitational lensing analysis.
 
 .. toctree::
    :maxdepth: 2
-   :caption: General:
-
-   general
-
-.. toctree::
-   :maxdepth: 2
    :caption: Tutorials:
 
    tutorials
