@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.abspath('../..'))  # Path to SMPy root
 # -- Project information -----------------------------------------------------
 
 project = 'SMPy'
-copyright = '2024, Georgios N. Vassilakis'
+copyright = '2025, Georgios N. Vassilakis'
 author = 'Georgios N. Vassilakis'
 release = '0.5.0'
 
@@ -60,18 +60,6 @@ html_theme = 'furo'
 html_static_path = ['_static']
 
 # Theme options
-html_theme_options = {
-    'display_version': True,
-    'prev_next_buttons_location': 'bottom',
-    'style_external_links': False,
-    'vcs_pageview_mode': '',
-    # RTD theme options
-    'collapse_navigation': True,
-    'sticky_navigation': True,
-    'navigation_depth': 4,
-    'includehidden': True,
-    'titles_only': False
-}
 
 # -- Intersphinx configuration -----------------------------------------------
 
