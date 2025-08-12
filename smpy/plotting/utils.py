@@ -114,6 +114,7 @@ def configure_labels(
     cfg: dict,
     axis_reference: Optional[str] = None,
     coord_system_type: Optional[str] = None,
+    fontsize: Optional[int] = None,
 ) -> None:
     """Configure x/y labels and title from plotting config.
 
@@ -134,26 +135,26 @@ def configure_labels(
     # Handle automatic labeling based on coordinate system
     if xlabel == "auto":
         if coord_system_type == "radec":
-            ax.set_xlabel("Right Ascension (deg)")
+            ax.set_xlabel("Right Ascension (deg)", fontsize=fontsize)
         else:
             # Pixel coordinates can reference map indices or catalog coordinates
             label = "X (map pixels)" if axis_reference == "map" else "X (pixels)"
-            ax.set_xlabel(label)
+            ax.set_xlabel(label, fontsize=fontsize)
     elif xlabel:
-        ax.set_xlabel(str(xlabel))
+        ax.set_xlabel(str(xlabel), fontsize=fontsize)
 
     if ylabel == "auto":
         if coord_system_type == "radec":
-            ax.set_ylabel("Declination (deg)")
+            ax.set_ylabel("Declination (deg)", fontsize=fontsize)
         else:
             label = "Y (map pixels)" if axis_reference == "map" else "Y (pixels)"
-            ax.set_ylabel(label)
+            ax.set_ylabel(label, fontsize=fontsize)
     elif ylabel:
-        ax.set_ylabel(str(ylabel))
+        ax.set_ylabel(str(ylabel), fontsize=fontsize)
 
     # Set plot title
     title = cfg.get("plot_title") or ""
-    ax.set_title(title)
+    ax.set_title(title, fontsize=fontsize)
 
 
 def apply_ra_orientation(ax: plt.Axes) -> None:
@@ -335,8 +336,28 @@ def peaks_to_plot_coords(
     return xs, ys
 
 
-def add_colorbar(ax: plt.Axes, im: plt.Axes, size: str = "5%", pad: float = 0.07) -> None:
-    """Attach a colorbar axis to the right of the given axes."""
+def add_colorbar(
+    ax: plt.Axes,
+    im: plt.Axes,
+    size: str = "5%",
+    pad: float = 0.07,
+    tick_fontsize: Optional[int] = None,
+) -> None:
+    """Attach a colorbar axis to the right of the given axes.
+
+    Parameters
+    ----------
+    ax : `matplotlib.axes.Axes`
+        Parent axes to attach the colorbar to.
+    im : `matplotlib.artist.Artist`
+        Image/artist to build the colorbar from.
+    size : `str`, optional
+        Colorbar width relative to the axes size.
+    pad : `float`, optional
+        Padding between axes and colorbar in inches.
+    tick_fontsize : `int`, optional
+        Font size for colorbar tick labels.
+    """
     # Create colorbar axis and disable minor ticks locally (no global rc updates)
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size=size, pad=pad)
@@ -345,5 +366,10 @@ def add_colorbar(ax: plt.Axes, im: plt.Axes, size: str = "5%", pad: float = 0.07
         cb.ax.minorticks_off()
     except Exception:  # pragma: no cover - older mpl
         pass
+    if tick_fontsize is not None:
+        try:
+            cb.ax.tick_params(labelsize=tick_fontsize)
+        except Exception:  # pragma: no cover
+            pass
 
 

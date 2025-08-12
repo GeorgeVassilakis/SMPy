@@ -98,7 +98,8 @@ def _plot_pixel(
     """Render pixel-coordinate plot with overlays and colorbar."""
     # Create figure/axes and apply local styling (no global rc changes)
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=config.get("figsize", (12, 8)))
-    apply_axes_style(ax)
+    fontsize = int(config.get("fontsize", 15))
+    apply_axes_style(ax, fontsize=fontsize)
 
     # Choose how axes are labeled in pixel mode
     axis_reference = str(config.get("axis_reference", "catalog")).lower()
@@ -141,12 +142,18 @@ def _plot_pixel(
         ax.scatter(px, py, s=100, facecolors="none", edgecolors="g", linewidth=1.5)
 
     # Labels, title, optional grid
-    configure_labels(ax, config, axis_reference=axis_reference, coord_system_type="pixel")
+    configure_labels(
+        ax,
+        config,
+        axis_reference=axis_reference,
+        coord_system_type="pixel",
+        fontsize=fontsize,
+    )
     if config.get("gridlines", False):
         ax.grid(color="black")
 
     # Attach colorbar to the right
-    add_colorbar(ax, im)
+    add_colorbar(ax, im, tick_fontsize=fontsize)
 
     # Save and/or return figure
     fig.tight_layout()
@@ -171,7 +178,8 @@ def _plot_radec(
     """Render RA/Dec plot with astronomical orientation and ticks."""
     # Create figure/axes and apply local styling (no global rc changes)
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=config.get("figsize", (12, 8)))
-    apply_axes_style(ax)
+    fontsize = int(config.get("fontsize", 15))
+    apply_axes_style(ax, fontsize=fontsize)
 
     # Build colormap normalization from config
     norm = create_normalization(
@@ -237,7 +245,7 @@ def _plot_radec(
     set_ticks(ax, scaled_x, scaled_y, ra_labels, dec_labels)
 
     # Labels, title, optional grid
-    configure_labels(ax, config, coord_system_type="radec")
+    configure_labels(ax, config, coord_system_type="radec", fontsize=fontsize)
     if config.get("gridlines", False):
         ax.grid(color="black")
 
@@ -245,7 +253,7 @@ def _plot_radec(
     apply_ra_orientation(ax)
 
     # Attach colorbar to the right
-    add_colorbar(ax, im)
+    add_colorbar(ax, im, tick_fontsize=fontsize)
 
     # Save and/or return figure
     fig.tight_layout()
