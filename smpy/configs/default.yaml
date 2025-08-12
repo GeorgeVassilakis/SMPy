@@ -69,6 +69,7 @@ methods:
 plotting:
   # Basic plotting
   figsize: [12, 8]
+  fontsize: 15
   cmap: 'viridis'
   xlabel: 'auto'  # 'auto', null, or custom string
   ylabel: 'auto'  # 'auto', null, or custom string
