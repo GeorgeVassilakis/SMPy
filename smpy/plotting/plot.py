@@ -7,7 +7,6 @@ APIs and orchestration.
 """
 # Standard Library
 from __future__ import annotations
-from typing import Optional, Tuple
 
 # Third Party
 import matplotlib.pyplot as plt

@@ -12,7 +12,6 @@ import warnings
 # Third Party
 import numpy as np
 from matplotlib import colors
-import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
@@ -318,18 +317,12 @@ def add_colorbar(ax, im, size="5%", pad=0.07, tick_fontsize=None):
     tick_fontsize : `int`, optional
         Font size for colorbar tick labels.
     """
-    # Create colorbar axis and disable minor ticks locally (no global rc updates)
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size=size, pad=pad)
     cb = ax.figure.colorbar(im, cax=cax)
-    try:
-        cb.ax.minorticks_off()
-    except Exception:  # pragma: no cover - older mpl
-        pass
+    # Disable minor ticks on the colorbar axis
+    cb.ax.minorticks_off()
     if tick_fontsize is not None:
-        try:
-            cb.ax.tick_params(labelsize=tick_fontsize)
-        except Exception:  # pragma: no cover
-            pass
+        cb.ax.tick_params(labelsize=tick_fontsize)
 
 
