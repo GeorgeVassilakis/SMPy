@@ -8,7 +8,6 @@ APIs and orchestration.
 
 from __future__ import annotations
 
-import logging
 from typing import Optional, Tuple
 
 import matplotlib.pyplot as plt
@@ -159,7 +158,8 @@ def _plot_pixel(
     fig.tight_layout()
     if output_name:
         fig.savefig(output_name)
-        logging.info(f"Mass map saved: {output_name}")
+        map_label = "Convergence" if map_category.lower() == "convergence" else "SNR"
+        print(f"{map_label} map saved as PNG file: {output_name}")
     
     if return_handles:
         return fig, ax, im
@@ -259,7 +259,8 @@ def _plot_radec(
     fig.tight_layout()
     if output_name:
         fig.savefig(output_name)
-        logging.info(f"Mass map saved: {output_name}")
+        map_label = "Convergence" if map_category.lower() == "convergence" else "SNR"
+        print(f"{map_label} map saved as PNG file: {output_name}")
 
     if return_handles:
         return fig, ax, im
