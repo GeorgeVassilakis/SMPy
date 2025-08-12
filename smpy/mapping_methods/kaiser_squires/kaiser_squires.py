@@ -70,8 +70,8 @@ class KaiserSquiresMapper(MassMapper):
         g1_hat = np.fft.fft2(g1_grid)
         g2_hat = np.fft.fft2(g2_grid)
 
-        # Create wavenumber grids
-        k1, k2 = np.meshgrid(np.fft.fftfreq(npix_ra), np.fft.fftfreq(npix_dec))
+        # Create wavenumber grids with correct ordering (dec=y, ra=x)
+        k2, k1 = np.meshgrid(np.fft.fftfreq(npix_dec), np.fft.fftfreq(npix_ra), indexing='ij')
         k_squared = k1**2 + k2**2
 
         # Avoid division by zero
