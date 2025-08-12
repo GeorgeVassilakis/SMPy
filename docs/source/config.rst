@@ -285,6 +285,10 @@ Plotting Settings
      - string
      - "viridis"
      - Matplotlib colormap name
+    * - fontsize
+      - integer
+      - 15
+      - Base font size for axis ticks, labels, title, and colorbar
    * - xlabel
      - string/null
      - "auto"
