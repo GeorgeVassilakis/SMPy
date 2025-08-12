@@ -5,25 +5,18 @@ Helpers avoid mutating global matplotlib state and operate on provided
 axes/inputs for predictable behavior.
 """
 
+# Standard Library
 from __future__ import annotations
-
-import logging
 import warnings
-from typing import Iterable, List, Optional, Sequence, Tuple
 
+# Third Party
 import numpy as np
 from matplotlib import colors
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
-def create_normalization(
-    scaling: Optional[dict | str],
-    data: np.ndarray,
-    vmin: Optional[float] = None,
-    vmax: Optional[float] = None,
-    map_type: str = "convergence",
-):
+def create_normalization(scaling, data, vmin=None, vmax=None, map_type="convergence"):
     """Create a matplotlib normalization object from config.
 
     Parameters
@@ -86,7 +79,7 @@ def create_normalization(
     return colors.Normalize(vmin=vmin, vmax=vmax)
 
 
-def apply_axes_style(ax: plt.Axes, fontsize: int = 15) -> None:
+def apply_axes_style(ax, fontsize=15):
     """Apply consistent, local styling to axes (no global rc mutation).
 
     Parameters
@@ -109,13 +102,7 @@ def apply_axes_style(ax: plt.Axes, fontsize: int = 15) -> None:
         spine.set_linewidth(1.3)
 
 
-def configure_labels(
-    ax: plt.Axes,
-    cfg: dict,
-    axis_reference: Optional[str] = None,
-    coord_system_type: Optional[str] = None,
-    fontsize: Optional[int] = None,
-) -> None:
+def configure_labels(ax, cfg, axis_reference=None, coord_system_type=None, fontsize=None):
     """Configure x/y labels and title from plotting config.
 
     Parameters
@@ -157,7 +144,7 @@ def configure_labels(
     ax.set_title(title, fontsize=fontsize)
 
 
-def apply_ra_orientation(ax: plt.Axes) -> None:
+def apply_ra_orientation(ax):
     """Orient RA to increase leftward by inverting x-axis.
 
     Notes
@@ -167,9 +154,7 @@ def apply_ra_orientation(ax: plt.Axes) -> None:
     ax.invert_xaxis()
 
 
-def propose_ticks(
-    range_min: float, range_max: float, target_count: int = 5
-) -> Tuple[np.ndarray, np.ndarray]:
+def propose_ticks(range_min, range_max, target_count=5):
     """Propose tick positions and labels for a range.
 
     Parameters
@@ -202,13 +187,7 @@ def propose_ticks(
     return ticks, labels
 
 
-def set_ticks(
-    ax: plt.Axes,
-    x_ticks: Sequence[float],
-    y_ticks: Sequence[float],
-    x_tick_labels: Sequence[str],
-    y_tick_labels: Sequence[str],
-) -> None:
+def set_ticks(ax, x_ticks, y_ticks, x_tick_labels, y_tick_labels):
     """Apply tick positions and labels to axes."""
     ax.set_xticks(list(x_ticks))
     ax.set_yticks(list(y_ticks))
@@ -216,9 +195,7 @@ def set_ticks(
     ax.set_yticklabels(list(y_tick_labels))
 
 
-def compute_pixel_extent(
-    data: np.ndarray, scaled_boundaries: dict, axis_reference: str
-) -> List[float]:
+def compute_pixel_extent(data, scaled_boundaries, axis_reference):
     """Compute imshow extent for pixel coordinates.
 
     Parameters
@@ -244,12 +221,7 @@ def compute_pixel_extent(
     ]
 
 
-def convert_center_to_scaled(
-    cluster_center: Optional[dict | str],
-    scaled_boundaries: dict,
-    true_boundaries: dict,
-    coord_system_type: str,
-) -> Tuple[Optional[float], Optional[float]]:
+def convert_center_to_scaled(cluster_center, scaled_boundaries, true_boundaries, coord_system_type):
     """Convert provided center to scaled coordinates for plotting.
 
     Parameters
@@ -295,13 +267,7 @@ def convert_center_to_scaled(
     return None, None
 
 
-def peaks_to_plot_coords(
-    X: Iterable[int],
-    Y: Iterable[int],
-    data: np.ndarray,
-    scaled_boundaries: dict,
-    axis_reference: str,
-) -> Tuple[List[float], List[float]]:
+def peaks_to_plot_coords(X, Y, data, scaled_boundaries, axis_reference):
     """Convert peak index coordinates to plotting coordinates for pixel mode.
 
     Parameters
@@ -336,13 +302,7 @@ def peaks_to_plot_coords(
     return xs, ys
 
 
-def add_colorbar(
-    ax: plt.Axes,
-    im: plt.Axes,
-    size: str = "5%",
-    pad: float = 0.07,
-    tick_fontsize: Optional[int] = None,
-) -> None:
+def add_colorbar(ax, im, size="5%", pad=0.07, tick_fontsize=None):
     """Attach a colorbar axis to the right of the given axes.
 
     Parameters

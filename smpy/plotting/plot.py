@@ -5,14 +5,15 @@ with consistent styling, scaling, overlays, and saving. Helpers live in
 ``smpy.plotting.utils`` to keep this module focused on public plotting
 APIs and orchestration.
 """
-
+# Standard Library
 from __future__ import annotations
-
 from typing import Optional, Tuple
 
+# Third Party
 import matplotlib.pyplot as plt
 import numpy as np
 
+# Local
 from smpy.utils import find_peaks2d
 from smpy.plotting.utils import (
     add_colorbar,
@@ -28,15 +29,7 @@ from smpy.plotting.utils import (
 )
 
 
-def plot_mass_map(
-    data: np.ndarray,
-    scaled_boundaries: dict,
-    true_boundaries: dict,
-    config: dict,
-    output_name: Optional[str] = None,
-    return_handles: bool = False,
-    map_category: str = "convergence",
-) -> Optional[Tuple[plt.Figure, plt.Axes, any]]:
+def plot_mass_map(data, scaled_boundaries, true_boundaries, config, output_name=None, return_handles=False, map_category="convergence"):
     """Plot a mass-like map (E/B mode) with styling and overlays.
 
     Parameters
@@ -66,34 +59,10 @@ def plot_mass_map(
     # Dispatch to coordinate-system specific renderer based on config
     coord_system = config.get("coordinate_system", "radec").lower()
     if coord_system == "radec":
-        return _plot_radec(
-            data,
-            scaled_boundaries,
-            true_boundaries,
-            config,
-            output_name,
-            return_handles,
-            map_category,
-        )
-    return _plot_pixel(
-        data,
-        scaled_boundaries,
-        true_boundaries,
-        config,
-        output_name,
-        return_handles,
-        map_category,
-    )
+        return _plot_radec(data, scaled_boundaries, true_boundaries, config, output_name, return_handles, map_category)
+    return _plot_pixel(data, scaled_boundaries, true_boundaries, config, output_name, return_handles, map_category)
 
-def _plot_pixel(
-    data: np.ndarray,
-    scaled_boundaries: dict,
-    true_boundaries: dict,
-    config: dict,
-    output_name: Optional[str],
-    return_handles: bool,
-    map_category: str,
-):
+def _plot_pixel(data, scaled_boundaries, true_boundaries, config, output_name, return_handles, map_category):
     """Render pixel-coordinate plot with overlays and colorbar."""
     # Create figure/axes and apply local styling (no global rc changes)
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=config.get("figsize", (12, 8)))
@@ -104,18 +73,14 @@ def _plot_pixel(
     axis_reference = str(config.get("axis_reference", "catalog")).lower()
 
     # Build colormap normalization from config (percentiles, power, symlog)
-    norm = create_normalization(
-        config.get("scaling"), data, vmin=config.get("vmin"), vmax=config.get("vmax"), map_type=map_category
-    )
+    norm = create_normalization(config.get("scaling"), data, vmin=config.get("vmin"), vmax=config.get("vmax"), map_type=map_category)
 
     # Determine image extent from chosen axis reference
     extent = compute_pixel_extent(data, scaled_boundaries, axis_reference)
     im = ax.imshow(data, cmap=config.get("cmap", "viridis"), norm=norm, extent=extent, origin="lower")
 
     # Optional: mark cluster center; convert to map pixels if needed
-    cx, cy = convert_center_to_scaled(
-        config.get("cluster_center"), scaled_boundaries, true_boundaries, coord_system_type="pixel"
-    )
+    cx, cy = convert_center_to_scaled(config.get("cluster_center"), scaled_boundaries, true_boundaries, coord_system_type="pixel")
     if cx is not None:
         if axis_reference == "map":
             # Convert from catalog coordinates to map pixel indices
@@ -133,21 +98,13 @@ def _plot_pixel(
     if threshold is not None:
         verbose_peaks = bool(config.get("verbose", False))
         # Detect peaks using 2D local maxima algorithm
-        X, Y, _, _ = find_peaks2d(
-            data, threshold=threshold, verbose=verbose_peaks, true_boundaries=true_boundaries, scaled_boundaries=scaled_boundaries
-        )
+        X, Y, _, _ = find_peaks2d(data, threshold=threshold, verbose=verbose_peaks, true_boundaries=true_boundaries, scaled_boundaries=scaled_boundaries)
         # Convert peak indices to appropriate plotting coordinates
         px, py = peaks_to_plot_coords(X, Y, data, scaled_boundaries, axis_reference)
         ax.scatter(px, py, s=100, facecolors="none", edgecolors="g", linewidth=1.5)
 
     # Labels, title, optional grid
-    configure_labels(
-        ax,
-        config,
-        axis_reference=axis_reference,
-        coord_system_type="pixel",
-        fontsize=fontsize,
-    )
+    configure_labels(ax, config, axis_reference=axis_reference, coord_system_type="pixel", fontsize=fontsize)
     if config.get("gridlines", False):
         ax.grid(color="black")
 
@@ -166,15 +123,7 @@ def _plot_pixel(
     plt.close(fig)
     return None
 
-def _plot_radec(
-    data: np.ndarray,
-    scaled_boundaries: dict,
-    true_boundaries: dict,
-    config: dict,
-    output_name: Optional[str],
-    return_handles: bool,
-    map_category: str,
-):
+def _plot_radec(data, scaled_boundaries, true_boundaries, config, output_name, return_handles, map_category):
     """Render RA/Dec plot with astronomical orientation and ticks."""
     # Create figure/axes and apply local styling (no global rc changes)
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=config.get("figsize", (12, 8)))
@@ -182,9 +131,7 @@ def _plot_radec(
     apply_axes_style(ax, fontsize=fontsize)
 
     # Build colormap normalization from config
-    norm = create_normalization(
-        config.get("scaling"), data, vmin=config.get("vmin"), vmax=config.get("vmax"), map_type=map_category
-    )
+    norm = create_normalization(config.get("scaling"), data, vmin=config.get("vmin"), vmax=config.get("vmax"), map_type=map_category)
 
     # Draw image using scaled RA/Dec extents
     im = ax.imshow(
@@ -205,9 +152,7 @@ def _plot_radec(
     if threshold is not None:
         verbose_peaks = bool(config.get("verbose", False))
         # Detect peaks using 2D local maxima algorithm
-        X, Y, _, _ = find_peaks2d(
-            data, threshold=threshold, verbose=verbose_peaks, true_boundaries=true_boundaries, scaled_boundaries=scaled_boundaries
-        )
+        X, Y, _, _ = find_peaks2d(data, threshold=threshold, verbose=verbose_peaks, true_boundaries=true_boundaries, scaled_boundaries=scaled_boundaries)
         # Convert peak pixel indices to RA/Dec coordinates
         ra_peaks = [
             scaled_boundaries["coord1_min"]
@@ -222,9 +167,7 @@ def _plot_radec(
         ax.scatter(ra_peaks, dec_peaks, s=100, facecolors="none", edgecolors="g", linewidth=1.5)
 
     # Optional: mark cluster center in RA/Dec coordinates
-    ra_center, dec_center = convert_center_to_scaled(
-        config.get("cluster_center"), scaled_boundaries, true_boundaries, coord_system_type="radec"
-    )
+    ra_center, dec_center = convert_center_to_scaled(config.get("cluster_center"), scaled_boundaries, true_boundaries, coord_system_type="radec")
     if ra_center is not None:
         ax.plot(ra_center, dec_center, "rx", markersize=10)
 
@@ -268,14 +211,7 @@ def _plot_radec(
     return None
 
 
-def plot_snr_map(
-    data: np.ndarray,
-    scaled_boundaries: dict,
-    true_boundaries: dict,
-    config: dict,
-    output_name: Optional[str] = None,
-    return_handles: bool = False,
-) -> Optional[Tuple[plt.Figure, plt.Axes, any]]:
+def plot_snr_map(data, scaled_boundaries, true_boundaries, config, output_name=None, return_handles=False):
     """Plot an SNR map with styling and overlays.
 
     Parameters
@@ -290,5 +226,5 @@ def plot_snr_map(
         config=config,
         output_name=output_name,
         return_handles=return_handles,
-        map_category="snr",
+        map_category="snr"
     )
