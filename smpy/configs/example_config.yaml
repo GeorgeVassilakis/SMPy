@@ -54,6 +54,7 @@ methods:
   ks_plus:
     inpainting_iterations: 100  # Number of iterations for inpainting algorithm
     reduced_shear_iterations: 3 # Number of iterations for reduced shear correction
+    nscales: null  # (int or null). If set, will be clipped to safe maximum.
 
     # Advanced settings
     min_threshold_fraction: 0.0    # Minimum threshold for DCT coefficients as a fraction of the maximum coefficient (default of 0 is advised)

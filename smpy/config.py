@@ -291,6 +291,20 @@ class Config:
             self._ensure_section('methods', 'ks_plus')
             self.config['methods']['ks_plus']['reduced_shear_iterations'] = kwargs['reduced_shear_iterations']
         
+        # Handle KS+ wavelet settings
+        if 'wavelet' in kwargs and isinstance(kwargs['wavelet'], dict):
+            self._ensure_section('methods')
+            self._ensure_section('methods', 'ks_plus')
+            # Ensure wavelet sub-dict exists, then update
+            if 'wavelet' not in self.config['methods']['ks_plus']:
+                self.config['methods']['ks_plus']['wavelet'] = {}
+            self.config['methods']['ks_plus']['wavelet'].update(kwargs['wavelet'])
+        
+        if 'wavelet_nscales' in kwargs and kwargs['wavelet_nscales'] is not None:
+            self._ensure_section('methods')
+            self._ensure_section('methods', 'ks_plus')
+            self.config['methods']['ks_plus']['nscales'] = kwargs['wavelet_nscales']
+        
         # Handle aperture mass filter parameters
         if 'filter' in kwargs:
             self._ensure_section('methods')

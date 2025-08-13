@@ -9,7 +9,12 @@ import numpy as np
 from scipy import fft
 from scipy.ndimage import gaussian_filter
 from ..base import MassMapper
-from smpy.filters.starlet import starlet_transform_2d, inverse_starlet_transform_2d
+from smpy.filters.starlet import (
+    starlet_transform_2d,
+    inverse_starlet_transform_2d,
+    compute_starlet_nscales_max,
+    starlet_nscales_support_aware,
+)
 
 class KSPlusMapper(MassMapper):
     """Implementation of Kaiser-Squires Plus mass mapping.
@@ -465,9 +470,24 @@ class KSPlusMapper(MassMapper):
         scales and ensures that the reconstructed field maintains proper
         statistical properties in both observed and inpainted regions.
         """
-        # Determine number of scales
-        min_dim = min(kappa.shape)
-        nscales = int(np.log2(min_dim))
+        # Determine number of scales with support-aware cap and optional user override
+        height, width = kappa.shape
+        cfg_nscales = self.method_config.get('nscales') if self.method_config else None
+        nscales_max = compute_starlet_nscales_max(height, width)
+        nscales = starlet_nscales_support_aware(height, width, cfg_nscales)
+
+        # Log selection once per mapper instance to avoid excessive output during iterations
+        if not hasattr(self, '_wavelet_nscales_logged'):
+            print(
+                f"KS+: nscales chosen = {nscales} (user={cfg_nscales!r}, "
+                f"safe_max={nscales_max}, image={height}x{width})"
+            )
+            if cfg_nscales is not None and int(cfg_nscales) != nscales:
+                print(
+                    "Warning: KS+ wavelet.nscales override was clipped to the safe maximum "
+                    f"({nscales_max})."
+                )
+            self._wavelet_nscales_logged = True
         
         # Decompose into wavelet coefficients
         wavelet_bands = starlet_transform_2d(kappa, nscales)

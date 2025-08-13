@@ -55,7 +55,8 @@ methods:
   ks_plus:
     inpainting_iterations: 100  # Number of iterations for inpainting algorithm
     reduced_shear_iterations: 3 # Number of iterations for reduced shear correction
-
+    nscales: null  # Desired number of starlet scales; clipped to a safe maximum if set
+    
     # Advanced settings
     min_threshold_fraction: 0.0    # Minimum threshold for DCT coefficients as a fraction of the maximum coefficient
     extension_size: 'double'    # Size of field extension to reduce border effects ('double' or number of pixels)

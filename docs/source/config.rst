@@ -257,6 +257,12 @@ Under ``methods.ks_plus``:
      - boolean
      - true
      - Apply wavelet-based power spectrum constraints
+   * - nscales
+     - integer/null
+     - null
+     - Desired number of starlet scales (detail bands + coarse). If set, the value is clipped to a
+       safe maximum derived from the image size and the B3–spline à trous kernel support. If null,
+       the safe maximum is used automatically.
    * - smoothing.type
      - string/null
      - "gaussian"

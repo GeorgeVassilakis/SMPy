@@ -16,6 +16,7 @@ This code draws from the CosmoStat implementation:
 
 import numpy as np
 from scipy.ndimage import convolve1d
+from typing import Optional
 
 def b3spline_filter(step=1):
     """Create a B3-spline filter for the starlet transform.
@@ -178,3 +179,68 @@ def inverse_starlet_transform_2d(wavelet_bands):
         reconstructed = filtered + wavelet_bands[j]
     
     return reconstructed
+
+
+def compute_starlet_nscales_max(height: int, width: int) -> int:
+    """Compute the safe maximum ``nscales`` for a starlet transform.
+
+    The starlet (isotropic undecimated, à trous) transform produces ``J``
+    detail bands and one coarse residual. The number of scales is defined as
+    ``nscales = J + 1``. The B3–spline à trous kernel support at detail level
+    ``j`` (0-indexed) is ``L_j = 4 * 2^j + 1`` pixels. To avoid border-
+    dominated coefficients, the coarsest detail (``j = J - 1``) must satisfy
+    ``L_{J-1} <= N`` where ``N = min(height, width)``.
+
+    Parameters
+    ----------
+    height : `int`
+        Image height in pixels.
+    width : `int`
+        Image width in pixels.
+
+    Returns
+    -------
+    nscales_max : `int`
+        Maximum safe number of starlet scales (detail bands + coarse).
+    """
+    N = int(min(height, width))
+
+    # Guard against very small images. Ensure at least one detail band.
+    if N <= 1:
+        return 2
+
+    value = (N - 1) / 4.0
+    # If value < 1, log2 is negative; clamp to at least 1 detail band
+    J_max = max(1, int(np.floor(np.log2(value))) + 1)
+    return J_max + 1
+
+
+def starlet_nscales_support_aware(
+    height: int, width: int, cfg_nscales: Optional[int] = None
+) -> int:
+    """Return a safe ``nscales`` for the starlet transform.
+
+    This function enforces the kernel-support constraint for the B3–spline
+    starlet and applies an optional user override clipped to the safe range.
+
+    Parameters
+    ----------
+    height : `int`
+        Image height in pixels.
+    width : `int`
+        Image width in pixels.
+    cfg_nscales : `int`, optional
+        User-requested number of scales. If provided, it is clipped to the
+        inclusive range ``[2, nscales_max]``.
+
+    Returns
+    -------
+    nscales : `int`
+        Number of scales to use (detail bands + coarse residual).
+    """
+    nscales_max = compute_starlet_nscales_max(height, width)
+
+    if cfg_nscales is None:
+        return nscales_max
+
+    return max(2, min(int(cfg_nscales), nscales_max))
