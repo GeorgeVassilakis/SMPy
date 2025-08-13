@@ -134,6 +134,12 @@ def run_mapping(config):
     else:
         raise ValueError(f"Unknown mapping method: {method}")
     
+    # Provide per-pixel weights to mappers that support masking by data presence
+    # Coordinate systems expose the accumulated weights as _last_weight_grid
+    if method == 'ks_plus' and hasattr(coord_system, '_last_weight_grid'):
+        # KS+ expects mask M=1 for data present, 0 for gaps. Weight>0 defines data presence.
+        mapper._weight_grid = coord_system._last_weight_grid
+    
     # Run mapping with timing
     start_time = time.time()
     maps = mapper.run(g1map, g2_sign * g2map, scaled_boundaries, true_boundaries)

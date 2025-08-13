@@ -135,6 +135,13 @@ class CoordinateSystem(ABC):
             2D array of binned, weighted first shear component values.
         g2_grid : `numpy.ndarray`
             2D array of binned, weighted second shear component values.
+
+        Notes
+        -----
+        The accumulated per-pixel weights used for normalization are stored
+        on the coordinate system instance as ``_last_weight_grid`` for
+        downstream consumers (e.g., KS+ mask construction). Pixels with
+        non-positive or zero weight indicate gaps (no contributing data).
         """
         # Filter out indices outside the grid
         valid_mask = (idx1 >= 0) & (idx1 < npix2) & (idx2 >= 0) & (idx2 < npix1)
@@ -158,6 +165,10 @@ class CoordinateSystem(ABC):
         nonzero_mask = weight_grid != 0
         g1_grid[nonzero_mask] /= weight_grid[nonzero_mask]
         g2_grid[nonzero_mask] /= weight_grid[nonzero_mask]
+        
+        # Expose weight grid for downstream consumers without changing
+        # the public return signature of create_grid.
+        self._last_weight_grid = weight_grid
         
         return g1_grid, g2_grid
 

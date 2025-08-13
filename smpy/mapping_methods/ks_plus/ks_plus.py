@@ -22,12 +22,18 @@ class KSPlusMapper(MassMapper):
     3. Iteratively correcting for reduced shear approximation
     4. Preserving proper statistical properties using wavelet constraints
 
-    Notes
-    -----
-    The KS+ algorithm implements the iterative inpainting scheme described
-    in the literature, combining sparsity priors in the DCT domain with
-    wavelet-based power spectrum preservation for robust mass map
-    reconstruction in the presence of missing data and systematic effects.
+        Notes
+        -----
+        The KS+ algorithm implements the iterative inpainting scheme described
+        in the literature, combining sparsity priors in the DCT domain with
+        wavelet-based power spectrum preservation for robust mass map
+        reconstruction in the presence of missing data and systematic effects.
+        
+        Mask semantics:
+        The binary mask encodes data availability only. Pixels are marked as
+        data (1) if measurements exist and are valid; gaps (0) are used solely
+        where data are missing or invalid. Zero shear values are valid data and
+        must not be masked.
     """
     
     @property
@@ -79,7 +85,9 @@ class KSPlusMapper(MassMapper):
         kappa_e = np.zeros_like(g1_grid)
         kappa_b = np.zeros_like(g1_grid)
         
-        # Set up mask (1 where data exists, 0 in gaps)
+        # Set up mask (1 where data exists, 0 in gaps). If a per-pixel
+        # weight grid has been provided by the pipeline, use it to derive
+        # data availability; otherwise fall back to finite checks only.
         mask = self._create_mask(g1_grid, g2_grid)
         
         # Extend field to handle border effects
@@ -135,10 +143,16 @@ class KSPlusMapper(MassMapper):
         return kappa_e, kappa_b
     
     def _create_mask(self, g1_grid, g2_grid):
-        """Create binary mask from shear data.
+        """Create binary mask from data presence/validity.
 
-        Identify missing data gaps by detecting NaN values and zero
-        shear measurements in both components.
+        Construct the KS+ data-availability mask with the convention
+        M=1 for pixels that have valid measurements and M=0 for gaps.
+        Zero shear values are considered valid measurements and must
+        not be treated as gaps.
+
+        Data presence is defined as:
+        - Both shear components are finite (not NaN/Inf); and
+        - If a per-pixel weight/count grid is available, weight > 0.
 
         Parameters
         ----------
@@ -150,12 +164,17 @@ class KSPlusMapper(MassMapper):
         Returns
         -------
         mask : `numpy.ndarray`
-            Binary mask (1 where data exists, 0 in gaps).
+            Binary mask where 1 indicates data present and 0 indicates a gap.
         """
-        # Identify missing data (gaps)
-        mask = np.ones_like(g1_grid)
-        mask[(np.isnan(g1_grid)) | (np.isnan(g2_grid))] = 0
-        mask[(g1_grid == 0) & (g2_grid == 0)] = 0
+        finite_data = np.isfinite(g1_grid) & np.isfinite(g2_grid)
+
+        weight_grid = getattr(self, '_weight_grid', None)
+        if weight_grid is not None:
+            positive_weight = np.isfinite(weight_grid) & (weight_grid > 0)
+            mask = (finite_data & positive_weight).astype(g1_grid.dtype)
+        else:
+            mask = finite_data.astype(g1_grid.dtype)
+
         return mask
     
     def _extend_field(self, g1_grid, g2_grid, mask, extension_size_dec, extension_size_ra):
@@ -279,7 +298,7 @@ class KSPlusMapper(MassMapper):
             # Enforce consistency with observed data
             gamma1, gamma2 = self._kappa_to_gamma(kappa_e, kappa_b)
             
-            # Replace with observed data outside the mask
+            # Replace with observed data on data pixels (mask==1)
             gamma1[mask > 0] = g1_grid[mask > 0]
             gamma2[mask > 0] = g2_grid[mask > 0]
             
