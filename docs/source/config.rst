@@ -285,10 +285,10 @@ Plotting Settings
      - string
      - "viridis"
      - Matplotlib colormap name
-    * - fontsize
-      - integer
-      - 15
-      - Base font size for axis ticks, labels, title, and colorbar
+   * - fontsize
+     - integer
+     - 15
+     - Base font size for axis ticks, labels, title, and colorbar
    * - xlabel
      - string/null
      - "auto"
@@ -324,7 +324,56 @@ Plotting Settings
    * - cluster_center
      - dict/string/null
      - null
-     - Center position: null, 'auto', or {ra_center: float, dec_center: float}
+     - Center position: null, 'auto', or a dictionary. For RA/Dec plots use {ra_center: float, dec_center: float}. For pixel plots use {x_center: float, y_center: float}.
+   * - axis_reference
+     - string/null
+     - null
+     - For pixel plots only: overrides which axes are used for plotting ('catalog' or 'map'). If null, defaults to the value of ``general.pixel.pixel_axis_reference``.
+   * - scaling
+     - dict/string/null
+     - null
+     - Color scaling configuration. If a string, treated as {type: <string>}.
+
+.. rubric:: Scaling configuration
+
+The ``plotting.scaling`` setting controls normalization of colormaps. Supported forms:
+
+.. code-block:: yaml
+
+   plotting:
+     scaling:
+       type: linear   # or 'power' or 'symlog'
+
+Options by type:
+
+- ``type: linear``
+  - Uses linear normalization with optional ``vmin``/``vmax``.
+
+- ``type: power``
+  - ``gamma``: float (default 1.0). Example:
+
+    .. code-block:: yaml
+
+       plotting:
+         scaling:
+           type: power
+           gamma: 0.5
+
+- ``type: symlog``
+  - ``linthresh``: float (default 0.1)
+  - ``linscale``: float (default 1.0)
+  - Optional map-specific overrides under ``convergence`` and ``snr`` keys:
+
+    .. code-block:: yaml
+
+       plotting:
+         scaling:
+           type: symlog
+           linthresh: 0.1
+           linscale: 1.0
+           snr:
+             linthresh: 1.0
+             linscale: 1.0
 
 SNR Settings
 ~~~~~~~~~~~~
