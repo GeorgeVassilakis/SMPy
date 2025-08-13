@@ -266,7 +266,7 @@ class KSPlusMapper(MassMapper):
         max_iterations = config.get('inpainting_iterations', 100)
         
         # Calculate initial threshold
-        dct_coeffs = fft.dctn(kappa_e)
+        dct_coeffs = fft.dctn(kappa_e, norm='ortho')
         lambda_max = np.max(np.abs(dct_coeffs))
         min_threshold_fraction = config.get('min_threshold_fraction', 0.0)
         if min_threshold_fraction > 0:
@@ -276,8 +276,8 @@ class KSPlusMapper(MassMapper):
         
         for i in range(max_iterations):
             # DCT thresholding
-            kappa_e_dct = fft.dctn(np.real(kappa_complex))
-            kappa_b_dct = fft.dctn(np.imag(kappa_complex))
+            kappa_e_dct = fft.dctn(np.real(kappa_complex), norm='ortho')
+            kappa_b_dct = fft.dctn(np.imag(kappa_complex), norm='ortho')
             
             # Calculate threshold for current iteration
             lambda_i = self._update_threshold(i, max_iterations, lambda_min, lambda_max)
@@ -287,8 +287,8 @@ class KSPlusMapper(MassMapper):
             kappa_b_dct[np.abs(kappa_b_dct) < lambda_i] = 0
             
             # Inverse DCT
-            kappa_e = fft.idctn(kappa_e_dct)
-            kappa_b = fft.idctn(kappa_b_dct)
+            kappa_e = fft.idctn(kappa_e_dct, norm='ortho')
+            kappa_b = fft.idctn(kappa_b_dct, norm='ortho')
             
             # Wavelet-based power spectrum constraints
             if config.get('use_wavelet_constraints', True):
