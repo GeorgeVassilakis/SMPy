@@ -199,7 +199,7 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
             os.makedirs(method_output_dir, exist_ok=True)
             
             output_name = f"{config['general']['output_directory']}/{mapping_method}/{config['general']['output_base_name']}_{mapping_method}_snr_{mode.lower()}_mode.png"
-            plot.plot_convergence(sn_maps[mode], scaled_boundaries, true_boundaries, plot_config, output_name, map_type='snr')
+            plot.plot_snr_map(sn_maps[mode], scaled_boundaries, true_boundaries, plot_config, output_name)
     
     # End timing
     end_time = time.time()

@@ -274,6 +274,11 @@ class Config:
         if 'verbose' in kwargs:
             self._ensure_section('plotting')
             self.config['plotting']['verbose'] = kwargs['verbose']
+
+        # Handle plotting fontsize
+        if 'fontsize' in kwargs and kwargs['fontsize'] is not None:
+            self._ensure_section('plotting')
+            self.config['plotting']['fontsize'] = kwargs['fontsize']
         
         # Handle KS+ specific parameters
         if 'inpainting_iterations' in kwargs:

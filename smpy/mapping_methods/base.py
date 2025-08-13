@@ -107,7 +107,7 @@ class MassMapper(ABC):
             plot_config['plot_title'] = f"{self.plotting_config['plot_title']} ({mode}-mode)"
             output_name = (f"{self.general_config['output_directory']}/{self.name}/"
                          f"{self.general_config['output_base_name']}_{self.name}_{mode.lower()}_mode.png")
-            plot.plot_convergence(plot_map, scaled_boundaries, true_boundaries, plot_config, output_name)
+            plot.plot_mass_map(plot_map, scaled_boundaries, true_boundaries, plot_config, output_name)
             
         return maps
         

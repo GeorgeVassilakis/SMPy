@@ -68,6 +68,7 @@ methods:
 plotting:
   # Basic plotting
   figsize: [20, 10]
+  fontsize: 15
   cmap: 'magma'
   xlabel: 'auto'  # 'auto', null, or custom string
   ylabel: 'auto'  # 'auto', null, or custom string
