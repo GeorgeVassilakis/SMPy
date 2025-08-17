@@ -6,7 +6,7 @@
 # SMPy (Shear Mapping in Python)
 
 ## Docs: 
-The latest documentation is available on Read the Docs: [smpy-docs.readthedocs.io](https://smpy-docs.readthedocs.io/en/latest/) (work in progress).
+The latest documentation is available on Read the Docs: [smpy-docs.readthedocs.io](https://smpy-docs.readthedocs.io/en/latest/overview.html) (work in progress).
 
 ## Overview
 **SMPy (Shear Mapping in Python)** is a mass reconstruction toolkit for weak gravitational lensing analysis, primarily focused on mapping total matter distributions from galaxy shear data. The package implements the Kaiser-Squires inversion technique (Kaiser & Squires 1993) to reconstruct the dimensionless surface mass density (convergence) field from weak lensing shear measurements. This non-parametric reconstruction method enables direct mapping of both dark and baryonic matter distributions from the observed distortions in background galaxy shapes.
