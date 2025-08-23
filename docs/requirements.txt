@@ -1,2 +1,3 @@
 sphinx>=4.0
 furo>=2024.7.18
+sphinx-copybutton>=0.5.2

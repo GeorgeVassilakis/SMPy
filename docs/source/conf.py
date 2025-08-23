@@ -19,6 +19,7 @@ extensions = [
     'sphinx.ext.viewcode',      # Add links to source code
     'sphinx.ext.intersphinx',   # Link to other projects' documentation
     'sphinx.ext.autosummary',   # Generate summary tables
+    'sphinx_copybutton',        # Add copy button to code blocks
 ]
 
 # Napoleon settings for NumPy style docstrings
@@ -60,6 +61,13 @@ html_theme = 'furo'
 html_static_path = ['_static']
 
 # Theme options
+
+# -- sphinx-copybutton configuration ---------------------------------------
+
+# Remove common prompts when copying code from examples and shell blocks
+copybutton_prompt_text = r'>>> |\.\.\. |\$ '
+copybutton_prompt_is_regexp = True
+copybutton_only_copy_prompt_lines = False
 
 # -- Intersphinx configuration -----------------------------------------------
 
