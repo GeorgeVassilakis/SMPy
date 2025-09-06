@@ -20,6 +20,7 @@ def map_mass(
     weight_col=None,
     mode='E',
     create_snr=False,
+    create_counts_map=False,
     save_fits=False,
     print_timing=False,
     smoothing=None,
@@ -59,6 +60,8 @@ def map_mass(
         Shear mode(s) to compute. Options: 'E', 'B', or ['E', 'B'].
     create_snr : `bool`, optional
         Whether to create signal-to-noise ratio map.
+    create_counts_map : `bool`, optional
+        Whether to create and save a per-pixel counts map PNG.
     save_fits : `bool`, optional
         Whether to save maps as FITS files.
     print_timing : `bool`, optional
@@ -119,6 +122,7 @@ def map_mass(
         weight_col=weight_col,
         mode=mode,
         create_snr=create_snr,
+        create_counts_map=create_counts_map,
         save_fits=save_fits,
         print_timing=print_timing,
         smoothing=smoothing,
