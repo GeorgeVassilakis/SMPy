@@ -92,6 +92,10 @@ General Settings
      - boolean
      - false
      - Whether to create signal-to-noise ratio map
+   * - create_counts_map
+     - boolean
+     - false
+     - Whether to create and save per-pixel object counts map as PNG
    * - save_fits
      - boolean
      - false

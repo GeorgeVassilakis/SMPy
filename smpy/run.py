@@ -143,6 +143,11 @@ def run_mapping(config):
     # Run mapping with timing
     start_time = time.time()
     maps = mapper.run(g1map, g2_sign * g2map, scaled_boundaries, true_boundaries)
+
+    # Capture counts grid if available from coordinate gridding
+    counts_grid = None
+    if hasattr(coord_system, '_last_count_grid'):
+        counts_grid = getattr(coord_system, '_last_count_grid')
     end_time = time.time()
     
     if config['general'].get('print_timing', False):
@@ -278,6 +283,12 @@ def run(config_input):
                         }
                         utils.save_fits(snr_map[mode], fits_boundaries, output_path)
     
+    # Optionally render counts map PNG if requested and available
+    counts_grid = None
+    # try to obtain count grid from a prior run_mapping call by reconstructing coordinate system state
+    # In current design, run_mapping encapsulates coord_system. To surface counts here, we recompute a lightweight grid-only path
+    # by leveraging that run_mapping computed gridding once; instead, we will trigger counts rendering inside run_mapping via return.
+
     # Return results
     result = {
         'maps': maps,
@@ -288,6 +299,49 @@ def run(config_input):
     # Add SNR map if created
     if config['general'].get('create_snr', False) and 'snr_map' in locals():
         result['snr_maps'] = snr_map
+
+    # Create and save counts map PNG if requested
+    if config['general'].get('create_counts_map', False):
+        # Recreate minimal elements to access count grid: rerun gridding stage only
+        coord_system_type = config['general']['coordinate_system'].lower()
+        coord_system = get_coordinate_system(coord_system_type)
+        coord_config = config['general'][coord_system_type]
+        shear_df = utils.load_shear_data(
+            config['general']['input_path'],
+            coord_config['coord1'],
+            coord_config['coord2'],
+            config['general']['g1_col'],
+            config['general']['g2_col'],
+            config['general']['weight_col'],
+            config['general']['input_hdu']
+        )
+        # Use same boundaries as used for mapping
+        _ = coord_system.calculate_boundaries(shear_df['coord1'], shear_df['coord2'])
+        shear_df = coord_system.transform_coordinates(shear_df)
+        _ = coord_system.create_grid(shear_df, scaled_boundaries, config)
+        if hasattr(coord_system, '_last_count_grid'):
+            counts_grid = coord_system._last_count_grid
+            # Plot counts grid using plotting utilities
+            from smpy.plotting import plot as plot_mod
+            plot_cfg = config.get('plotting', {}).copy()
+            plot_cfg['coordinate_system'] = config['general'].get('coordinate_system', 'radec')
+            if plot_cfg['coordinate_system'] == 'pixel':
+                plot_cfg['axis_reference'] = config['general']['pixel'].get('pixel_axis_reference', 'catalog')
+            # Set title and scaling appropriate for counts
+            plot_cfg['plot_title'] = f"Counts Map"
+            # For counts, ensure linear scaling and integer-like colorbar
+            if 'scaling' in plot_cfg:
+                sc = plot_cfg['scaling'] or {}
+                sc['type'] = 'linear'
+                sc.pop('percentile', None)
+                plot_cfg['scaling'] = sc
+            method = config['general']['method']
+            method_output_dir = f"{config['general']['output_directory']}/{method}"
+            os.makedirs(method_output_dir, exist_ok=True)
+            output_name = f"{method_output_dir}/{config['general']['output_base_name']}_{method}_counts.png"
+            # Use mass_map plotter (convergence category) with counts array
+            plot_mod.plot_mass_map(counts_grid, scaled_boundaries, true_boundaries, plot_cfg, output_name)
+            result['counts_map'] = counts_grid
     
     return result
 
