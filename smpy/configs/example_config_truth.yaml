@@ -28,6 +28,7 @@ general:
   # Analysis settings
   method: "kaiser_squires"  # "kaiser_squires", "aperture_mass", or "ks_plus"
   create_snr: true  # Whether to create SNR map
+  create_counts_map: false  # Whether to create and save per-pixel object counts map
   mode: ['E']  # ['E'], ['B'], or ['E', 'B']
   print_timing: true  # Whether to print timing information for map creation
   save_fits: false  # Whether to save maps as FITS files

@@ -155,20 +155,24 @@ class CoordinateSystem(ABC):
         g1_grid = np.zeros((npix1, npix2))
         g2_grid = np.zeros((npix1, npix2))
         weight_grid = np.zeros((npix1, npix2))
+        count_grid = np.zeros((npix1, npix2))
         
         # Accumulate weighted values
         np.add.at(g1_grid, (idx2, idx1), g1 * weight)
         np.add.at(g2_grid, (idx2, idx1), g2 * weight)
         np.add.at(weight_grid, (idx2, idx1), weight)
+        # Accumulate raw sample counts per pixel
+        np.add.at(count_grid, (idx2, idx1), 1)
         
         # Normalize by weights
         nonzero_mask = weight_grid != 0
         g1_grid[nonzero_mask] /= weight_grid[nonzero_mask]
         g2_grid[nonzero_mask] /= weight_grid[nonzero_mask]
         
-        # Expose weight grid for downstream consumers without changing
+        # Expose weight and count grids for downstream consumers without changing
         # the public return signature of create_grid.
         self._last_weight_grid = weight_grid
+        self._last_count_grid = count_grid
         
         return g1_grid, g2_grid
 

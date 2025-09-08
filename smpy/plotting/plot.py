@@ -26,6 +26,7 @@ from smpy.plotting.utils import (
     propose_ticks,
     set_ticks,
 )
+import matplotlib.patheffects as patheffects
 
 
 def plot_mass_map(data, scaled_boundaries, true_boundaries, config, output_name=None, return_handles=False, map_category="convergence"):
@@ -47,8 +48,8 @@ def plot_mass_map(data, scaled_boundaries, true_boundaries, config, output_name=
     return_handles : `bool`, optional
         If ``True``, return ``(fig, ax, im)`` instead of closing.
     map_category : `str`, optional
-        Map category used for scaling overrides. Options: 'convergence',
-        'snr'.
+        Map category used for scaling and overlays. Options: 'convergence',
+        'snr', 'counts'.
 
     Returns
     -------
@@ -92,15 +93,47 @@ def _plot_pixel(data, scaled_boundaries, true_boundaries, config, output_name, r
             cy = (cy - y_min) / (y_max - y_min) * height
         ax.plot(cx, cy, "rx", markersize=10)
 
-    # Optional: overlay peak markers above threshold
+    # Optional: overlay peak markers above threshold (disabled for counts maps)
     threshold = config.get("threshold")
-    if threshold is not None:
+    if (threshold is not None) and (str(map_category).lower() != "counts"):
         verbose_peaks = bool(config.get("verbose", False))
         # Detect peaks using 2D local maxima algorithm
         X, Y, _, _ = find_peaks2d(data, threshold=threshold, verbose=verbose_peaks, true_boundaries=true_boundaries, scaled_boundaries=scaled_boundaries)
         # Convert peak indices to appropriate plotting coordinates
         px, py = peaks_to_plot_coords(X, Y, data, scaled_boundaries, axis_reference)
         ax.scatter(px, py, s=100, facecolors="none", edgecolors="g", linewidth=1.5)
+
+    # For counts maps: overlay integer count labels at pixel centers
+    if str(map_category).lower() == "counts":
+        height, width = data.shape
+        # Compute x, y centers in plotting coordinates based on axis reference
+        if axis_reference == "map":
+            x_centers = [j + 0.5 for j in range(width)]
+            y_centers = [i + 0.5 for i in range(height)]
+        else:
+            x_min = scaled_boundaries["coord1_min"]
+            x_max = scaled_boundaries["coord1_max"]
+            y_min = scaled_boundaries["coord2_min"]
+            y_max = scaled_boundaries["coord2_max"]
+            x_centers = [x_min + (j + 0.5) * (x_max - x_min) / width for j in range(width)]
+            y_centers = [y_min + (i + 0.5) * (y_max - y_min) / height for i in range(height)]
+
+        count_fontsize = max(6, int(fontsize * 0.6))
+        outline = [patheffects.withStroke(linewidth=1.8, foreground="black")]
+        for i in range(height):
+            for j in range(width):
+                val = data[i, j]
+                label = f"{int(round(val))}"
+                ax.text(
+                    x_centers[j],
+                    y_centers[i],
+                    label,
+                    color="white",
+                    ha="center",
+                    va="center",
+                    fontsize=count_fontsize,
+                    path_effects=outline,
+                )
 
     # Labels, title, optional grid
     configure_labels(ax, config, axis_reference=axis_reference, coord_system_type="pixel", fontsize=fontsize)
@@ -146,9 +179,9 @@ def _plot_radec(data, scaled_boundaries, true_boundaries, config, output_name, r
         origin="lower",
     )
 
-    # Optional: overlay peak markers above threshold
+    # Optional: overlay peak markers above threshold (disabled for counts maps)
     threshold = config.get("threshold")
-    if threshold is not None:
+    if (threshold is not None) and (str(map_category).lower() != "counts"):
         verbose_peaks = bool(config.get("verbose", False))
         # Detect peaks using 2D local maxima algorithm
         X, Y, _, _ = find_peaks2d(data, threshold=threshold, verbose=verbose_peaks, true_boundaries=true_boundaries, scaled_boundaries=scaled_boundaries)
@@ -164,6 +197,32 @@ def _plot_radec(data, scaled_boundaries, true_boundaries, config, output_name, r
             for y in Y
         ]
         ax.scatter(ra_peaks, dec_peaks, s=100, facecolors="none", edgecolors="g", linewidth=1.5)
+
+    # For counts maps: overlay integer count labels at pixel centers
+    if str(map_category).lower() == "counts":
+        height, width = data.shape
+        x_min = scaled_boundaries["coord1_min"]
+        x_max = scaled_boundaries["coord1_max"]
+        y_min = scaled_boundaries["coord2_min"]
+        y_max = scaled_boundaries["coord2_max"]
+        x_centers = [x_min + (j + 0.5) * (x_max - x_min) / width for j in range(width)]
+        y_centers = [y_min + (i + 0.5) * (y_max - y_min) / height for i in range(height)]
+        count_fontsize = max(6, int(fontsize * 0.6))
+        outline = [patheffects.withStroke(linewidth=1.8, foreground="black")]
+        for i in range(height):
+            for j in range(width):
+                val = data[i, j]
+                label = f"{int(round(val))}"
+                ax.text(
+                    x_centers[j],
+                    y_centers[i],
+                    label,
+                    color="white",
+                    ha="center",
+                    va="center",
+                    fontsize=count_fontsize,
+                    path_effects=outline,
+                )
 
     # Optional: mark cluster center in RA/Dec coordinates
     ra_center, dec_center = convert_center_to_scaled(config.get("cluster_center"), scaled_boundaries, true_boundaries, coord_system_type="radec")
