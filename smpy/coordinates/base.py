@@ -110,7 +110,7 @@ class CoordinateSystem(ABC):
             containing transformed coordinates ready for gridding.
         """
 
-    def _create_shear_grid(self, data_df, idx1, idx2, npix1, npix2):
+    def _create_shear_grid(self, data_df, idx1, idx2, npix1, npix2, accumulate_counts=False):
         """Create weighted shear grid from binning indices.
 
         Helper method that bins shear values into a regular grid using
@@ -142,6 +142,9 @@ class CoordinateSystem(ABC):
         on the coordinate system instance as ``_last_weight_grid`` for
         downstream consumers (e.g., KS+ mask construction). Pixels with
         non-positive or zero weight indicate gaps (no contributing data).
+        If ``accumulate_counts`` is ``True``, the raw sample counts per pixel
+        are accumulated and exposed as ``_last_count_grid``; otherwise, any
+        stale ``_last_count_grid`` attribute is removed to prevent reuse.
         """
         # Filter out indices outside the grid
         valid_mask = (idx1 >= 0) & (idx1 < npix2) & (idx2 >= 0) & (idx2 < npix1)
@@ -155,20 +158,30 @@ class CoordinateSystem(ABC):
         g1_grid = np.zeros((npix1, npix2))
         g2_grid = np.zeros((npix1, npix2))
         weight_grid = np.zeros((npix1, npix2))
+        count_grid = None
         
         # Accumulate weighted values
         np.add.at(g1_grid, (idx2, idx1), g1 * weight)
         np.add.at(g2_grid, (idx2, idx1), g2 * weight)
         np.add.at(weight_grid, (idx2, idx1), weight)
+        # Accumulate raw sample counts per pixel if requested
+        if accumulate_counts:
+            count_grid = np.zeros((npix1, npix2))
+            np.add.at(count_grid, (idx2, idx1), 1)
         
         # Normalize by weights
         nonzero_mask = weight_grid != 0
         g1_grid[nonzero_mask] /= weight_grid[nonzero_mask]
         g2_grid[nonzero_mask] /= weight_grid[nonzero_mask]
         
-        # Expose weight grid for downstream consumers without changing
-        # the public return signature of create_grid.
+        # Expose weight and optional count grids for downstream consumers
         self._last_weight_grid = weight_grid
+        if accumulate_counts and count_grid is not None:
+            self._last_count_grid = count_grid
+        else:
+            # Ensure stale counts are not reused across calls
+            if hasattr(self, '_last_count_grid'):
+                delattr(self, '_last_count_grid')
         
         return g1_grid, g2_grid
 

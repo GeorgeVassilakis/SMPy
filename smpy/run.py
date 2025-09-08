@@ -76,6 +76,9 @@ def run_mapping(config):
     true_boundaries : `dict`
         Coordinate boundaries in the original coordinate system for
         astronomical positioning and tick labels.
+    counts_grid : `numpy.ndarray` or `None`
+        Per-pixel counts accumulated during gridding; ``None`` if not
+        available.
         
     Raises
     ------
@@ -143,13 +146,18 @@ def run_mapping(config):
     # Run mapping with timing
     start_time = time.time()
     maps = mapper.run(g1map, g2_sign * g2map, scaled_boundaries, true_boundaries)
+
+    # Capture counts grid if available from coordinate gridding
+    counts_grid = None
+    if hasattr(coord_system, '_last_count_grid'):
+        counts_grid = getattr(coord_system, '_last_count_grid')
     end_time = time.time()
     
     if config['general'].get('print_timing', False):
         elapsed_time = end_time - start_time
         print(f"Time taken to create {method} maps: {elapsed_time:.2f} seconds")
     
-    return maps, scaled_boundaries, true_boundaries
+    return maps, scaled_boundaries, true_boundaries, counts_grid
 
 def run(config_input):
     """Execute the complete mass mapping analysis workflow.
@@ -175,6 +183,7 @@ def run(config_input):
         - 'scaled_boundaries': Coordinate boundaries for plotting
         - 'true_boundaries': Original coordinate boundaries
         - 'snr_maps': SNR maps (if create_snr=True in config)
+        - 'counts_map': Per-pixel counts (if create_counts_map=True)
         
     Raises
     ------
@@ -234,7 +243,7 @@ def run(config_input):
                 )
     
     # Run mass mapping
-    maps, scaled_boundaries, true_boundaries = run_mapping(method_config)
+    maps, scaled_boundaries, true_boundaries, counts_grid = run_mapping(method_config)
     
     # Save maps as FITS files if requested
     if config['general'].get('save_fits', False):
@@ -288,6 +297,27 @@ def run(config_input):
     # Add SNR map if created
     if config['general'].get('create_snr', False) and 'snr_map' in locals():
         result['snr_maps'] = snr_map
+
+    # Create and save counts map PNG if requested, using counts from gridding
+    if config['general'].get('create_counts_map', False) and counts_grid is not None:
+        from smpy.plotting import plot as plot_mod
+        plot_cfg = config.get('plotting', {}).copy()
+        plot_cfg['coordinate_system'] = config['general'].get('coordinate_system', 'radec')
+        if plot_cfg['coordinate_system'] == 'pixel':
+            plot_cfg['axis_reference'] = config['general']['pixel'].get('pixel_axis_reference', 'catalog')
+        # Set title and ensure linear scaling for counts
+        plot_cfg['plot_title'] = f"Counts Map"
+        sc = (plot_cfg.get('scaling') or {}).copy()
+        sc['type'] = 'linear'
+        sc.pop('percentile', None)
+        plot_cfg['scaling'] = sc
+        method = config['general']['method']
+        method_output_dir = f"{config['general']['output_directory']}/{method}"
+        os.makedirs(method_output_dir, exist_ok=True)
+        output_name = f"{method_output_dir}/{config['general']['output_base_name']}_{method}_counts.png"
+        # Use mass_map plotter with counts category to disable peak overlays
+        plot_mod.plot_mass_map(counts_grid, scaled_boundaries, true_boundaries, plot_cfg, output_name, map_category="counts")
+        result['counts_map'] = counts_grid
     
     return result
 
