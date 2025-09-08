@@ -105,7 +105,16 @@ class PixelSystem(CoordinateSystem):
         x_idx = np.digitize(data_df['coord1_scaled'], x_bins) - 1
         y_idx = np.digitize(data_df['coord2_scaled'], y_bins) - 1
         
-        return self._create_shear_grid(data_df, x_idx, y_idx, npix_y, npix_x)
+        # Determine whether to accumulate counts based on config
+        accumulate_counts = bool(config.get('general', {}).get('create_counts_map', False))
+        return self._create_shear_grid(
+            data_df,
+            x_idx,
+            y_idx,
+            npix_y,
+            npix_x,
+            accumulate_counts=accumulate_counts,
+        )
 
     def calculate_boundaries(self, coord1, coord2):
         """Calculate field boundaries in pixel space.

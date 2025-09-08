@@ -85,7 +85,16 @@ class RADecSystem(CoordinateSystem):
         ra_idx = np.digitize(data_df['coord1_scaled'], ra_bins) - 1
         dec_idx = np.digitize(data_df['coord2_scaled'], dec_bins) - 1
         
-        return self._create_shear_grid(data_df, ra_idx, dec_idx, npix_dec, npix_ra)
+        # Determine whether to accumulate counts based on config
+        accumulate_counts = bool(config.get('general', {}).get('create_counts_map', False))
+        return self._create_shear_grid(
+            data_df,
+            ra_idx,
+            dec_idx,
+            npix_dec,
+            npix_ra,
+            accumulate_counts=accumulate_counts,
+        )
 
     def calculate_boundaries(self, coord1, coord2):
         """Calculate field boundaries in RA/Dec space.
