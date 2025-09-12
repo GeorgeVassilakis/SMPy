@@ -96,6 +96,10 @@ General Settings
      - boolean
      - false
      - Whether to create and save per-pixel object counts map as PNG
+   * - overlay_counts_map
+     - boolean
+     - false
+     - Overlay per-pixel counts as text on the convergence map plots (uses the same grid used for mass maps).
    * - save_fits
      - boolean
      - false

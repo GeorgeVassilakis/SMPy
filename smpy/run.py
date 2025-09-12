@@ -122,6 +122,10 @@ def run_mapping(config):
         scaled_boundaries,
         config
     )
+    # Capture counts grid (if accumulated) immediately after gridding for optional overlays
+    counts_grid = None
+    if hasattr(coord_system, '_last_count_grid'):
+        counts_grid = getattr(coord_system, '_last_count_grid')
     
     # Get correct g2 sign based on coordinate system
     g2_sign = -1 if coord_system_type == 'radec' else 1
@@ -145,12 +149,13 @@ def run_mapping(config):
     
     # Run mapping with timing
     start_time = time.time()
-    maps = mapper.run(g1map, g2_sign * g2map, scaled_boundaries, true_boundaries)
-
-    # Capture counts grid if available from coordinate gridding
-    counts_grid = None
-    if hasattr(coord_system, '_last_count_grid'):
-        counts_grid = getattr(coord_system, '_last_count_grid')
+    maps = mapper.run(
+        g1map,
+        g2_sign * g2map,
+        scaled_boundaries,
+        true_boundaries,
+        counts_overlay=counts_grid,
+    )
     end_time = time.time()
     
     if config['general'].get('print_timing', False):

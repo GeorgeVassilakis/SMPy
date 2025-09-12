@@ -29,7 +29,7 @@ from smpy.plotting.utils import (
 import matplotlib.patheffects as patheffects
 
 
-def plot_mass_map(data, scaled_boundaries, true_boundaries, config, output_name=None, return_handles=False, map_category="convergence"):
+def plot_mass_map(data, scaled_boundaries, true_boundaries, config, output_name=None, return_handles=False, map_category="convergence", counts_overlay=None):
     """Plot a mass-like map (E/B mode) with styling and overlays.
 
     Parameters
@@ -50,6 +50,10 @@ def plot_mass_map(data, scaled_boundaries, true_boundaries, config, output_name=
     map_category : `str`, optional
         Map category used for scaling and overlays. Options: 'convergence',
         'snr', 'counts'.
+    counts_overlay : `numpy.ndarray`, optional
+        If provided, overlays integer per-pixel counts (using existing counts
+        labeling logic) on top of the rendered image. Used when
+        ``general.overlay_counts_map: true`` for convergence plots.
 
     Returns
     -------
@@ -59,10 +63,10 @@ def plot_mass_map(data, scaled_boundaries, true_boundaries, config, output_name=
     # Dispatch to coordinate-system specific renderer based on config
     coord_system = config.get("coordinate_system", "radec").lower()
     if coord_system == "radec":
-        return _plot_radec(data, scaled_boundaries, true_boundaries, config, output_name, return_handles, map_category)
-    return _plot_pixel(data, scaled_boundaries, true_boundaries, config, output_name, return_handles, map_category)
+        return _plot_radec(data, scaled_boundaries, true_boundaries, config, output_name, return_handles, map_category, counts_overlay)
+    return _plot_pixel(data, scaled_boundaries, true_boundaries, config, output_name, return_handles, map_category, counts_overlay)
 
-def _plot_pixel(data, scaled_boundaries, true_boundaries, config, output_name, return_handles, map_category):
+def _plot_pixel(data, scaled_boundaries, true_boundaries, config, output_name, return_handles, map_category, counts_overlay):
     """Render pixel-coordinate plot with overlays and colorbar."""
     # Create figure/axes and apply local styling (no global rc changes)
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=config.get("figsize", (12, 8)))
@@ -103,37 +107,11 @@ def _plot_pixel(data, scaled_boundaries, true_boundaries, config, output_name, r
         px, py = peaks_to_plot_coords(X, Y, data, scaled_boundaries, axis_reference)
         ax.scatter(px, py, s=100, facecolors="none", edgecolors="g", linewidth=1.5)
 
-    # For counts maps: overlay integer count labels at pixel centers
-    if str(map_category).lower() == "counts":
-        height, width = data.shape
-        # Compute x, y centers in plotting coordinates based on axis reference
-        if axis_reference == "map":
-            x_centers = [j + 0.5 for j in range(width)]
-            y_centers = [i + 0.5 for i in range(height)]
-        else:
-            x_min = scaled_boundaries["coord1_min"]
-            x_max = scaled_boundaries["coord1_max"]
-            y_min = scaled_boundaries["coord2_min"]
-            y_max = scaled_boundaries["coord2_max"]
-            x_centers = [x_min + (j + 0.5) * (x_max - x_min) / width for j in range(width)]
-            y_centers = [y_min + (i + 0.5) * (y_max - y_min) / height for i in range(height)]
-
-        count_fontsize = max(6, int(fontsize * 0.6))
-        outline = [patheffects.withStroke(linewidth=1.8, foreground="black")]
-        for i in range(height):
-            for j in range(width):
-                val = data[i, j]
-                label = f"{int(round(val))}"
-                ax.text(
-                    x_centers[j],
-                    y_centers[i],
-                    label,
-                    color="white",
-                    ha="center",
-                    va="center",
-                    fontsize=count_fontsize,
-                    path_effects=outline,
-                )
+    # Overlay integer count labels at pixel centers (for counts map or overlay mode)
+    overlay_mode = str(map_category).lower() == "counts"
+    overlay_data = data if overlay_mode else counts_overlay
+    if overlay_data is not None and (overlay_mode or counts_overlay is not None):
+        _overlay_counts_text_pixel(ax, overlay_data, scaled_boundaries, axis_reference, fontsize)
 
     # Labels, title, optional grid
     configure_labels(ax, config, axis_reference=axis_reference, coord_system_type="pixel", fontsize=fontsize)
@@ -155,7 +133,40 @@ def _plot_pixel(data, scaled_boundaries, true_boundaries, config, output_name, r
     plt.close(fig)
     return None
 
-def _plot_radec(data, scaled_boundaries, true_boundaries, config, output_name, return_handles, map_category):
+def _overlay_counts_text_pixel(ax, data, scaled_boundaries, axis_reference, base_fontsize):
+    """Draw integer count labels at pixel centers for pixel-coordinate plots."""
+    height, width = data.shape
+    axis_reference = str(axis_reference or "catalog").lower()
+    # Compute x, y centers in plotting coordinates based on axis reference
+    if axis_reference == "map":
+        x_centers = [j + 0.5 for j in range(width)]
+        y_centers = [i + 0.5 for i in range(height)]
+    else:
+        x_min = scaled_boundaries["coord1_min"]
+        x_max = scaled_boundaries["coord1_max"]
+        y_min = scaled_boundaries["coord2_min"]
+        y_max = scaled_boundaries["coord2_max"]
+        x_centers = [x_min + (j + 0.5) * (x_max - x_min) / width for j in range(width)]
+        y_centers = [y_min + (i + 0.5) * (y_max - y_min) / height for i in range(height)]
+
+    count_fontsize = max(6, int(base_fontsize * 0.6))
+    outline = [patheffects.withStroke(linewidth=1.8, foreground="black")]
+    for i in range(height):
+        for j in range(width):
+            val = data[i, j]
+            label = f"{int(round(val))}"
+            ax.text(
+                x_centers[j],
+                y_centers[i],
+                label,
+                color="white",
+                ha="center",
+                va="center",
+                fontsize=count_fontsize,
+                path_effects=outline,
+            )
+
+def _plot_radec(data, scaled_boundaries, true_boundaries, config, output_name, return_handles, map_category, counts_overlay):
     """Render RA/Dec plot with astronomical orientation and ticks."""
     # Create figure/axes and apply local styling (no global rc changes)
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=config.get("figsize", (12, 8)))
@@ -198,31 +209,11 @@ def _plot_radec(data, scaled_boundaries, true_boundaries, config, output_name, r
         ]
         ax.scatter(ra_peaks, dec_peaks, s=100, facecolors="none", edgecolors="g", linewidth=1.5)
 
-    # For counts maps: overlay integer count labels at pixel centers
-    if str(map_category).lower() == "counts":
-        height, width = data.shape
-        x_min = scaled_boundaries["coord1_min"]
-        x_max = scaled_boundaries["coord1_max"]
-        y_min = scaled_boundaries["coord2_min"]
-        y_max = scaled_boundaries["coord2_max"]
-        x_centers = [x_min + (j + 0.5) * (x_max - x_min) / width for j in range(width)]
-        y_centers = [y_min + (i + 0.5) * (y_max - y_min) / height for i in range(height)]
-        count_fontsize = max(6, int(fontsize * 0.6))
-        outline = [patheffects.withStroke(linewidth=1.8, foreground="black")]
-        for i in range(height):
-            for j in range(width):
-                val = data[i, j]
-                label = f"{int(round(val))}"
-                ax.text(
-                    x_centers[j],
-                    y_centers[i],
-                    label,
-                    color="white",
-                    ha="center",
-                    va="center",
-                    fontsize=count_fontsize,
-                    path_effects=outline,
-                )
+    # Overlay integer count labels at pixel centers (for counts map or overlay mode)
+    overlay_mode = str(map_category).lower() == "counts"
+    overlay_data = data if overlay_mode else counts_overlay
+    if overlay_data is not None and (overlay_mode or counts_overlay is not None):
+        _overlay_counts_text_radec(ax, overlay_data, scaled_boundaries, fontsize)
 
     # Optional: mark cluster center in RA/Dec coordinates
     ra_center, dec_center = convert_center_to_scaled(config.get("cluster_center"), scaled_boundaries, true_boundaries, coord_system_type="radec")
@@ -267,6 +258,32 @@ def _plot_radec(data, scaled_boundaries, true_boundaries, config, output_name, r
         return fig, ax, im
     plt.close(fig)
     return None
+
+def _overlay_counts_text_radec(ax, data, scaled_boundaries, base_fontsize):
+    """Draw integer count labels at pixel centers for RA/Dec plots (scaled coordinates)."""
+    height, width = data.shape
+    x_min = scaled_boundaries["coord1_min"]
+    x_max = scaled_boundaries["coord1_max"]
+    y_min = scaled_boundaries["coord2_min"]
+    y_max = scaled_boundaries["coord2_max"]
+    x_centers = [x_min + (j + 0.5) * (x_max - x_min) / width for j in range(width)]
+    y_centers = [y_min + (i + 0.5) * (y_max - y_min) / height for i in range(height)]
+    count_fontsize = max(6, int(base_fontsize * 0.6))
+    outline = [patheffects.withStroke(linewidth=1.8, foreground="black")]
+    for i in range(height):
+        for j in range(width):
+            val = data[i, j]
+            label = f"{int(round(val))}"
+            ax.text(
+                x_centers[j],
+                y_centers[i],
+                label,
+                color="white",
+                ha="center",
+                va="center",
+                fontsize=count_fontsize,
+                path_effects=outline,
+            )
 
 
 def plot_snr_map(data, scaled_boundaries, true_boundaries, config, output_name=None, return_handles=False):

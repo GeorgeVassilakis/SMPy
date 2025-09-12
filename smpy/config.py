@@ -251,6 +251,11 @@ class Config:
         if 'create_counts_map' in kwargs:
             self._ensure_section('general')
             self.config['general']['create_counts_map'] = kwargs['create_counts_map']
+
+        # Handle overlay_counts_map
+        if 'overlay_counts_map' in kwargs:
+            self._ensure_section('general')
+            self.config['general']['overlay_counts_map'] = kwargs['overlay_counts_map']
         
         # Handle save_fits
         if 'save_fits' in kwargs:
@@ -494,4 +499,3 @@ class Config:
         with open(path, 'w') as f:
             yaml.dump(self.config, f, default_flow_style=False, sort_keys=False)
         print(f"Configuration saved to: {path}")
-
