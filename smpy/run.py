@@ -272,7 +272,7 @@ def run(config_input):
     # Create SNR map if requested
     if config['general'].get('create_snr', False):
         # Pass full nested config to SNR function
-        snr_map = create_snr_map(config, maps, scaled_boundaries, true_boundaries)
+        snr_map = create_snr_map(config, maps, scaled_boundaries, true_boundaries, counts_overlay=counts_grid)
         
         # Save SNR maps as FITS files if requested
         if config['general'].get('save_fits', False) and snr_map:

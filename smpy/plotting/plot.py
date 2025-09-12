@@ -286,7 +286,7 @@ def _overlay_counts_text_radec(ax, data, scaled_boundaries, base_fontsize):
             )
 
 
-def plot_snr_map(data, scaled_boundaries, true_boundaries, config, output_name=None, return_handles=False):
+def plot_snr_map(data, scaled_boundaries, true_boundaries, config, output_name=None, return_handles=False, counts_overlay=None):
     """Plot an SNR map with styling and overlays.
 
     Parameters
@@ -301,5 +301,6 @@ def plot_snr_map(data, scaled_boundaries, true_boundaries, config, output_name=N
         config=config,
         output_name=output_name,
         return_handles=return_handles,
-        map_category="snr"
+        map_category="snr",
+        counts_overlay=counts_overlay,
     )

@@ -82,7 +82,7 @@ def perform_mapping(grid_list, config, mapping_method='kaiser_squires'):
     
     return kappa_e_list, kappa_b_list
 
-def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
+def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries, counts_overlay=None):
     """Create signal-to-noise maps from convergence maps.
 
     Generate noise realizations through spatial or orientation shuffling
@@ -199,7 +199,9 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries):
             os.makedirs(method_output_dir, exist_ok=True)
             
             output_name = f"{config['general']['output_directory']}/{mapping_method}/{config['general']['output_base_name']}_{mapping_method}_snr_{mode.lower()}_mode.png"
-            plot.plot_snr_map(sn_maps[mode], scaled_boundaries, true_boundaries, plot_config, output_name)
+            # Pass counts overlay if enabled and available
+            overlay = counts_overlay if config['general'].get('overlay_counts_map', False) else None
+            plot.plot_snr_map(sn_maps[mode], scaled_boundaries, true_boundaries, plot_config, output_name, counts_overlay=overlay)
     
     # End timing
     end_time = time.time()
