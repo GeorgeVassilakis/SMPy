@@ -86,7 +86,10 @@ class RADecSystem(CoordinateSystem):
         dec_idx = np.digitize(data_df['coord2_scaled'], dec_bins) - 1
         
         # Determine whether to accumulate counts based on config
-        accumulate_counts = bool(config.get('general', {}).get('create_counts_map', False))
+        accumulate_counts = bool(
+            config.get('general', {}).get('create_counts_map', False)
+            or config.get('general', {}).get('overlay_counts_map', False)
+        )
         return self._create_shear_grid(
             data_df,
             ra_idx,

@@ -60,7 +60,7 @@ class MassMapper(ABC):
             B-mode mass map.
         """
         
-    def run(self, g1_grid, g2_grid, scaled_boundaries, true_boundaries):
+    def run(self, g1_grid, g2_grid, scaled_boundaries, true_boundaries, counts_overlay=None):
         """Run complete mass mapping pipeline.
 
         Execute the mass mapping algorithm and handle output generation
@@ -107,7 +107,16 @@ class MassMapper(ABC):
             plot_config['plot_title'] = f"{self.plotting_config['plot_title']} ({mode}-mode)"
             output_name = (f"{self.general_config['output_directory']}/{self.name}/"
                          f"{self.general_config['output_base_name']}_{self.name}_{mode.lower()}_mode.png")
-            plot.plot_mass_map(plot_map, scaled_boundaries, true_boundaries, plot_config, output_name)
+            # Pass counts overlay only when enabled and data provided
+            counts_to_overlay = counts_overlay if self.general_config.get('overlay_counts_map', False) else None
+            plot.plot_mass_map(
+                plot_map,
+                scaled_boundaries,
+                true_boundaries,
+                plot_config,
+                output_name,
+                counts_overlay=counts_to_overlay,
+            )
             
         return maps
         
