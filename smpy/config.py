@@ -301,6 +301,37 @@ class Config:
             self._ensure_section('methods', 'ks_plus')
             self.config['methods']['ks_plus']['reduced_shear_iterations'] = kwargs['reduced_shear_iterations']
         
+        # KS+ wavelet constraints and schedule options
+        if 'use_wavelet_constraints' in kwargs:
+            self._ensure_section('methods')
+            self._ensure_section('methods', 'ks_plus')
+            self.config['methods']['ks_plus']['use_wavelet_constraints'] = kwargs['use_wavelet_constraints']
+
+        if 'constrain_B' in kwargs:
+            self._ensure_section('methods')
+            self._ensure_section('methods', 'ks_plus')
+            self.config['methods']['ks_plus']['constrain_B'] = kwargs['constrain_B']
+
+        if 'threshold_schedule' in kwargs:
+            self._ensure_section('methods')
+            self._ensure_section('methods', 'ks_plus')
+            self.config['methods']['ks_plus']['threshold_schedule'] = kwargs['threshold_schedule']
+
+        if 'threshold_tau' in kwargs:
+            self._ensure_section('methods')
+            self._ensure_section('methods', 'ks_plus')
+            self.config['methods']['ks_plus']['threshold_tau'] = kwargs['threshold_tau']
+
+        # note: wavelet constraint stability parameters are internal defaults (not exposed)
+
+        # KS+ other advanced options
+        if 'extension_size' in kwargs:
+            self._ensure_section('methods')
+            self._ensure_section('methods', 'ks_plus')
+            self.config['methods']['ks_plus']['extension_size'] = kwargs['extension_size']
+
+        # note: min_threshold_fraction is deprecated and not supported
+        
         # Handle KS+ wavelet settings
         if 'wavelet' in kwargs and isinstance(kwargs['wavelet'], dict):
             self._ensure_section('methods')

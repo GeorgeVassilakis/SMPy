@@ -253,10 +253,6 @@ Under ``methods.ks_plus``:
      - integer
      - 3
      - Number of iterations for reduced shear correction
-   * - min_threshold_fraction
-     - float
-     - 0.0
-     - Minimum threshold for DCT coefficients
    * - extension_size
      - string/int
      - "double"
@@ -265,6 +261,18 @@ Under ``methods.ks_plus``:
      - boolean
      - true
      - Apply wavelet-based power spectrum constraints
+   * - constrain_B
+     - boolean
+     - false
+     - Whether to apply wavelet power matching to B-modes as well (KS+ leaves B free by default)
+   * - threshold_schedule
+     - string
+     - "exp"
+     - DCT threshold schedule; currently only 'exp' (exponential decay) is supported
+   * - threshold_tau
+     - float/null
+     - null
+     - Decay constant in iterations for the exponential schedule. If null, defaults to one quarter of ``inpainting_iterations``.
    * - nscales
      - integer/null
      - null
