@@ -270,14 +270,9 @@ class KSPlusMapper(MassMapper):
         # Get algorithm parameters
         max_iterations = config.get('inpainting_iterations', 100)
         
-        # Calculate initial threshold
+        # Calculate initial threshold max (min fraction deprecated)
         dct_coeffs = fft.dctn(kappa_e, norm='ortho')
         lambda_max = np.max(np.abs(dct_coeffs))
-        min_threshold_fraction = config.get('min_threshold_fraction', 0.0)
-        if min_threshold_fraction > 0:
-            lambda_min = lambda_max * min_threshold_fraction
-        else:
-            lambda_min = 0.0
         
         for i in range(max_iterations):
             # DCT thresholding
@@ -285,7 +280,7 @@ class KSPlusMapper(MassMapper):
             kappa_b_dct = fft.dctn(np.imag(kappa_complex), norm='ortho')
             
             # Calculate threshold for current iteration
-            lambda_i = self._update_threshold(i, max_iterations, lambda_min, lambda_max)
+            lambda_i = self._update_threshold(i, max_iterations, 0.0, lambda_max)
             
             # Apply threshold
             kappa_e_dct[np.abs(kappa_e_dct) < lambda_i] = 0
@@ -297,8 +292,11 @@ class KSPlusMapper(MassMapper):
             
             # Wavelet-based power spectrum constraints
             if config.get('use_wavelet_constraints', True):
+                # Apply power matching to E-mode only by default. KS+ leaves B free.
                 kappa_e = self._apply_wavelet_constraints(kappa_e, mask)
-                kappa_b = self._apply_wavelet_constraints(kappa_b, mask)
+                constrain_B = bool(config.get('constrain_B', False))
+                if constrain_B:
+                    kappa_b = self._apply_wavelet_constraints(kappa_b, mask)
             
             # Enforce consistency with observed data
             gamma1, gamma2 = self._kappa_to_gamma(kappa_e, kappa_b)
@@ -492,23 +490,49 @@ class KSPlusMapper(MassMapper):
         # Decompose into wavelet coefficients
         wavelet_bands = starlet_transform_2d(kappa, nscales)
         
-        # Also decompose the mask to get proper correspondence at each scale
-        mask_bands = starlet_transform_2d(mask.astype(float), nscales)
-        
+        # Use true binary mask across scales (no wavelet of mask)
+        data_mask = mask.astype(bool)
+
+        # Stability parameters (hard-coded defaults; not exposed to YAML)
+        clip_min = 0.1
+        clip_max = 10.0
+        sigma_floor_abs = 1e-12
+        sigma_floor_rel = 1e-6
+        min_samples = 16
+
         # Process each scale except the coarsest
-        for j in range(nscales-1):
-            # Create binary mask for this scale
-            scale_mask = mask_bands[j] > 0.5
-            
-            if np.sum(~scale_mask) > 0 and np.sum(scale_mask) > 0:
-                # Calculate standard deviations
-                std_out = np.std(wavelet_bands[j][scale_mask])
-                std_in = np.std(wavelet_bands[j][~scale_mask])
-                
-                if std_in > 0:
-                    # Apply normalization factor inside the gaps
-                    scale_factor = std_out / std_in
-                    wavelet_bands[j][~scale_mask] *= scale_factor
+        for j in range(nscales - 1):
+            band = wavelet_bands[j]
+
+            # Collect observed/gap samples using the same mask at all scales
+            obs_vals = band[data_mask]
+            gap_vals = band[~data_mask]
+
+            # Require minimum sample counts for stable statistics
+            if obs_vals.size < min_samples or gap_vals.size < min_samples:
+                continue
+
+            # Compute standard deviations
+            std_obs = np.std(obs_vals)
+            std_gap = np.std(gap_vals)
+            std_band = np.std(band)
+
+            # Skip if non-finite
+            if not (np.isfinite(std_obs) and np.isfinite(std_gap) and np.isfinite(std_band)):
+                continue
+
+            # Robust floor on denominator to avoid huge ratios
+            sigma_floor = max(sigma_floor_abs, sigma_floor_rel * std_band)
+            denom = max(std_gap, sigma_floor)
+
+            # Compute and clip scale factor
+            scale = float(std_obs / denom) if denom > 0 else 1.0
+            scale = float(np.clip(scale, clip_min, clip_max))
+
+            # Apply scaling inside gaps only
+            band_gap_scaled = gap_vals * scale
+            band[~data_mask] = band_gap_scaled
+            wavelet_bands[j] = band
         
         # Reconstruct
         kappa_corrected = inverse_starlet_transform_2d(wavelet_bands)
@@ -516,7 +540,7 @@ class KSPlusMapper(MassMapper):
         return kappa_corrected
     
     def _update_threshold(self, iteration, max_iterations, lambda_min, lambda_max):
-        """Update threshold following exponential decay.
+        """Update threshold using a stable exponential schedule.
 
         Compute the DCT coefficient threshold for the current iteration
         using exponential decay from maximum to minimum values.
@@ -528,7 +552,7 @@ class KSPlusMapper(MassMapper):
         max_iterations : `int`
             Maximum number of iterations.
         lambda_min : `float`
-            Minimum threshold value (final iteration).
+            Minimum threshold value (kept for backward compatibility; not used in 'exp').
         lambda_max : `float`
             Maximum threshold value (first iteration).
 
@@ -539,10 +563,35 @@ class KSPlusMapper(MassMapper):
 
         Notes
         -----
-        The threshold decreases exponentially to gradually reduce the
-        sparsity constraint and allow finer details to emerge in the
-        reconstructed convergence field.
+        The previous schedule collapsed to zero when ``lambda_min=0`` after
+        the first iteration. We switch to ``exp`` schedule:
+            lambda_i = lambda_max * exp(-i / tau),
+        with ``tau`` configurable (default: ``max_iterations/4``).
+
+        Configuration (optional, under method config):
+        - threshold_schedule: 'exp' (default and currently only supported)
+        - threshold_tau: float, decay constant in iterations
         """
-        # Exponential threshold decrease
-        alpha = float(iteration) / max_iterations
-        return lambda_max * (lambda_min / lambda_max) ** alpha
+        schedule = 'exp'
+        cfg = self.method_config or {}
+        schedule = cfg.get('threshold_schedule', schedule)
+        if schedule != 'exp':
+            # Fallback gracefully to 'exp'
+            schedule = 'exp'
+
+        # Exponential schedule parameters
+        tau = cfg.get('threshold_tau')
+        if tau is None:
+            # default decay: a quarter of max_iterations (at least 1)
+            tau = max(1.0, float(max_iterations) / 4.0)
+        else:
+            try:
+                tau = float(tau)
+                if not np.isfinite(tau) or tau <= 0:
+                    tau = max(1.0, float(max_iterations) / 4.0)
+            except Exception:
+                tau = max(1.0, float(max_iterations) / 4.0)
+
+        # Compute threshold with exponential decay
+        lam = float(lambda_max) * float(np.exp(-float(iteration) / tau))
+        return lam

@@ -60,9 +60,13 @@ methods:
     nscales: null  # Desired number of starlet scales; clipped to a safe maximum if set
     
     # Advanced settings
-    min_threshold_fraction: 0.0    # Minimum threshold for DCT coefficients as a fraction of the maximum coefficient
     extension_size: 'double'    # Size of field extension to reduce border effects ('double' or number of pixels)
     use_wavelet_constraints: true # Apply wavelet-based power spectrum constraints
+    constrain_B: false            # By default, KS+ leaves B-modes unconstrained
+
+    # DCT threshold schedule (stable exponential by default)
+    threshold_schedule: 'exp'     # Only 'exp' is supported currently
+    threshold_tau: null           # Decay constant in iterations (default: max_iter/4 when null)
     
     smoothing:
       type: 'gaussian'  # 'gaussian' or null
