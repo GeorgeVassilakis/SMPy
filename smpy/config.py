@@ -37,6 +37,7 @@ class Config:
       parameters
 
     Configuration access follows the fail-fast principle:
+
     - Required parameters use direct access:
       ``config['section']['parameter']``
     - Optional parameters use ``.get()``:

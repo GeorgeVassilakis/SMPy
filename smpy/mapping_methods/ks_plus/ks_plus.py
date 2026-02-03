@@ -27,18 +27,17 @@ class KSPlusMapper(MassMapper):
     3. Iteratively correcting for reduced shear approximation
     4. Preserving proper statistical properties using wavelet constraints
 
-        Notes
-        -----
-        The KS+ algorithm implements the iterative inpainting scheme described
-        in the literature, combining sparsity priors in the DCT domain with
-        wavelet-based power spectrum preservation for robust mass map
-        reconstruction in the presence of missing data and systematic effects.
-        
-        Mask semantics:
-        The binary mask encodes data availability only. Pixels are marked as
-        data (1) if measurements exist and are valid; gaps (0) are used solely
-        where data are missing or invalid. Zero shear values are valid data and
-        must not be masked.
+    Notes
+    -----
+    The KS+ algorithm implements the iterative inpainting scheme described
+    in the literature, combining sparsity priors in the DCT domain with
+    wavelet-based power spectrum preservation for robust mass map
+    reconstruction in the presence of missing data and systematic effects.
+
+    The binary mask encodes data availability only. Pixels are marked as
+    data (1) if measurements exist and are valid; gaps (0) are used solely
+    where data are missing or invalid. Zero shear values are valid data and
+    must not be masked.
     """
     
     @property
