@@ -305,24 +305,25 @@ def run(config_input):
 
     # Create and save counts map PNG if requested, using counts from gridding
     if config['general'].get('create_counts_map', False) and counts_grid is not None:
-        from smpy.plotting import plot as plot_mod
-        plot_cfg = config.get('plotting', {}).copy()
-        plot_cfg['coordinate_system'] = config['general'].get('coordinate_system', 'radec')
-        if plot_cfg['coordinate_system'] == 'pixel':
-            plot_cfg['axis_reference'] = config['general']['pixel'].get('pixel_axis_reference', 'catalog')
-        # Set title and ensure linear scaling for counts
-        plot_cfg['plot_title'] = f"Counts Map"
-        sc = (plot_cfg.get('scaling') or {}).copy()
-        sc['type'] = 'linear'
-        sc.pop('percentile', None)
-        plot_cfg['scaling'] = sc
-        method = config['general']['method']
-        method_output_dir = f"{config['general']['output_directory']}/{method}"
-        os.makedirs(method_output_dir, exist_ok=True)
-        output_name = f"{method_output_dir}/{config['general']['output_base_name']}_{method}_counts.png"
-        # Use mass_map plotter with counts category to disable peak overlays
-        plot_mod.plot_mass_map(counts_grid, scaled_boundaries, true_boundaries, plot_cfg, output_name, map_category="counts")
         result['counts_map'] = counts_grid
+        if config['general'].get('save_plots', True):
+            from smpy.plotting import plot as plot_mod
+            plot_cfg = config.get('plotting', {}).copy()
+            plot_cfg['coordinate_system'] = config['general'].get('coordinate_system', 'radec')
+            if plot_cfg['coordinate_system'] == 'pixel':
+                plot_cfg['axis_reference'] = config['general']['pixel'].get('pixel_axis_reference', 'catalog')
+            # Set title and ensure linear scaling for counts
+            plot_cfg['plot_title'] = f"Counts Map"
+            sc = (plot_cfg.get('scaling') or {}).copy()
+            sc['type'] = 'linear'
+            sc.pop('percentile', None)
+            plot_cfg['scaling'] = sc
+            method = config['general']['method']
+            method_output_dir = f"{config['general']['output_directory']}/{method}"
+            os.makedirs(method_output_dir, exist_ok=True)
+            output_name = f"{method_output_dir}/{config['general']['output_base_name']}_{method}_counts.png"
+            # Use mass_map plotter with counts category to disable peak overlays
+            plot_mod.plot_mass_map(counts_grid, scaled_boundaries, true_boundaries, plot_cfg, output_name, map_category="counts")
     
     return result
 

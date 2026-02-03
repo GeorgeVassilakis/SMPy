@@ -2,7 +2,13 @@
 
 import os
 import sys
+from pathlib import Path
 sys.path.insert(0, os.path.abspath('../..'))  # Path to SMPy root
+
+# Ensure Matplotlib can write its cache during notebook execution.
+_mplconfigdir = Path(__file__).resolve().parent.parent / "_build" / "mplconfig"
+_mplconfigdir.mkdir(parents=True, exist_ok=True)
+os.environ.setdefault("MPLCONFIGDIR", str(_mplconfigdir))
 
 # -- Project information -----------------------------------------------------
 
@@ -20,6 +26,7 @@ extensions = [
     'sphinx.ext.intersphinx',   # Link to other projects' documentation
     'sphinx.ext.autosummary',   # Generate summary tables
     'sphinx_copybutton',        # Add copy button to code blocks
+    'nbsphinx',                 # Render Jupyter notebooks as embedded docs pages
 ]
 
 # Napoleon settings for NumPy style docstrings
@@ -68,6 +75,13 @@ html_static_path = ['_static']
 copybutton_prompt_text = r'>>> |\.\.\. |\$ '
 copybutton_prompt_is_regexp = True
 copybutton_only_copy_prompt_lines = False
+
+# -- nbsphinx configuration --------------------------------------------------
+
+# Execute notebooks during the docs build so tutorial pages always reflect
+# current behavior.
+nbsphinx_execute = "always"
+nbsphinx_timeout = 600
 
 # -- Intersphinx configuration -----------------------------------------------
 

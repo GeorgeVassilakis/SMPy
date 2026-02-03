@@ -34,6 +34,7 @@ general:
   mode: ['E']  # ['E'], ['B'], or ['E', 'B']
   print_timing: false  # Whether to print timing information for map creation
   save_fits: false  # Whether to save maps as FITS files
+  save_plots: true  # Whether to save mass and SNR plots as PNG files
 
 #------Method Settings------#
 methods:

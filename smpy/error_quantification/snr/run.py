@@ -185,23 +185,24 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries, 
         sn_maps['B'] = convergence_b / np.sqrt(variance_map_b)
     
     # Plot SNR maps
-    for mode in config['general']['mode']:
-        if mode in sn_maps:
-            plot_config = config['plotting'].copy()
-            # Ensure plotting uses the correct coordinate system
-            plot_config['coordinate_system'] = config['general'].get('coordinate_system', 'radec')
-            if plot_config['coordinate_system'] == 'pixel':
-                plot_config['axis_reference'] = config['general']['pixel'].get('pixel_axis_reference', 'catalog')
-            plot_config['plot_title'] = f'{config["snr"]["plot_title"]} ({mode}-mode)'
-            
-            # Create method-specific output directory
-            method_output_dir = f"{config['general']['output_directory']}/{mapping_method}"
-            os.makedirs(method_output_dir, exist_ok=True)
-            
-            output_name = f"{config['general']['output_directory']}/{mapping_method}/{config['general']['output_base_name']}_{mapping_method}_snr_{mode.lower()}_mode.png"
-            # Pass counts overlay if enabled and available
-            overlay = counts_overlay if config['general'].get('overlay_counts_map', False) else None
-            plot.plot_snr_map(sn_maps[mode], scaled_boundaries, true_boundaries, plot_config, output_name, counts_overlay=overlay)
+    if config['general'].get('save_plots', True):
+        for mode in config['general']['mode']:
+            if mode in sn_maps:
+                plot_config = config['plotting'].copy()
+                # Ensure plotting uses the correct coordinate system
+                plot_config['coordinate_system'] = config['general'].get('coordinate_system', 'radec')
+                if plot_config['coordinate_system'] == 'pixel':
+                    plot_config['axis_reference'] = config['general']['pixel'].get('pixel_axis_reference', 'catalog')
+                plot_config['plot_title'] = f'{config["snr"]["plot_title"]} ({mode}-mode)'
+
+                # Create method-specific output directory
+                method_output_dir = f"{config['general']['output_directory']}/{mapping_method}"
+                os.makedirs(method_output_dir, exist_ok=True)
+
+                output_name = f"{config['general']['output_directory']}/{mapping_method}/{config['general']['output_base_name']}_{mapping_method}_snr_{mode.lower()}_mode.png"
+                # Pass counts overlay if enabled and available
+                overlay = counts_overlay if config['general'].get('overlay_counts_map', False) else None
+                plot.plot_snr_map(sn_maps[mode], scaled_boundaries, true_boundaries, plot_config, output_name, counts_overlay=overlay)
     
     # End timing
     end_time = time.time()

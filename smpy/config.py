@@ -261,6 +261,11 @@ class Config:
         if 'save_fits' in kwargs:
             self._ensure_section('general')
             self.config['general']['save_fits'] = kwargs['save_fits']
+
+        # Handle save_plots
+        if 'save_plots' in kwargs:
+            self._ensure_section('general')
+            self.config['general']['save_plots'] = kwargs['save_plots']
         
         # Handle mode
         if 'mode' in kwargs:

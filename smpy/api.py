@@ -23,6 +23,7 @@ def map_mass(
     create_counts_map=False,
     overlay_counts_map=False,
     save_fits=False,
+    save_plots=True,
     print_timing=False,
     smoothing=None,
     **kwargs
@@ -67,6 +68,8 @@ def map_mass(
         Whether to overlay per-pixel counts as text on the convergence map plots.
     save_fits : `bool`, optional
         Whether to save maps as FITS files.
+    save_plots : `bool`, optional
+        Whether to save mass and SNR plots as PNG files.
     print_timing : `bool`, optional
         Whether to print timing information.
     smoothing : `float`, optional
@@ -128,6 +131,7 @@ def map_mass(
         create_counts_map=create_counts_map,
         overlay_counts_map=overlay_counts_map,
         save_fits=save_fits,
+        save_plots=save_plots,
         print_timing=print_timing,
         smoothing=smoothing,
         **kwargs

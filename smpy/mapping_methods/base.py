@@ -90,34 +90,35 @@ class MassMapper(ABC):
             'E': map_e,
             'B': map_b
         }
-        
-        # Create method-specific output directory
-        method_output_dir = f"{self.general_config['output_directory']}/{self.name}"
-        os.makedirs(method_output_dir, exist_ok=True)
-        
-        # Plot maps
-        for mode in self.general_config['mode']:
-            plot_map = maps[mode]
-            plot_config = self.plotting_config.copy()
-            # Ensure plotting knows which coordinate system to use
-            plot_config['coordinate_system'] = self.general_config.get('coordinate_system', 'radec')
-            if plot_config['coordinate_system'] == 'pixel':
-                # Surface the axis reference choice from config when in pixel mode
-                plot_config['axis_reference'] = self.config['general']['pixel'].get('pixel_axis_reference', 'catalog')
-            plot_config['plot_title'] = f"{self.plotting_config['plot_title']} ({mode}-mode)"
-            output_name = (f"{self.general_config['output_directory']}/{self.name}/"
-                         f"{self.general_config['output_base_name']}_{self.name}_{mode.lower()}_mode.png")
-            # Pass counts overlay only when enabled and data provided
-            counts_to_overlay = counts_overlay if self.general_config.get('overlay_counts_map', False) else None
-            plot.plot_mass_map(
-                plot_map,
-                scaled_boundaries,
-                true_boundaries,
-                plot_config,
-                output_name,
-                counts_overlay=counts_to_overlay,
-            )
-            
+
+        if self.general_config.get('save_plots', True):
+            # Create method-specific output directory
+            method_output_dir = f"{self.general_config['output_directory']}/{self.name}"
+            os.makedirs(method_output_dir, exist_ok=True)
+
+            # Plot maps
+            for mode in self.general_config['mode']:
+                plot_map = maps[mode]
+                plot_config = self.plotting_config.copy()
+                # Ensure plotting knows which coordinate system to use
+                plot_config['coordinate_system'] = self.general_config.get('coordinate_system', 'radec')
+                if plot_config['coordinate_system'] == 'pixel':
+                    # Surface the axis reference choice from config when in pixel mode
+                    plot_config['axis_reference'] = self.config['general']['pixel'].get('pixel_axis_reference', 'catalog')
+                plot_config['plot_title'] = f"{self.plotting_config['plot_title']} ({mode}-mode)"
+                output_name = (f"{self.general_config['output_directory']}/{self.name}/"
+                             f"{self.general_config['output_base_name']}_{self.name}_{mode.lower()}_mode.png")
+                # Pass counts overlay only when enabled and data provided
+                counts_to_overlay = counts_overlay if self.general_config.get('overlay_counts_map', False) else None
+                plot.plot_mass_map(
+                    plot_map,
+                    scaled_boundaries,
+                    true_boundaries,
+                    plot_config,
+                    output_name,
+                    counts_overlay=counts_to_overlay,
+                )
+
         return maps
         
     @property
