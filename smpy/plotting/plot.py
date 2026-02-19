@@ -22,6 +22,7 @@ from smpy.plotting.utils import (
     configure_labels,
     convert_center_to_scaled,
     create_normalization,
+    overlay_xray_contours,
     peaks_to_plot_coords,
     propose_ticks,
     set_ticks,
@@ -42,7 +43,8 @@ def plot_mass_map(data, scaled_boundaries, true_boundaries, config, output_name=
         True coordinate boundaries for tick labels.
     config : `dict`
         Plot configuration settings including figsize, cmap, scaling,
-        'coordinate_system', and optional 'axis_reference' (pixel only).
+        'coordinate_system', optional 'axis_reference' (pixel only), and
+        optional x-ray contour settings under ``xray_contours``.
     output_name : `str`, optional
         Path for saving the plot file.
     return_handles : `bool`, optional
@@ -106,6 +108,18 @@ def _plot_pixel(data, scaled_boundaries, true_boundaries, config, output_name, r
         # Convert peak indices to appropriate plotting coordinates
         px, py = peaks_to_plot_coords(X, Y, data, scaled_boundaries, axis_reference)
         ax.scatter(px, py, s=100, facecolors="none", edgecolors="g", linewidth=1.5)
+
+    # Optional: overlay DS9 x-ray contours for convergence and/or SNR maps
+    overlay_xray_contours(
+        ax=ax,
+        data_shape=data.shape,
+        scaled_boundaries=scaled_boundaries,
+        true_boundaries=true_boundaries,
+        config=config,
+        map_category=map_category,
+        coord_system_type="pixel",
+        axis_reference=axis_reference,
+    )
 
     # Overlay integer count labels at pixel centers (for counts map or overlay mode)
     overlay_mode = str(map_category).lower() == "counts"
@@ -208,6 +222,17 @@ def _plot_radec(data, scaled_boundaries, true_boundaries, config, output_name, r
             for y in Y
         ]
         ax.scatter(ra_peaks, dec_peaks, s=100, facecolors="none", edgecolors="g", linewidth=1.5)
+
+    # Optional: overlay DS9 x-ray contours for convergence and/or SNR maps
+    overlay_xray_contours(
+        ax=ax,
+        data_shape=data.shape,
+        scaled_boundaries=scaled_boundaries,
+        true_boundaries=true_boundaries,
+        config=config,
+        map_category=map_category,
+        coord_system_type="radec",
+    )
 
     # Overlay integer count labels at pixel centers (for counts map or overlay mode)
     overlay_mode = str(map_category).lower() == "counts"

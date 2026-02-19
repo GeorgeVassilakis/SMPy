@@ -326,3 +326,282 @@ def add_colorbar(ax, im, size="5%", pad=0.07, tick_fontsize=None):
         cb.ax.tick_params(labelsize=tick_fontsize)
 
 
+def read_ds9_ctr(ctr_path):
+    """Read DS9 contour coordinates from a ``.ctr`` text file.
+
+    Parameters
+    ----------
+    ctr_path : `str`
+        Path to the contour file exported from DS9.
+
+    Returns
+    -------
+    contours : `list` [`numpy.ndarray`]
+        List of contours. Each contour is an ``(N, 2)`` array with columns
+        ``x`` and ``y``.
+    coord_type : `str`
+        Coordinate type declared in the file. Supported values are
+        ``'fk5'``, ``'wcs'``, ``'image'``, and ``'physical'``. Defaults to
+        ``'fk5'`` if not specified in the file.
+    """
+    contours = []
+    current_points = []
+    coord_type = None
+
+    with open(ctr_path, "r", encoding="utf-8") as handle:
+        for raw_line in handle:
+            line = raw_line.strip()
+            if (not line) or line.startswith("#"):
+                continue
+
+            line_lower = line.lower()
+            if line_lower in {"fk5", "wcs", "image", "physical"}:
+                coord_type = line_lower
+                continue
+
+            if line_lower == "line":
+                if current_points:
+                    contours.append(np.asarray(current_points, dtype=float))
+                    current_points = []
+                continue
+
+            try:
+                values = [float(value) for value in line.replace(",", " ").split()]
+            except ValueError:
+                continue
+
+            if len(values) >= 2:
+                current_points.append((values[0], values[1]))
+
+    if current_points:
+        contours.append(np.asarray(current_points, dtype=float))
+
+    if coord_type is None:
+        coord_type = "fk5"
+
+    return contours, coord_type
+
+
+def overlay_xray_contours(
+    ax,
+    data_shape,
+    scaled_boundaries,
+    true_boundaries,
+    config,
+    map_category,
+    coord_system_type,
+    axis_reference=None,
+):
+    """Overlay DS9 x-ray contours onto a map axis if enabled.
+
+    Parameters
+    ----------
+    ax : `matplotlib.axes.Axes`
+        Target axes.
+    data_shape : `tuple` [`int`, `int`]
+        Map shape as ``(height, width)``.
+    scaled_boundaries : `dict`
+        Scaled coordinate boundaries used for plotting extents.
+    true_boundaries : `dict`
+        True coordinate boundaries (needed for FK5 conversion).
+    config : `dict`
+        Plot configuration dictionary.
+    map_category : `str`
+        Map type for routing toggle logic (``'convergence'`` or ``'snr'``).
+    coord_system_type : `str`
+        Coordinate system used by the plot (``'radec'`` or ``'pixel'``).
+    axis_reference : `str`, optional
+        Pixel-axis reference (``'catalog'`` or ``'map'``) for pixel plots.
+    """
+    xray_cfg = config.get("xray_contours")
+    if not isinstance(xray_cfg, dict):
+        return
+
+    category = str(map_category or "").lower()
+    if category == "convergence":
+        enabled = bool(xray_cfg.get("show_on_convergence", False))
+    elif category == "snr":
+        enabled = bool(xray_cfg.get("show_on_snr", False))
+    else:
+        enabled = False
+
+    if not enabled:
+        return
+
+    ctr_file = xray_cfg.get("ctr_file")
+    if not ctr_file:
+        return
+
+    try:
+        contours, coord_type = read_ds9_ctr(ctr_file)
+    except OSError as exc:
+        warnings.warn(
+            f"Unable to read x-ray contour file '{ctr_file}': {exc}",
+            RuntimeWarning,
+        )
+        return
+
+    transformed = _transform_contours_for_plot(
+        contours=contours,
+        coord_type=coord_type,
+        data_shape=data_shape,
+        scaled_boundaries=scaled_boundaries,
+        true_boundaries=true_boundaries,
+        coord_system_type=coord_system_type,
+        axis_reference=axis_reference,
+    )
+
+    if not transformed:
+        return
+
+    color = str(xray_cfg.get("color", "cyan"))
+
+    try:
+        linewidth = float(xray_cfg.get("linewidth", 0.8))
+    except (TypeError, ValueError):
+        warnings.warn(
+            "Invalid plotting.xray_contours.linewidth; using 0.8.",
+            RuntimeWarning,
+        )
+        linewidth = 0.8
+    if linewidth <= 0:
+        warnings.warn(
+            "Non-positive plotting.xray_contours.linewidth; using 0.8.",
+            RuntimeWarning,
+        )
+        linewidth = 0.8
+
+    try:
+        alpha = float(xray_cfg.get("alpha", 0.7))
+    except (TypeError, ValueError):
+        warnings.warn(
+            "Invalid plotting.xray_contours.alpha; using 0.7.",
+            RuntimeWarning,
+        )
+        alpha = 0.7
+    alpha = float(np.clip(alpha, 0.0, 1.0))
+
+    for contour in transformed:
+        if contour.shape[0] < 2:
+            continue
+        ax.plot(
+            contour[:, 0],
+            contour[:, 1],
+            color=color,
+            linewidth=linewidth,
+            alpha=alpha,
+        )
+
+
+def _transform_contours_for_plot(
+    contours,
+    coord_type,
+    data_shape,
+    scaled_boundaries,
+    true_boundaries,
+    coord_system_type,
+    axis_reference,
+):
+    """Convert contour coordinates to the current plot coordinate system."""
+    if not contours:
+        return []
+
+    coord_type = str(coord_type or "").lower()
+    if coord_type in {"fk5", "wcs"}:
+        if str(coord_system_type).lower() != "radec":
+            warnings.warn(
+                "Skipping FK5/WCS contours because coordinate_system is 'pixel'.",
+                RuntimeWarning,
+            )
+            return []
+        return _convert_world_contours_to_scaled(
+            contours=contours,
+            scaled_boundaries=scaled_boundaries,
+            true_boundaries=true_boundaries,
+        )
+
+    if coord_type in {"image", "physical"}:
+        return _convert_image_contours_to_plot_coords(
+            contours=contours,
+            data_shape=data_shape,
+            scaled_boundaries=scaled_boundaries,
+            coord_system_type=coord_system_type,
+            axis_reference=axis_reference,
+        )
+
+    warnings.warn(
+        f"Unsupported DS9 contour coordinate type '{coord_type}'.",
+        RuntimeWarning,
+    )
+    return []
+
+
+def _convert_world_contours_to_scaled(contours, scaled_boundaries, true_boundaries):
+    """Convert RA/Dec contours to scaled plot coordinates."""
+    x_true_min = true_boundaries["coord1_min"]
+    x_true_max = true_boundaries["coord1_max"]
+    y_true_min = true_boundaries["coord2_min"]
+    y_true_max = true_boundaries["coord2_max"]
+
+    x_scaled_min = scaled_boundaries["coord1_min"]
+    x_scaled_max = scaled_boundaries["coord1_max"]
+    y_scaled_min = scaled_boundaries["coord2_min"]
+    y_scaled_max = scaled_boundaries["coord2_max"]
+
+    transformed = []
+    for contour in contours:
+        x_coords = np.interp(
+            contour[:, 0],
+            [x_true_min, x_true_max],
+            [x_scaled_min, x_scaled_max],
+        )
+        y_coords = np.interp(
+            contour[:, 1],
+            [y_true_min, y_true_max],
+            [y_scaled_min, y_scaled_max],
+        )
+        transformed.append(np.column_stack((x_coords, y_coords)))
+
+    return transformed
+
+
+def _convert_image_contours_to_plot_coords(
+    contours,
+    data_shape,
+    scaled_boundaries,
+    coord_system_type,
+    axis_reference,
+):
+    """Convert image/physical contours to active plotting coordinates.
+
+    Notes
+    -----
+    DS9 image-like coordinates are treated as 1-indexed pixel coordinates.
+    """
+    height, width = data_shape
+    if height <= 0 or width <= 0:
+        return []
+
+    axis_reference = str(axis_reference or "catalog").lower()
+    coord_system_type = str(coord_system_type).lower()
+
+    x_min = scaled_boundaries["coord1_min"]
+    x_max = scaled_boundaries["coord1_max"]
+    y_min = scaled_boundaries["coord2_min"]
+    y_max = scaled_boundaries["coord2_max"]
+
+    transformed = []
+    for contour in contours:
+        x_image = contour[:, 0] - 0.5
+        y_image = contour[:, 1] - 0.5
+
+        if coord_system_type == "pixel" and axis_reference == "map":
+            x_plot = x_image
+            y_plot = y_image
+        else:
+            x_plot = x_min + (x_image / width) * (x_max - x_min)
+            y_plot = y_min + (y_image / height) * (y_max - y_min)
+
+        transformed.append(np.column_stack((x_plot, y_plot)))
+
+    return transformed

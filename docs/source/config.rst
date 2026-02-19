@@ -355,6 +355,11 @@ Plotting Settings
      - dict/string/null
      - null
      - Color scaling configuration. If a string, treated as {type: <string>}.
+   * - xray_contours
+     - dict/null
+     - null
+     - Optional DS9 ``.ctr`` contour overlay configuration. See x-ray
+       contour settings below.
 
 .. rubric:: Scaling configuration
 
@@ -396,6 +401,44 @@ Options by type:
            snr:
              linthresh: 1.0
              linscale: 1.0
+
+.. rubric:: X-ray contour settings
+
+Under ``plotting.xray_contours``:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 15 15 45
+
+   * - Parameter
+     - Type
+     - Default
+     - Description
+   * - ctr_file
+     - string/null
+     - null
+     - Path to DS9 contour file (``.ctr``). If null, contour overlay is
+       disabled.
+   * - show_on_convergence
+     - boolean
+     - false
+     - Whether to draw contours on convergence plots.
+   * - show_on_snr
+     - boolean
+     - false
+     - Whether to draw contours on SNR plots.
+   * - color
+     - string
+     - "cyan"
+     - Matplotlib line color for contours.
+   * - linewidth
+     - float
+     - 0.8
+     - Line width for contour traces.
+   * - alpha
+     - float
+     - 0.7
+     - Contour opacity in the range [0, 1].
 
 SNR Settings
 ~~~~~~~~~~~~

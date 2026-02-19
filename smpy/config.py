@@ -431,7 +431,41 @@ class Config:
                 axis_ref = pixel_cfg.get('pixel_axis_reference')
                 if axis_ref is not None and axis_ref not in ['catalog', 'map']:
                     raise ValueError("'pixel_axis_reference' must be 'catalog' or 'map' when provided")
-        
+
+        # Validate optional x-ray contour plotting settings when provided
+        plotting = self.config.get('plotting', {})
+        xray_cfg = plotting.get('xray_contours')
+        if xray_cfg is not None:
+            if not isinstance(xray_cfg, dict):
+                raise ValueError("'plotting.xray_contours' must be a dictionary when provided")
+
+            ctr_file = xray_cfg.get('ctr_file')
+            if ctr_file is not None and not isinstance(ctr_file, str):
+                raise ValueError("'plotting.xray_contours.ctr_file' must be a string or null")
+
+            for flag_key in ('show_on_convergence', 'show_on_snr'):
+                flag_value = xray_cfg.get(flag_key)
+                if flag_value is not None and not isinstance(flag_value, bool):
+                    raise ValueError(f"'plotting.xray_contours.{flag_key}' must be a boolean when provided")
+
+            alpha = xray_cfg.get('alpha')
+            if alpha is not None:
+                try:
+                    alpha_value = float(alpha)
+                except (TypeError, ValueError) as exc:
+                    raise ValueError("'plotting.xray_contours.alpha' must be a number") from exc
+                if not (0.0 <= alpha_value <= 1.0):
+                    raise ValueError("'plotting.xray_contours.alpha' must be between 0 and 1")
+
+            linewidth = xray_cfg.get('linewidth')
+            if linewidth is not None:
+                try:
+                    linewidth_value = float(linewidth)
+                except (TypeError, ValueError) as exc:
+                    raise ValueError("'plotting.xray_contours.linewidth' must be a number") from exc
+                if linewidth_value <= 0:
+                    raise ValueError("'plotting.xray_contours.linewidth' must be greater than 0")
+
         # Validate method
         method = general.get('method', 'kaiser_squires')
         valid_methods = ['kaiser_squires', 'aperture_mass', 'ks_plus']

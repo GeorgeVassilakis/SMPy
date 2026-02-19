@@ -167,3 +167,6 @@ examples/notebooks/.DS_Store
 examples/outputs/cluster_testing/
 scratch/
 .cursorrules
+examples/outputs/tutorials/
+examples/notebooks/tutorials_plan.md
+AGENTS.md

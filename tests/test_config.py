@@ -298,6 +298,46 @@ class TestConfig(unittest.TestCase):
             config.validate()
         
         self.assertIn('Invalid method', str(context.exception))
+
+    def test_validation_xray_contours_success(self):
+        """Test validation accepts well-formed x-ray contour config."""
+        config = Config.from_defaults('kaiser_squires')
+        config.update_from_kwargs(
+            data='/some/fake/path.fits',
+            coord_system='radec',
+            pixel_scale=0.168
+        )
+        config.config['plotting']['xray_contours'] = {
+            'ctr_file': '/tmp/example.ctr',
+            'show_on_convergence': True,
+            'show_on_snr': False,
+            'color': 'cyan',
+            'linewidth': 1.0,
+            'alpha': 0.6,
+        }
+
+        # Should not raise any exception
+        config.validate()
+
+    def test_validation_xray_contours_invalid_alpha(self):
+        """Test validation rejects out-of-range x-ray contour alpha."""
+        config = Config.from_defaults('kaiser_squires')
+        config.update_from_kwargs(
+            data='/some/fake/path.fits',
+            coord_system='radec',
+            pixel_scale=0.168
+        )
+        config.config['plotting']['xray_contours'] = {
+            'ctr_file': '/tmp/example.ctr',
+            'show_on_convergence': True,
+            'show_on_snr': True,
+            'alpha': 1.5,
+        }
+
+        with self.assertRaises(ValueError) as context:
+            config.validate()
+
+        self.assertIn('xray_contours.alpha', str(context.exception))
     
     # REMOVED: test_deep_merge (Phase 4)
     # The _deep_merge method was removed as part of configuration simplification.

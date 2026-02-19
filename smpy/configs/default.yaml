@@ -90,6 +90,13 @@ plotting:
   threshold: null    # Peak detection threshold
   verbose: null      # Print peak information
   cluster_center: null  # null, 'auto', or {ra/x_center: float, dec/y_center: float}
+  xray_contours:
+    ctr_file: null  # Path to DS9 .ctr file; null disables contour loading
+    show_on_convergence: false  # Overlay contours on convergence plots
+    show_on_snr: false  # Overlay contours on SNR plots
+    color: 'cyan'  # Matplotlib line color
+    linewidth: 0.8  # Line width for contour traces
+    alpha: 0.7  # Opacity in [0, 1]
 
   # Scaling options
   scaling:
