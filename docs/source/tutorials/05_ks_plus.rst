@@ -1,4 +1,4 @@
-06 – KS+
+05 – KS+
 ========
 
 Goal
@@ -12,4 +12,3 @@ What you'll learn
 Status
 ------
 This page is a placeholder. The runnable notebook will be added and flattened here.
-

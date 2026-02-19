@@ -42,8 +42,7 @@ Subpages
 
    tutorials/01_quickstart
    tutorials/02_configuration
-   tutorials/03_coordinates
-   tutorials/04_kaiser_squires
-   tutorials/05_aperture_mass
-   tutorials/06_ks_plus
-   tutorials/07_snr_and_validation
+   tutorials/03_kaiser_squires
+   tutorials/04_aperture_mass
+   tutorials/05_ks_plus
+   tutorials/06_snr_and_validation

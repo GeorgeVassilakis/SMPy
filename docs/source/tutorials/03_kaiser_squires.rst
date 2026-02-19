@@ -1,4 +1,4 @@
-04 – Kaiser–Squires Deep Dive
+03 – Kaiser–Squires Deep Dive
 =============================
 
 Goal
@@ -12,4 +12,3 @@ What you'll learn
 Status
 ------
 This page is a placeholder. The runnable notebook will be added and flattened here.
-

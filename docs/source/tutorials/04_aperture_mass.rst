@@ -1,15 +1,14 @@
-02 – Configuration
+04 – Aperture Mass
 ==================
 
 Goal
 ----
-- Master the YAML config and programmatic updates.
+- Localized mass measurements with Schirmer/Schneider filters.
 
 What you'll learn
 -----------------
-- Python↔YAML round‑trip, validation errors, parameter sweeps.
+- Filter choice and scale; physical interpretation; simple peak structure.
 
 Status
 ------
 This page is a placeholder. The runnable notebook will be added and flattened here.
-
