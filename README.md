@@ -55,8 +55,8 @@ The package provides a robust implementation supporting both weighted and unweig
   - Optional grid lines and coordinate labels
   - Automatic or manual axis labeling
   - Customizable figure sizes and titles
-- **Peak Annotation**: Option to mark and label detected peaks automatically or via manual input
-- **WCS Integration**: Proper coordinate system handling in output plots
+- **Peak Detection Overlay**: Optional automatic detection and marker overlay of peaks above a configurable threshold
+- **Coordinate-aware plotting**: Coordinate-aware plotting for RA/Dec and pixel maps (axis orientation, extents, and tick labeling). WCS headers are included in FITS outputs when saving FITS.
 
 ### Configuration & Usability
 - **YAML Configuration**: Easy-to-use YAML configuration files for full control over:
@@ -71,7 +71,7 @@ The package provides a robust implementation supporting both weighted and unweig
 
 ## Installation
 
-1. **Prerequisites**: Ensure you have Python 3.x installed on your system. SMPy also requires `numpy`, `scipy`, `pandas`, `astropy`, `matplotlib`, and `pyyaml` for numerical computations and visualizations.
+1. **Prerequisites**: Ensure you have Python 3.8+ installed on your system. SMPy also requires `numpy`, `scipy`, `pandas`, `astropy`, `matplotlib`, and `pyyaml` for numerical computations and visualizations.
 
 2. **Clone the Repository**: Clone the SMPy repository to your local machine using git:
 
@@ -102,24 +102,45 @@ The package provides a robust implementation supporting both weighted and unweig
    python runner.py -c /path/to/example_config.yaml
    ```
 
-### With Jupyter Notebook
-1. Import the run module:
+### With Jupyter Notebook (Quickstart: 2 API Levels)
+Use the same example catalog for both API levels:
+
+```python
+data_file = "examples/data/forecast_lum_annular.fits"
+common = dict(
+    data=data_file,
+    coord_system="radec",
+    pixel_scale=0.4,
+    g1_col="g1_Rinv",
+    g2_col="g2_Rinv",
+    weight_col="weight",
+    save_plots=False,
+)
+```
+
+1. **High-level functional API (quick)**
    ```python
-   from smpy import run
+   from smpy import map_kaiser_squires, map_aperture_mass, map_ks_plus
+
+   result_ks = map_kaiser_squires(**common)
+   result_am = map_aperture_mass(**common, filter_type="schirmer", filter_scale=60)
+   result_ksp = map_ks_plus(**common, inpainting_iterations=5, reduced_shear_iterations=1)
    ```
 
-2. Copy and edit the `example_config.yaml` configuration file.
-
-3. Define config path and run:
+2. **Configuration-based API (recommended for reproducibility)**
    ```python
-   config_path = '/path/to/SMPy/smpy/configs/example_config.yaml'
-   run.run(config_path)
+   from smpy import run
+   from smpy.config import Config
+
+   config = Config.from_defaults("kaiser_squires")
+   config.update_from_kwargs(**common, smoothing=2.0, mode=["E", "B"])
+   result_cfg = run(config)
    ```
 
 ## Contributions
 - `SMPy` is built in the spirit of open source, so feel free to fork the repository and create a pull request to contribute! Any help is appreciated :)
 - If there are issues or bugs in the software, feel free to raise an issue in GitHub's issues tab or create a GitHub discussion, and request @GeorgeVassilakis for review.
-- If you need support or help using `SMPy`, feel free to contact me via my email: vassilakis.g@northeastern.edu
+- If you need support or help using `SMPy`, feel free to contact me via my email: gv321 [at] cam [dot] ac [dot] uk
 
 ## Example Kaiser Squires Convergence Map
 ![Kaiser Squires Convergence Map](examples/outputs/kaiser_squires/simulation_testing_kaiser_squires_e_mode.png)
