@@ -87,8 +87,8 @@ The package provides a robust implementation supporting both weighted and unweig
 
 ## How to Run
 ### Examples
-- Pedagogical explinations are shown in the `SMPy/examples/notebooks` directory.
-  - The two notebooks run through the SMPy algorithm on mock observations, along with it's corresponding truth file as a unit test that the algorithm correctly recovers a gaussian shear.
+- Pedagogical examples are shown in the `SMPy/examples/notebooks` directory.
+  - The notebooks run SMPy on mock observations and corresponding truth data.
 
 ### With runner script
 1. **Prepare your configuration file**
@@ -138,9 +138,17 @@ common = dict(
    ```
 
 ## Contributions
-- `SMPy` is built in the spirit of open source, so feel free to fork the repository and create a pull request to contribute! Any help is appreciated :)
-- If there are issues or bugs in the software, feel free to raise an issue in GitHub's issues tab or create a GitHub discussion, and request @GeorgeVassilakis for review.
-- If you need support or help using `SMPy`, feel free to contact me via my email: gv321 [at] cam [dot] ac [dot] uk
+- Open an issue for bugs, unclear documentation, or feature requests.
+- Open a discussion or issue before starting large changes.
+- For private support, contact the maintainer at gv321 [at] cam [dot] ac [dot] uk.
+
+## Testing
+
+Run the test suite from the repository root:
+
+```bash
+python -m pytest
+```
 
 ## Example Kaiser Squires Convergence Map
 ![Kaiser Squires Convergence Map](examples/outputs/kaiser_squires/simulation_testing_kaiser_squires_e_mode.png)
