@@ -79,7 +79,7 @@ Generative AI was used in three ways in this work. First, Claude Sonnet 4 (with 
 
 ## Software references
 
-`SMPy` is written in Python 3.8+ and uses the following packages:
+`SMPy` is written in Python 3.10+ and uses the following packages:
 
 - `NumPy` [@numpy]
 - `SciPy` [@scipy]

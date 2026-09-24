@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "smpy-lensing"
+dynamic = ["version"]
+description = "Shear Mapping in Python"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "Georgios N. Vassilakis" }]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Astronomy",
+]
+dependencies = [
+    "numpy>=1.20.0",
+    "astropy>=5.0.0",
+    "pandas>=1.2.0",
+    "matplotlib>=3.4.0",
+    "scipy>=1.6.0",
+    "pyyaml>=5.1",
+]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.urls]
+Documentation = "https://smpy-docs.readthedocs.io/"
+Source = "https://github.com/GeorgeVassilakis/SMPy"
+
+[tool.setuptools.dynamic]
+version = { attr = "smpy.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["smpy*"]
+
+[tool.setuptools.package-data]
+smpy = ["configs/*.yaml"]

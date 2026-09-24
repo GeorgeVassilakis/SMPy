@@ -1,6 +1,6 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](https://opensource.org/licenses/MIT)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/bb1d59e8b4a143f8a261bc7320861495)](https://app.codacy.com/gh/GeorgeVassilakis/SMPy/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![GitHub stars](https://img.shields.io/github/stars/GeorgeVassilakis/SMPy.svg?style=social&label=Star&maxAge=2592000)](https://GitHub.com/GeorgeVassilakis/SMPy/stargazers/)
 
 # SMPy (Shear Mapping in Python)
@@ -71,7 +71,7 @@ The package provides a robust implementation supporting both weighted and unweig
 
 ## Installation
 
-1. **Prerequisites**: Ensure you have Python 3.8+ installed on your system. SMPy also requires `numpy`, `scipy`, `pandas`, `astropy`, `matplotlib`, and `pyyaml` for numerical computations and visualizations.
+1. **Prerequisites**: Ensure you have Python 3.10+ installed on your system. SMPy also requires `numpy`, `scipy`, `pandas`, `astropy`, `matplotlib`, and `pyyaml` for numerical computations and visualizations.
 
 2. **Clone the Repository**: Clone the SMPy repository to your local machine using git:
 
@@ -79,7 +79,7 @@ The package provides a robust implementation supporting both weighted and unweig
    git clone https://github.com/GeorgeVassilakis/SMPy.git
    ```
 
-3. **Install the Package:** Install SMPy using setup.py:
+3. **Install the Package:** Install SMPy from the repository root:
 
    ```bash
    pip install .
