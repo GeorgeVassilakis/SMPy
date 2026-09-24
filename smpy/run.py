@@ -318,7 +318,7 @@ def run(config_input):
             if plot_cfg['coordinate_system'] == 'pixel':
                 plot_cfg['axis_reference'] = config['general']['pixel'].get('pixel_axis_reference', 'catalog')
             # Set title and ensure linear scaling for counts
-            plot_cfg['plot_title'] = f"Counts Map"
+            plot_cfg['plot_title'] = "Counts Map"
             sc = (plot_cfg.get('scaling') or {}).copy()
             sc['type'] = 'linear'
             sc.pop('percentile', None)

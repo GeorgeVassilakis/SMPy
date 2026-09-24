@@ -114,14 +114,13 @@ class KSPlusMapper(MassMapper):
 
         # Reduced shear correction loop
         max_iterations = config.get('reduced_shear_iterations', 3)
-        for k in range(max_iterations):
+        kappa_e_extended = np.zeros_like(g1_extended)
+        for _ in range(max_iterations):
             # Correct for reduced shear: γ = g(1-κ)
             g1_corrected = g1_extended.copy()
             g2_corrected = g2_extended.copy()
-
-            if k > 0:  # Skip on first iteration (κ=0)
-                g1_corrected[mask_extended > 0] *= (1 - kappa_e_extended[mask_extended > 0])
-                g2_corrected[mask_extended > 0] *= (1 - kappa_e_extended[mask_extended > 0])
+            g1_corrected[mask_extended > 0] *= (1 - kappa_e_extended[mask_extended > 0])
+            g2_corrected[mask_extended > 0] *= (1 - kappa_e_extended[mask_extended > 0])
 
             # Perform inpainting-based reconstruction
             kappa_e_extended, kappa_b_extended = self._inpainting_reconstruction(

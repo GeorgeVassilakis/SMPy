@@ -55,7 +55,7 @@ def schirmer_filter(scaled_radii, scale):
     # Combine parts
     return part1 * part2
 
-def schneider_filter(scaled_radii, scale, l=3):
+def schneider_filter(scaled_radii, scale, ell=3):
     """Compute Schneider filter values for given scaled radii.
 
     Calculate the Schneider filter function values with polynomial weighting
@@ -67,7 +67,7 @@ def schneider_filter(scaled_radii, scale, l=3):
         Radius values scaled by the aperture radius.
     scale : `float`
         Scale radius of the filter in pixels.
-    l : `int`, optional
+    ell : `int`, optional
         Polynomial order parameter.
 
     Returns
@@ -92,8 +92,8 @@ def schneider_filter(scaled_radii, scale, l=3):
     mask = scaled_radii <= 1.0
 
     # Q function filter
-    filter_vals[mask] = ((1 + l) * (2 + l) / (np.pi * scale**2)) * \
+    filter_vals[mask] = ((1 + ell) * (2 + ell) / (np.pi * scale**2)) * \
                         (scaled_radii[mask]**2) * \
-                        (1 - scaled_radii[mask]**2)**l
+                        (1 - scaled_radii[mask]**2)**ell
 
     return filter_vals

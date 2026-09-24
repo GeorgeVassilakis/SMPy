@@ -7,7 +7,6 @@ for SMPy mass mapping operations.
 import copy
 import os
 from pathlib import Path
-from typing import Dict, Optional
 
 import yaml
 
