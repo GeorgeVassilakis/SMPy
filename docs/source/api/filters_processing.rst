@@ -15,9 +15,6 @@ Aperture Mass Filters
 
    smpy.filters.processing.schirmer_filter
    smpy.filters.processing.schneider_filter
-   smpy.filters.processing.create_filter_kernel
-   smpy.filters.processing.apply_filter_convolution
-   smpy.filters.processing.apply_aperture_filter
 
 Starlet Wavelet Processing
 --------------------------

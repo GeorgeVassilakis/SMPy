@@ -1,11 +1,9 @@
-"""Filter functions for aperture mass mapping and related processing.
+"""Filter functions for aperture mass mapping.
 
 This module provides implementations of various filter functions used in
-aperture mass mapping including Schirmer and Schneider filters, along with
-utility functions for creating 2D convolution kernels.
+aperture mass mapping including Schirmer and Schneider filters.
 """
 
-from scipy.ndimage import convolve
 import numpy as np
 
 def schirmer_filter(scaled_radii, scale):
@@ -99,116 +97,3 @@ def schneider_filter(scaled_radii, scale, l=3):
                         (1 - scaled_radii[mask]**2)**l
 
     return filter_vals
-
-def create_filter_kernel(filter_func, scale, truncation=1.0, l=None):
-    """Create a 2D kernel for any aperture mass filter.
-
-    Generate a 2D convolution kernel from a radial filter function for
-    use in aperture mass mapping operations.
-
-    Parameters
-    ----------
-    filter_func : callable
-        Filter function to apply to scaled radii.
-    scale : `float`
-        Scale radius of the filter in pixels.
-    truncation : `float`, optional
-        Truncation radius in units of scale radius.
-    l : `int`, optional
-        Polynomial order parameter for Schneider filter.
-
-    Returns
-    -------
-    kernel : `numpy.ndarray`
-        2D filter kernel for convolution operations.
-
-    Notes
-    -----
-    The kernel size is determined by the truncation radius and is always
-    made odd to ensure a well-defined center pixel.
-    """
-    # Create grid for kernel
-    size = int(np.ceil(2 * truncation * scale))
-    size = size + 1 if size % 2 == 0 else size  # Ensure odd size
-
-    x = np.linspace(-truncation * scale, truncation * scale, size)
-    y = x.copy()
-    X, Y = np.meshgrid(x, y)
-    R = np.sqrt(X**2 + Y**2)
-
-    # Calculate scaled radii and apply filter
-    scaled_radius = R / scale
-
-    # Call the filter function with appropriate arguments
-    if filter_func == schneider_filter and l is not None:
-        kernel = filter_func(scaled_radius, scale, l)
-    else:
-        kernel = filter_func(scaled_radius, scale)
-
-    return kernel
-
-def apply_filter_convolution(data, kernel):
-    """Apply a filter kernel via convolution.
-
-    Perform 2D convolution of data with the specified kernel using
-    constant boundary conditions.
-
-    Parameters
-    ----------
-    data : `numpy.ndarray`
-        2D input data array.
-    kernel : `numpy.ndarray`
-        2D convolution kernel.
-
-    Returns
-    -------
-    filtered_data : `numpy.ndarray`
-        Convolved data array.
-    """
-    return convolve(data, kernel, mode='constant', cval=0.0)
-
-def apply_aperture_filter(data, filter_config):
-    """Apply aperture filter based on configuration.
-
-    Apply the specified aperture mass filter to input data according
-    to the provided configuration parameters.
-
-    Parameters
-    ----------
-    data : `numpy.ndarray`
-        2D input data array.
-    filter_config : `dict` or None
-        Filter configuration dictionary containing 'type', 'scale',
-        'truncation', and optional 'l' parameters.
-
-    Returns
-    -------
-    filtered_data : `numpy.ndarray`
-        Filtered data array.
-
-    Raises
-    ------
-    ValueError
-        If unknown aperture filter type is specified.
-
-    Notes
-    -----
-    Supported filter types are 'schirmer' and 'schneider'. If filter_config
-    is None, returns the input data unchanged.
-    """
-    if filter_config is None:
-        return data
-
-    filter_type = filter_config.get('type', '').lower()
-    scale = filter_config.get('scale', 1.0)
-    truncation = filter_config.get('truncation', 1.0)
-
-    if filter_type == 'schirmer':
-        kernel = create_filter_kernel(schirmer_filter, scale, truncation)
-    elif filter_type == 'schneider':
-        l = filter_config.get('l', 3)
-        kernel = create_filter_kernel(schneider_filter, scale, truncation, l=l)
-    else:
-        raise ValueError(f"Unknown aperture filter type: {filter_type}")
-
-    return apply_filter_convolution(data, kernel)
