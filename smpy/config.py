@@ -74,7 +74,7 @@ class Config:
     ...     pixel_scale=0.168
     ... )
     """
-    
+
     def __init__(self, config_dict=None):
         """Initialize Config with optional configuration dictionary.
 
@@ -84,7 +84,7 @@ class Config:
             Configuration dictionary. If None, creates empty config.
         """
         self.config = config_dict if config_dict is not None else {}
-    
+
     @classmethod
     def from_file(cls, path):
         """Load configuration from YAML file.
@@ -102,21 +102,21 @@ class Config:
         with open(path, 'r') as f:
             config_dict = yaml.safe_load(f)
         return cls(config_dict)
-    
+
     @classmethod
     def from_defaults(cls, method='kaiser_squires'):
         """Load default configuration for specified method.
-        
-        Load configuration from the default.yaml file and return the nested 
-        structure as-is. This provides consistent configuration structure 
+
+        Load configuration from the default.yaml file and return the nested
+        structure as-is. This provides consistent configuration structure
         regardless of loading method.
-        
+
         Parameters
         ----------
         method : `str`, optional
             Method name ('kaiser_squires', 'aperture_mass', or 'ks_plus').
             Default is 'kaiser_squires'.
-            
+
         Returns
         -------
         config : `Config`
@@ -133,7 +133,7 @@ class Config:
         -----
         Returns the full nested configuration structure:
 
-        - **General settings**: ``config['general']`` 
+        - **General settings**: ``config['general']``
         - **Method-specific**: ``config['methods'][method_name]``
         - **Plotting settings**: ``config['plotting']``
         - **SNR settings**: ``config['snr']``
@@ -143,7 +143,8 @@ class Config:
         Load Kaiser-Squires defaults:
 
         >>> config = Config.from_defaults('kaiser_squires')
-        >>> smoothing = config.to_dict()['methods']['kaiser_squires']['smoothing']
+        >>> cfg_dict = config.to_dict()
+        >>> smoothing = cfg_dict['methods']['kaiser_squires']['smoothing']
         >>> print(smoothing['type'])
         gaussian
 
@@ -158,22 +159,22 @@ class Config:
         defaults_path = Path(__file__).parent / 'configs' / 'default.yaml'
         if not defaults_path.exists():
             raise FileNotFoundError(f"Default config file not found: {defaults_path}")
-        
+
         with open(defaults_path, 'r') as f:
             config = yaml.safe_load(f)
-        
+
         # Set the method in general section
         config['general']['method'] = method
-        
+
         return cls(config)
 
-    
+
     def update_from_kwargs(self, **kwargs):
         """Update configuration from keyword arguments.
-        
+
         This method maps simple keyword arguments to the nested
         configuration structure expected by SMPy.
-        
+
         Parameters
         ----------
         **kwargs
@@ -183,7 +184,7 @@ class Config:
         if 'data' in kwargs:
             self._ensure_section('general')
             self.config['general']['input_path'] = kwargs['data']
-        
+
         # Handle coordinate system
         if 'coord_system' in kwargs:
             self._ensure_section('general')
@@ -193,7 +194,7 @@ class Config:
             self.config['general']['coordinate_system'] = coord_system
             # Mark that coordinate system was explicitly set by user
             self.config['general']['_coord_system_set_by_user'] = True
-        
+
         # Handle pixel_scale (for radec system)
         if 'pixel_scale' in kwargs and kwargs['pixel_scale'] is not None:
             self._ensure_section('general')
@@ -201,7 +202,7 @@ class Config:
             self.config['general']['radec']['resolution'] = kwargs['pixel_scale']
             # Mark that pixel_scale was explicitly set by user
             self.config['general']['_pixel_scale_set_by_user'] = True
-        
+
         # Handle downsample_factor (for pixel system)
         if 'downsample_factor' in kwargs and kwargs['downsample_factor'] is not None:
             self._ensure_section('general')
@@ -218,22 +219,22 @@ class Config:
             if axis_ref not in ['catalog', 'map']:
                 raise ValueError("pixel_axis_reference must be 'catalog' or 'map'")
             self.config['general']['pixel']['pixel_axis_reference'] = axis_ref
-        
+
         # Handle method
         if 'method' in kwargs:
             self._ensure_section('general')
             self.config['general']['method'] = kwargs['method']
-        
+
         # Handle output directory
         if 'output_dir' in kwargs:
             self._ensure_section('general')
             self.config['general']['output_directory'] = kwargs['output_dir']
-        
+
         # Handle output base name
         if 'output_base_name' in kwargs:
             self._ensure_section('general')
             self.config['general']['output_base_name'] = kwargs['output_base_name']
-        
+
         # Handle smoothing parameter
         if 'smoothing' in kwargs:
             # Always nested structure
@@ -242,12 +243,12 @@ class Config:
             self._ensure_section('methods', method)
             self._ensure_section('methods', method, 'smoothing')
             self.config['methods'][method]['smoothing']['sigma'] = kwargs['smoothing']
-        
+
         # Handle create_snr
         if 'create_snr' in kwargs:
             self._ensure_section('general')
             self.config['general']['create_snr'] = kwargs['create_snr']
-        
+
         # Handle create_counts_map
         if 'create_counts_map' in kwargs:
             self._ensure_section('general')
@@ -257,7 +258,7 @@ class Config:
         if 'overlay_counts_map' in kwargs:
             self._ensure_section('general')
             self.config['general']['overlay_counts_map'] = kwargs['overlay_counts_map']
-        
+
         # Handle save_fits
         if 'save_fits' in kwargs:
             self._ensure_section('general')
@@ -267,7 +268,7 @@ class Config:
         if 'save_plots' in kwargs:
             self._ensure_section('general')
             self.config['general']['save_plots'] = kwargs['save_plots']
-        
+
         # Handle mode
         if 'mode' in kwargs:
             self._ensure_section('general')
@@ -275,18 +276,18 @@ class Config:
             if isinstance(mode_value, str):
                 mode_value = [mode_value]
             self.config['general']['mode'] = mode_value
-        
+
         # Handle data columns
         for col in ['g1_col', 'g2_col', 'weight_col']:
             if col in kwargs:
                 self._ensure_section('general')
                 self.config['general'][col] = kwargs[col]
-        
+
         # Handle verbosity/timing
         if 'print_timing' in kwargs:
             self._ensure_section('general')
             self.config['general']['print_timing'] = kwargs['print_timing']
-        
+
         if 'verbose' in kwargs:
             self._ensure_section('plotting')
             self.config['plotting']['verbose'] = kwargs['verbose']
@@ -295,18 +296,18 @@ class Config:
         if 'fontsize' in kwargs and kwargs['fontsize'] is not None:
             self._ensure_section('plotting')
             self.config['plotting']['fontsize'] = kwargs['fontsize']
-        
+
         # Handle KS+ specific parameters
         if 'inpainting_iterations' in kwargs:
             self._ensure_section('methods')
             self._ensure_section('methods', 'ks_plus')
             self.config['methods']['ks_plus']['inpainting_iterations'] = kwargs['inpainting_iterations']
-        
+
         if 'reduced_shear_iterations' in kwargs:
             self._ensure_section('methods')
             self._ensure_section('methods', 'ks_plus')
             self.config['methods']['ks_plus']['reduced_shear_iterations'] = kwargs['reduced_shear_iterations']
-        
+
         # KS+ wavelet constraints and schedule options
         if 'use_wavelet_constraints' in kwargs:
             self._ensure_section('methods')
@@ -328,7 +329,8 @@ class Config:
             self._ensure_section('methods', 'ks_plus')
             self.config['methods']['ks_plus']['threshold_tau'] = kwargs['threshold_tau']
 
-        # note: wavelet constraint stability parameters are internal defaults (not exposed)
+        # note: wavelet constraint stability parameters are internal defaults
+        # (not exposed)
 
         # KS+ other advanced options
         if 'extension_size' in kwargs:
@@ -337,7 +339,7 @@ class Config:
             self.config['methods']['ks_plus']['extension_size'] = kwargs['extension_size']
 
         # note: min_threshold_fraction is deprecated and not supported
-        
+
         # Handle KS+ wavelet settings
         if 'wavelet' in kwargs and isinstance(kwargs['wavelet'], dict):
             self._ensure_section('methods')
@@ -346,12 +348,12 @@ class Config:
             if 'wavelet' not in self.config['methods']['ks_plus']:
                 self.config['methods']['ks_plus']['wavelet'] = {}
             self.config['methods']['ks_plus']['wavelet'].update(kwargs['wavelet'])
-        
+
         if 'wavelet_nscales' in kwargs and kwargs['wavelet_nscales'] is not None:
             self._ensure_section('methods')
             self._ensure_section('methods', 'ks_plus')
             self.config['methods']['ks_plus']['nscales'] = kwargs['wavelet_nscales']
-        
+
         # Handle aperture mass filter parameters
         if 'filter' in kwargs:
             self._ensure_section('methods')
@@ -359,23 +361,23 @@ class Config:
             if isinstance(kwargs['filter'], dict):
                 self._ensure_section('methods', 'aperture_mass', 'filter')
                 self.config['methods']['aperture_mass']['filter'].update(kwargs['filter'])
-        
+
         # Handle individual filter parameters
         if 'filter_type' in kwargs:
             self._ensure_section('methods')
             self._ensure_section('methods', 'aperture_mass')
             self._ensure_section('methods', 'aperture_mass', 'filter')
             self.config['methods']['aperture_mass']['filter']['type'] = kwargs['filter_type']
-        
+
         if 'filter_scale' in kwargs:
             self._ensure_section('methods')
             self._ensure_section('methods', 'aperture_mass')
             self._ensure_section('methods', 'aperture_mass', 'filter')
             self.config['methods']['aperture_mass']['filter']['scale'] = kwargs['filter_scale']
-    
+
     def _ensure_section(self, *keys):
         """Ensure nested dictionary sections exist.
-        
+
         Parameters
         ----------
         *keys : `str`
@@ -386,12 +388,12 @@ class Config:
             if key not in current:
                 current[key] = {}
             current = current[key]
-    
+
     def validate(self):
         """Validate configuration for required parameters.
-        
+
         Expects nested configuration structure only.
-        
+
         Raises
         ------
         ValueError
@@ -399,32 +401,38 @@ class Config:
         """
         # Access nested structure directly
         general = self.config['general']
-        
-        # Check for required parameters (only if input_path is actually set to a real value)
+
+        # Check for required parameters (only if input_path is actually set to
+        # a real value)
         if general.get('input_path') and general['input_path'] != "":
             required_params = ['input_path', 'coordinate_system']
             for param in required_params:
                 if param not in general:
                     raise ValueError(f"Required parameter '{param}' missing from config")
-        
+
         # Check coordinate system specific requirements
-        # Only validate if input_path is set (meaning this is a real run, not just loading defaults)
+        # Only validate if input_path is set (meaning this is a real run, not
+        # just loading defaults)
         input_path = general.get('input_path', '')
         if input_path and input_path != "":
             coord_system = general.get('coordinate_system', '').lower()
             coord_system_set_by_user = general.get('_coord_system_set_by_user', False)
-            
+
             if coord_system == 'radec':
-                # If coordinate system was set by user, require pixel_scale to also be set by user
+                # If coordinate system was set by user, require pixel_scale to
+                # also be set by user
                 if coord_system_set_by_user and not general.get('_pixel_scale_set_by_user', False):
                     raise ValueError(self._missing_coord_param_message('radec'))
-                elif not coord_system_set_by_user and ('radec' not in general or 'resolution' not in general['radec']):
+                elif not coord_system_set_by_user and ('radec' not in general
+                                                       or 'resolution' not in general['radec']):
                     raise ValueError(self._missing_coord_param_message('radec'))
             elif coord_system == 'pixel':
-                # If coordinate system was set by user, require downsample_factor to also be set by user  
+                # If coordinate system was set by user, require
+                # downsample_factor to also be set by user
                 if coord_system_set_by_user and not general.get('_downsample_factor_set_by_user', False):
                     raise ValueError(self._missing_coord_param_message('pixel'))
-                elif not coord_system_set_by_user and ('pixel' not in general or 'downsample_factor' not in general['pixel']):
+                elif not coord_system_set_by_user and ('pixel' not in general
+                                                       or 'downsample_factor' not in general['pixel']):
                     raise ValueError(self._missing_coord_param_message('pixel'))
                 # Validate optional axis reference if present
                 pixel_cfg = general.get('pixel', {})
@@ -501,12 +509,12 @@ class Config:
         return (
             "Invalid coordinate_system specified. Expected 'radec' or 'pixel'."
         )
-    
+
     def validate_file_existence(self):
         """Validate that input files exist on disk.
-        
+
         Expects nested configuration structure only.
-        
+
         Raises
         ------
         FileNotFoundError
@@ -514,35 +522,35 @@ class Config:
         """
         # Access nested structure directly
         input_path = self.config['general'].get('input_path')
-        
+
         # Skip validation for empty paths or test paths
         if not input_path or input_path == "" or input_path.startswith('/some/fake'):
             return
-            
+
         # Check if file exists
         if not os.path.exists(input_path):
             raise FileNotFoundError(
                 f"Input file not found: {input_path}\n"
                 f"Please check that the file exists and the path is correct."
             )
-    
+
     def to_dict(self):
         """Return configuration as dictionary.
-        
+
         Returns
         -------
         config : `dict`
             Configuration dictionary
         """
         return copy.deepcopy(self.config)
-    
+
     def show_config(self, section=None):
         """Print current configuration in YAML format.
-        
+
         Parameters
         ----------
         section : `str`, optional
-            Show only specific section ('general', 'plotting', 'snr', 
+            Show only specific section ('general', 'plotting', 'snr',
             'methods'). If `None`, shows entire configuration.
         """
         if section:
@@ -555,13 +563,13 @@ class Config:
         else:
             # Show entire config
             config_to_show = self.config
-        
+
         # Print as YAML
         print(yaml.dump(config_to_show, default_flow_style=False, sort_keys=False))
 
     def save_config(self, path):
         """Save current configuration to YAML file.
-        
+
         Parameters
         ----------
         path : `str` or `pathlib.Path`

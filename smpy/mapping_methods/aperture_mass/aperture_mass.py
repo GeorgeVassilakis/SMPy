@@ -24,7 +24,7 @@ class ApertureMassMapper(MassMapper):
     Map_B = conv(g1, Q*sin(2φ)) + conv(-g2, Q*cos(2φ))
     where φ is the polar angle and Q(r) is the chosen filter function.
     """
-    
+
     @property
     def name(self):
         """Name identifier for the aperture mass method.
@@ -35,7 +35,7 @@ class ApertureMassMapper(MassMapper):
             String identifier 'aperture_mass'.
         """
         return "aperture_mass"
-    
+
     def _create_aperture_mass_kernels(self, rs, filter_type, l_param, truncation):
         """Create the aperture mass convolution kernels.
 
@@ -70,33 +70,33 @@ class ApertureMassMapper(MassMapper):
         # Ensure kernel size is odd for a well-defined center pixel
         size = int(np.ceil(2 * kernel_radius_in_pixels))
         size = size + 1 if size % 2 == 0 else size
-        
+
         # Create a grid of coordinates for the kernel
         half_extent = (size - 1) / 2.0
         kernel_coords = np.linspace(-half_extent, half_extent, size)
         X_k, Y_k = np.meshgrid(kernel_coords, kernel_coords)
-        
+
         # Calculate radial distance and polar angle
         R_k = np.sqrt(X_k**2 + Y_k**2)
         Phi_k = np.arctan2(Y_k, X_k)
-        
+
         # Get scaled radii for filter calculation
         scaled_radii_k = R_k / rs
-        
+
         # Get Q filter values based on filter type
         if filter_type == 'schneider':
             q_vals_k = schneider_filter(scaled_radii_k, rs, l_param)
         else:  # Default to Schirmer
             q_vals_k = schirmer_filter(scaled_radii_k, rs)
-            
+
         # Create the kernels
         kernel_1 = q_vals_k * np.cos(2 * Phi_k)
         kernel_2 = q_vals_k * np.sin(2 * Phi_k)
-        
+
         return kernel_1, kernel_2
 
     def _compute_aperture_mass(self, g1_grid, g2_grid, rs):
-        """Compute aperture mass maps using the selected filter via convolution.
+        """Compute aperture mass maps by convolving with the selected filter.
 
         Apply aperture mass convolution to shear grids using the configured
         filter function to produce localized mass maps.
@@ -133,33 +133,34 @@ class ApertureMassMapper(MassMapper):
                 f"Please add a 'filter' section under methods.{self.name} in your config. "
                 f"Required parameters: type, scale. Optional: truncation, l"
             )
-        
+
         # Required parameters - user must specify these explicitly
         try:
             filter_type = filter_config['type'].lower()
         except KeyError:
             raise KeyError(
                 f"Missing required parameter 'filter.type' for {self.name} method. "
-                f"Please add 'type: schirmer' (or 'schneider') under methods.{self.name}.filter in your config."
+                f"Please add 'type: schirmer' (or 'schneider') under methods.{self.name}.filter "
+                "in your config."
             )
-        
+
         # Optional parameters with reasonable defaults
         l_param = filter_config.get('l', 3) if filter_type == 'schneider' else None
         truncation = filter_config.get('truncation', 1.0)
 
         # Create the aperture mass specific convolution kernels
         K1, K2 = self._create_aperture_mass_kernels(rs, filter_type, l_param, truncation)
-        
+
         # E-mode: Map_E = conv(-g1, K1) + conv(-g2, K2)
         map_e = convolve(-g1_grid, K1, mode='constant', cval=0.0) + \
                 convolve(-g2_grid, K2, mode='constant', cval=0.0)
-        
+
         # B-mode: Map_B = conv(g1, K2) + conv(-g2, K1)
         map_b = convolve(g1_grid, K2, mode='constant', cval=0.0) + \
                 convolve(-g2_grid, K1, mode='constant', cval=0.0)
-                
+
         return map_e, map_b
-    
+
     def create_maps(self, g1_grid, g2_grid):
         """Create aperture mass maps.
 
@@ -199,7 +200,7 @@ class ApertureMassMapper(MassMapper):
                 f"Please add a 'filter' section under methods.{self.name} in your config. "
                 f"Required parameters: type, scale. Optional: truncation, l"
             )
-        
+
         # Required parameter - user must specify scale explicitly
         try:
             rs = filter_config['scale']
@@ -209,6 +210,6 @@ class ApertureMassMapper(MassMapper):
                 f"Please add 'scale: <value>' under methods.{self.name}.filter in your config. "
                 f"This should be the aperture radius in pixels or physical units."
             )
-        
+
         # Compute and return raw aperture mass maps
         return self._compute_aperture_mass(g1_grid, g2_grid, rs)

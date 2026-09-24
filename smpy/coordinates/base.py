@@ -21,7 +21,7 @@ class CoordinateSystem(ABC):
     system specific functionality for gridding shear data and handling
     coordinate transformations.
     """
-    
+
     @abstractmethod
     def get_grid_parameters(self, config):
         """Get grid parameters from config for the specific coordinate system.
@@ -41,7 +41,7 @@ class CoordinateSystem(ABC):
             - For RA/Dec: resolution_arcmin for setting grid spacing
             - For Pixel: downsample_factor and max_grid_size for binning
         """
-    
+
     @abstractmethod
     def create_grid(self, data_df, boundaries, config):
         """Create a shear grid by binning data in the coordinate system.
@@ -67,7 +67,7 @@ class CoordinateSystem(ABC):
         g2_grid : `numpy.ndarray`
             2D array containing binned second shear component values.
         """
-    
+
     @abstractmethod
     def calculate_boundaries(self, coord1, coord2):
         """Calculate field boundaries and setup coordinate labels.
@@ -90,7 +90,7 @@ class CoordinateSystem(ABC):
         true_boundaries : `dict`
             Dictionary containing true coordinate ranges and labels.
         """
-    
+
     @abstractmethod
     def transform_coordinates(self, data_df):
         """Transform coordinates if needed (e.g., centering, scaling).
@@ -153,13 +153,13 @@ class CoordinateSystem(ABC):
         g1 = data_df['g1'].values[valid_mask]
         g2 = data_df['g2'].values[valid_mask]
         weight = data_df['weight'].values[valid_mask]
-        
+
         # Initialize grids
         g1_grid = np.zeros((npix1, npix2))
         g2_grid = np.zeros((npix1, npix2))
         weight_grid = np.zeros((npix1, npix2))
         count_grid = None
-        
+
         # Accumulate weighted values
         np.add.at(g1_grid, (idx2, idx1), g1 * weight)
         np.add.at(g2_grid, (idx2, idx1), g2 * weight)
@@ -168,12 +168,12 @@ class CoordinateSystem(ABC):
         if accumulate_counts:
             count_grid = np.zeros((npix1, npix2))
             np.add.at(count_grid, (idx2, idx1), 1)
-        
+
         # Normalize by weights
         nonzero_mask = weight_grid != 0
         g1_grid[nonzero_mask] /= weight_grid[nonzero_mask]
         g2_grid[nonzero_mask] /= weight_grid[nonzero_mask]
-        
+
         # Expose weight and optional count grids for downstream consumers
         self._last_weight_grid = weight_grid
         if accumulate_counts and count_grid is not None:
@@ -182,14 +182,14 @@ class CoordinateSystem(ABC):
             # Ensure stale counts are not reused across calls
             if hasattr(self, '_last_count_grid'):
                 delattr(self, '_last_count_grid')
-        
+
         return g1_grid, g2_grid
 
     def prepare_data(self, data_df):
-        """Prepare data for gridding by validating and transforming coordinates.
+        """Prepare for gridding by validating and transforming coordinates.
 
-        Check that required columns exist and ensure coordinates are transformed
-        appropriately before gridding operations.
+        Check that required columns exist and ensure coordinates are
+        transformed appropriately before gridding operations.
 
         Parameters
         ----------
@@ -210,9 +210,9 @@ class CoordinateSystem(ABC):
         required_cols = ['coord1', 'coord2', 'g1', 'g2', 'weight']
         if not all(col in data_df.columns for col in required_cols):
             raise ValueError(f"DataFrame must contain columns: {required_cols}")
-        
+
         # Transform coordinates if not already done
         if 'coord1_scaled' not in data_df.columns:
             data_df = self.transform_coordinates(data_df)
-            
+
         return data_df

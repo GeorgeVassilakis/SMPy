@@ -48,9 +48,9 @@ if __name__ == "__main__":
         metavar='PATH'
     )
     args = parser.parse_args()
-    
+
     # Check if file exists
     if not args.config.is_file():
         raise ArgumentTypeError(f"Not a valid file: {args.config}")
-    
+
     main(args)

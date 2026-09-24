@@ -38,9 +38,9 @@ def apply_filter(data, filter_config):
     """
     if filter_config is None or filter_config.get('type') is None:
         return data
-        
+
     filter_type = filter_config['type'].lower()
-    
+
     if filter_type == 'gaussian':
         sigma = filter_config.get('sigma', 1.0)
         return gaussian_filter(data, sigma=sigma)

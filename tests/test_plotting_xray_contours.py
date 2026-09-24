@@ -140,7 +140,7 @@ class TestXRayContourPlotting(unittest.TestCase):
         plt.close(fig)
 
     def test_pixel_image_contours_map_reference(self):
-        """Image-space contours should convert for pixel ``axis_reference=map``."""
+        """Convert image-space contours for pixel ``axis_reference=map``."""
         ctr_path = self._write_ctr_file(
             """
             image

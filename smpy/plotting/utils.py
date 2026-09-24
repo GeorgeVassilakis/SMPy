@@ -68,7 +68,8 @@ def create_normalization(scaling, data, vmin=None, vmax=None, map_type="converge
         return colors.PowerNorm(gamma=gamma, vmin=vmin, vmax=vmax)
 
     if scale_type == "symlog":
-        # Allow map-specific parameter overrides (e.g., different thresholds for SNR vs convergence)
+        # Allow map-specific parameter overrides (e.g., different thresholds
+        # for SNR vs convergence)
         map_specific_params = scaling.get(map_type, {}) or {}
         linthresh = float(map_specific_params.get("linthresh", scaling.get("linthresh", 0.1)))
         linscale = float(map_specific_params.get("linscale", scaling.get("linscale", 1.0)))
@@ -123,7 +124,8 @@ def configure_labels(ax, cfg, axis_reference=None, coord_system_type=None, fonts
         if coord_system_type == "radec":
             ax.set_xlabel("Right Ascension (deg)", fontsize=fontsize)
         else:
-            # Pixel coordinates can reference map indices or catalog coordinates
+            # Pixel coordinates can reference map indices or catalog
+            # coordinates
             label = "X (map pixels)" if axis_reference == "map" else "X (pixels)"
             ax.set_xlabel(label, fontsize=fontsize)
     elif xlabel:

@@ -24,7 +24,7 @@ class KaiserSquiresMapper(MassMapper):
     kappa = D^(-1) * gamma, where D is the differential operator relating
     convergence to shear in Fourier space.
     """
-    
+
     @property
     def name(self):
         """Name identifier for the Kaiser-Squires method.
@@ -35,7 +35,7 @@ class KaiserSquiresMapper(MassMapper):
             String identifier 'kaiser_squires'.
         """
         return "kaiser_squires"
-    
+
     def create_maps(self, g1_grid, g2_grid):
         """Create convergence maps using Kaiser-Squires inversion.
 

@@ -45,15 +45,15 @@ def schirmer_filter(scaled_radii, scale):
     c = 47
     d = 50
     x_c = 0.12
-    
+
     # Calculate the first part: 1/(1 + e^(a-bx) + e^(dx-c))
     part1 = 1.0 / (1.0 + np.exp(a - b*scaled_radii) + np.exp(d*scaled_radii - c))
-    
+
     # Calculate the second part: tanh(x/x_c)/(pi*Rs^2*(x/x_c))
     # Avoid division by zero when x = 0
     x_ratio = np.divide(scaled_radii, x_c, out=np.ones_like(scaled_radii)*1e-10, where=scaled_radii!=0)
     part2 = np.tanh(x_ratio) / (np.pi * scale**2 * x_ratio)
-    
+
     # Combine parts
     return part1 * part2
 
@@ -89,15 +89,15 @@ def schneider_filter(scaled_radii, scale, l=3):
     """
     # Initialize filter values
     filter_vals = np.zeros_like(scaled_radii)
-    
+
     # Apply filter only within the aperture radius (Heaviside function)
     mask = scaled_radii <= 1.0
-    
+
     # Q function filter
     filter_vals[mask] = ((1 + l) * (2 + l) / (np.pi * scale**2)) * \
                         (scaled_radii[mask]**2) * \
                         (1 - scaled_radii[mask]**2)**l
-    
+
     return filter_vals
 
 def create_filter_kernel(filter_func, scale, truncation=1.0, l=None):
@@ -130,21 +130,21 @@ def create_filter_kernel(filter_func, scale, truncation=1.0, l=None):
     # Create grid for kernel
     size = int(np.ceil(2 * truncation * scale))
     size = size + 1 if size % 2 == 0 else size  # Ensure odd size
-    
+
     x = np.linspace(-truncation * scale, truncation * scale, size)
     y = x.copy()
     X, Y = np.meshgrid(x, y)
     R = np.sqrt(X**2 + Y**2)
-    
+
     # Calculate scaled radii and apply filter
     scaled_radius = R / scale
-    
+
     # Call the filter function with appropriate arguments
     if filter_func == schneider_filter and l is not None:
         kernel = filter_func(scaled_radius, scale, l)
     else:
         kernel = filter_func(scaled_radius, scale)
-    
+
     return kernel
 
 def apply_filter_convolution(data, kernel):
@@ -198,11 +198,11 @@ def apply_aperture_filter(data, filter_config):
     """
     if filter_config is None:
         return data
-        
+
     filter_type = filter_config.get('type', '').lower()
     scale = filter_config.get('scale', 1.0)
     truncation = filter_config.get('truncation', 1.0)
-    
+
     if filter_type == 'schirmer':
         kernel = create_filter_kernel(schirmer_filter, scale, truncation)
     elif filter_type == 'schneider':
@@ -210,5 +210,5 @@ def apply_aperture_filter(data, filter_config):
         kernel = create_filter_kernel(schneider_filter, scale, truncation, l=l)
     else:
         raise ValueError(f"Unknown aperture filter type: {filter_type}")
-        
+
     return apply_filter_convolution(data, kernel)

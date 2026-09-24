@@ -65,7 +65,8 @@ def map_mass(
     create_counts_map : `bool`, optional
         Whether to create and save a per-pixel counts map PNG.
     overlay_counts_map : `bool`, optional
-        Whether to overlay per-pixel counts as text on the convergence map plots.
+        Whether to overlay per-pixel counts as text on the convergence map
+        plots.
     save_fits : `bool`, optional
         Whether to save maps as FITS files.
     save_plots : `bool`, optional
@@ -113,7 +114,7 @@ def map_mass(
     """
     # Load default configuration for the method
     config = Config.from_defaults(method)
-    
+
     # Update config with user parameters
     config.update_from_kwargs(
         data=data,
@@ -136,10 +137,10 @@ def map_mass(
         smoothing=smoothing,
         **kwargs
     )
-    
+
     # Validate configuration structure
     config.validate()
-    
+
     # Execute the mapping
     from .run import run
     return run(config)
@@ -250,7 +251,7 @@ def map_aperture_mass(
     if isinstance(kwargs['filter'], dict):
         kwargs['filter']['type'] = filter_type
         kwargs['filter']['scale'] = filter_scale
-    
+
     return map_mass(
         data=data,
         method='aperture_mass',
@@ -313,7 +314,7 @@ def map_ks_plus(
     # Handle KS+ specific parameters
     kwargs['inpainting_iterations'] = inpainting_iterations
     kwargs['reduced_shear_iterations'] = reduced_shear_iterations
-    
+
     return map_mass(
         data=data,
         method='ks_plus',

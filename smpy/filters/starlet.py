@@ -42,15 +42,15 @@ def b3spline_filter(step=1):
     """
     # B3-spline filter coefficients
     h = np.array([1.0/16, 1.0/4, 3.0/8, 1.0/4, 1.0/16])
-    
+
     # For step=1, return the basic filter
     if step == 1:
         return h
-    
+
     # For larger steps, add zeros between coefficients (à trous algorithm)
     kernel = np.zeros(len(h) + (len(h)-1)*(step-1))
     kernel[::step] = h
-    
+
     return kernel
 
 def apply_filter(data, kernel):
@@ -108,32 +108,32 @@ def starlet_transform_2d(data, nscales):
     """
     # Make sure input is float
     data = np.float64(data)
-    
+
     # Initialize arrays
     ny, nx = data.shape
     wavelet_bands = np.zeros((nscales, ny, nx))
-    
+
     # Initialize smoothed data
     smoothed_data = data.copy()
-    
+
     # Compute wavelet bands
     for j in range(nscales-1):
         # Get filter for current scale
         step = 2**j
         kernel = b3spline_filter(step)
-        
+
         # Smooth data using convolution with the filter
         smoothed_j_plus_1 = apply_filter(smoothed_data, kernel)
-        
+
         # Wavelet coefficients = detail signal between two scales
         wavelet_bands[j] = smoothed_data - smoothed_j_plus_1
-        
+
         # Update smoothed data for next scale
         smoothed_data = smoothed_j_plus_1
-    
+
     # Last scale contains the coarse approximation
     wavelet_bands[nscales-1] = smoothed_data
-    
+
     return wavelet_bands
 
 def inverse_starlet_transform_2d(wavelet_bands):
@@ -160,24 +160,24 @@ def inverse_starlet_transform_2d(wavelet_bands):
     smoothing at each step to ensure perfect reconstruction.
     """
     nscales, _, _ = wavelet_bands.shape
-    
+
     # Start with the coarsest scale
     reconstructed = np.copy(wavelet_bands[nscales-1])
-    
+
     # Process each detail band from coarse to fine
     for j in range(nscales-2, -1, -1):
         # Calculate step size for the filter
         step = 2**(j)
-        
+
         # Get filter for current scale
         kernel = b3spline_filter(step)
-        
+
         # Apply filter to current reconstruction
         filtered = apply_filter(reconstructed, kernel)
-        
+
         # Add the wavelet coefficients
         reconstructed = filtered + wavelet_bands[j]
-    
+
     return reconstructed
 
 

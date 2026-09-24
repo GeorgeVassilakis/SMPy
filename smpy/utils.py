@@ -54,7 +54,7 @@ def load_shear_data(shear_cat_path, coord1_col, coord2_col, g1_col, g2_col, weig
         shear_catalog = Table.read(shear_cat_path, hdu=hdu)
     except IndexError:
         raise IndexError(f"HDU {hdu} not found in {shear_cat_path}")
-    
+
     # Convert to pandas DataFrame with generic column names
     try:
         shear_df = pd.DataFrame({
@@ -65,13 +65,13 @@ def load_shear_data(shear_cat_path, coord1_col, coord2_col, g1_col, g2_col, weig
         })
     except KeyError as e:
         raise KeyError(f"Column {e} not found in HDU {hdu}. Available columns: {shear_catalog.colnames}")
-    
+
     # Add weights (unit weights if not specified)
     if weight_col is None:
         shear_df['weight'] = np.ones(len(shear_df))
     else:
         shear_df['weight'] = shear_catalog[weight_col]
-    
+
     return shear_df
 
 def find_peaks2d(image, threshold=None, verbose=False, true_boundaries=None, scaled_boundaries=None):
@@ -109,7 +109,7 @@ def find_peaks2d(image, threshold=None, verbose=False, true_boundaries=None, sca
     threshold = threshold if threshold is not None else image.min()
 
     # Pad the image for border peak checks
-    padded_image = np.pad(image, pad_width=1, mode='constant', 
+    padded_image = np.pad(image, pad_width=1, mode='constant',
                          constant_values=image.min())
 
     # Check for peaks by comparing to neighbors
@@ -142,17 +142,17 @@ def find_peaks2d(image, threshold=None, verbose=False, true_boundaries=None, sca
     if verbose and true_boundaries and scaled_boundaries:
         coords = []
         coord_system = 'pixel' if 'X' in true_boundaries['coord1_name'] else 'radec'
-        
+
         for x, y in zip(X, Y):
             # Convert pixel indices to scaled coordinates
             scaled_coord1 = scaled_boundaries['coord1_min'] + (x + 0.5) * (
                 scaled_boundaries['coord1_max'] - scaled_boundaries['coord1_min']
             ) / image.shape[1]
-            
+
             scaled_coord2 = scaled_boundaries['coord2_min'] + (y + 0.5) * (
                 scaled_boundaries['coord2_max'] - scaled_boundaries['coord2_min']
             ) / image.shape[0]
-            
+
             # Convert scaled coordinates to true coordinates
             true_coord1 = np.interp(
                 scaled_coord1,
@@ -164,7 +164,7 @@ def find_peaks2d(image, threshold=None, verbose=False, true_boundaries=None, sca
                 [scaled_boundaries['coord2_min'], scaled_boundaries['coord2_max']],
                 [true_boundaries['coord2_min'], true_boundaries['coord2_max']]
             )
-            
+
             coords.append((true_coord1, true_coord2))
 
         # Print peak information with appropriate coordinate labels
@@ -172,7 +172,7 @@ def find_peaks2d(image, threshold=None, verbose=False, true_boundaries=None, sca
             coord1_label, coord2_label = 'RA', 'Dec'
         else:
             coord1_label, coord2_label = 'X', 'Y'
-            
+
         print("\nDetected Peaks:")
         print("-" * 60)
         print(f"{'Peak #':<8}{'Value':<12}{coord1_label:<12}{coord2_label:<12}")
@@ -219,24 +219,24 @@ def g1g2_to_gt_gc(g1, g2, coord1, coord2, center_coord1, center_coord2, pix_coor
     coord1_min = np.min(coord1)
     coord2_max = np.max(coord2)
     coord2_min = np.min(coord2)
-    
+
     aspect_ratio = (coord1_max - coord1_min) / (coord2_max - coord2_min)
     pix_coord2 = int(pix_coord1 / aspect_ratio)
-    
+
     # Create coordinate grid
     coord1_grid, coord2_grid = np.meshgrid(
         np.linspace(coord1_min, coord1_max, pix_coord1),
         np.linspace(coord2_min, coord2_max, pix_coord2)
     )
-    
+
     # Calculate polar angle
-    phi = np.arctan2(coord2_grid - center_coord2, 
+    phi = np.arctan2(coord2_grid - center_coord2,
                      coord1_grid - center_coord1)
-    
+
     # Calculate tangential and cross components
     gt = -g1 * np.cos(2 * phi) - g2 * np.sin(2 * phi)
     gc = -g1 * np.sin(2 * phi) + g2 * np.cos(2 * phi)
-    
+
     return gt, gc, phi
 
 def _shuffle_coordinates(shear_df, seed=None):
@@ -259,19 +259,19 @@ def _shuffle_coordinates(shear_df, seed=None):
     """
     if seed is not None:
         random.seed(seed)
-        
+
     shuffled_df = shear_df.copy()
 
     # Combine scaled coordinates into pairs
-    coord_pairs = list(zip(shuffled_df['coord1_scaled'], 
+    coord_pairs = list(zip(shuffled_df['coord1_scaled'],
                           shuffled_df['coord2_scaled']))
-    
+
     # Shuffle the pairs
     random.shuffle(coord_pairs)
-    
+
     # Unzip the shuffled pairs
     shuffled_coord1, shuffled_coord2 = zip(*coord_pairs)
-    
+
     # Update the scaled coordinates
     shuffled_df['coord1_scaled'] = shuffled_coord1
     shuffled_df['coord2_scaled'] = shuffled_coord2
@@ -297,7 +297,7 @@ def _shuffle_galaxy_rotation(shear_df, rng=None):
         DataFrame with randomly rotated shear components.
     """
     shuffled_df = shear_df.copy()
-    
+
     # Add a random angle to the galaxy rotation
     g1, g2 = shuffled_df['g1'], shuffled_df['g2']
     if rng is None:
@@ -306,10 +306,10 @@ def _shuffle_galaxy_rotation(shear_df, rng=None):
         angle = rng.uniform(0, 2 * np.pi, len(g1))
     g1g2_len = np.sqrt(np.array(g1)**2 + np.array(g2)**2)
     g1g2_angle = np.arctan2(g2, g1) + angle
-    
+
     shuffled_df['g1'] = g1g2_len * np.cos(g1g2_angle)
     shuffled_df['g2'] = g1g2_len * np.sin(g1g2_angle)
-    
+
     return shuffled_df
 
 def generate_multiple_shear_dfs(og_shear_df, num_shuffles=100, shuffle_type='spatial', seed=0):
@@ -342,27 +342,30 @@ def generate_multiple_shear_dfs(og_shear_df, num_shuffles=100, shuffle_type='spa
         If invalid shuffle_type is specified.
     """
     shuffled_dfs = []
-    
+
     # Handle 'random' seed option
     if seed == 'random':
         seed = secrets.randbits(128)
         rng = np.random.default_rng(seed)
         # For orientation shuffling, we'll use NumPy's RNG directly
-        # For spatial shuffling, we still use Python's random module with the seed
+        # For spatial shuffling, we still use Python's random module with the
+        # seed
         if shuffle_type == 'spatial':
             random.seed(seed)
-    
+
     for i in range(num_shuffles):
         if shuffle_type == 'spatial':
             if seed != 'random':
-                # Only set seed for each iteration if not using the 'random' option
+                # Only set seed for each iteration if not using the 'random'
+                # option
                 shuffled_df = _shuffle_coordinates(og_shear_df, seed=seed+i)
             else:
                 # For 'random', we already set the seed once outside the loop
                 shuffled_df = _shuffle_coordinates(og_shear_df, seed=None)
         elif shuffle_type == 'orientation':
             if seed == 'random':
-                # Use NumPy's RNG directly for orientation shuffling with 'random' option
+                # Use NumPy's RNG directly for orientation shuffling with
+                # 'random' option
                 shuffled_df = _shuffle_galaxy_rotation(og_shear_df, rng=rng)
             else:
                 # Standard orientation shuffling
@@ -370,7 +373,7 @@ def generate_multiple_shear_dfs(og_shear_df, num_shuffles=100, shuffle_type='spa
         else:
             raise ValueError(f"Invalid shuffle type: {shuffle_type}")
         shuffled_dfs.append(shuffled_df)
-    
+
     return shuffled_dfs
 
 def save_fits(data, true_boundaries, filename):

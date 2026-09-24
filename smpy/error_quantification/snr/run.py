@@ -63,7 +63,7 @@ def perform_mapping(grid_list, config, mapping_method='kaiser_squires'):
     """
     kappa_e_list = []
     kappa_b_list = []
-    
+
     # Create the appropriate mapper based on the method
     if mapping_method.lower() == 'kaiser_squires':
         mapper = KaiserSquiresMapper(config)
@@ -73,13 +73,13 @@ def perform_mapping(grid_list, config, mapping_method='kaiser_squires'):
         mapper = KSPlusMapper(config)
     else:
         raise ValueError(f"Unsupported mapping method: {mapping_method}")
-    
+
     # Apply the mapping to each grid
     for g1map, g2map in grid_list:
         kappa_e, kappa_b = mapper.create_maps(g1map, g2map)
         kappa_e_list.append(kappa_e)
         kappa_b_list.append(kappa_b)
-    
+
     return kappa_e_list, kappa_b_list
 
 def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries, counts_overlay=None):
@@ -118,7 +118,7 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries, 
     coord_system_type = config['general']['coordinate_system'].lower()
     coord_system = get_coordinate_system(coord_system_type)
     coord_config = config['general'][coord_system_type]
-    
+
     # Load shear data
     shear_df = utils.load_shear_data(
         config['general']['input_path'],
@@ -129,10 +129,10 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries, 
         config['general']['weight_col'],
         config['general']['input_hdu']
     )
-    
+
     # Transform coordinates
     shear_df = coord_system.transform_coordinates(shear_df)
-    
+
     # Create shuffled dataframes
     shuffled_dfs = utils.generate_multiple_shear_dfs(
         shear_df,
@@ -140,7 +140,7 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries, 
         config['snr']['shuffle_type'],
         config['snr'].get('seed', 0)
     )
-    
+
     # Create shear grids for shuffled dataframes
     g1_g2_map_list = []
     for shuffled_df in shuffled_dfs:
@@ -150,40 +150,40 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries, 
             config
         )
         g1_g2_map_list.append((g1map, g2map))
-    
+
     # Calculate kappa for shuffled maps
     mapping_method = config['general']['method']
-    
+
     # If the mapping method is KS+, use standard KS for variance calculation
     if mapping_method.lower() == 'ks_plus':
         variance_mapping_method = 'kaiser_squires'
     else:
         variance_mapping_method = mapping_method
-    
+
     kappa_e_list, kappa_b_list = perform_mapping(g1_g2_map_list, config, variance_mapping_method)
 
     # Process maps
     filter_config = config['snr']['smoothing']
     processed_kappa_e_list = [plotting.apply_filter(k, filter_config) for k in kappa_e_list]
     processed_kappa_b_list = [plotting.apply_filter(k, filter_config) for k in kappa_b_list]
-    
+
     # Calculate variance maps
     variance_map_e = np.var(np.stack(processed_kappa_e_list, axis=0), axis=0)
     variance_map_b = np.var(np.stack(processed_kappa_b_list, axis=0), axis=0)
-    
+
     # Create SNR maps
     sn_maps = {}
-    
+
     if 'E' in convergence_maps:
         convergence_e = convergence_maps['E']
         convergence_e = plotting.apply_filter(convergence_e, filter_config)
         sn_maps['E'] = convergence_e / np.sqrt(variance_map_e)
-    
+
     if 'B' in convergence_maps:
         convergence_b = convergence_maps['B']
         convergence_b = plotting.apply_filter(convergence_b, filter_config)
         sn_maps['B'] = convergence_b / np.sqrt(variance_map_b)
-    
+
     # Plot SNR maps
     if config['general'].get('save_plots', True):
         for mode in config['general']['mode']:
@@ -192,24 +192,30 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries, 
                 # Ensure plotting uses the correct coordinate system
                 plot_config['coordinate_system'] = config['general'].get('coordinate_system', 'radec')
                 if plot_config['coordinate_system'] == 'pixel':
-                    plot_config['axis_reference'] = config['general']['pixel'].get('pixel_axis_reference', 'catalog')
+                    plot_config['axis_reference'] = config['general']['pixel'].get(
+                        'pixel_axis_reference', 'catalog'
+                    )
                 plot_config['plot_title'] = f'{config["snr"]["plot_title"]} ({mode}-mode)'
 
                 # Create method-specific output directory
                 method_output_dir = f"{config['general']['output_directory']}/{mapping_method}"
                 os.makedirs(method_output_dir, exist_ok=True)
 
-                output_name = f"{config['general']['output_directory']}/{mapping_method}/{config['general']['output_base_name']}_{mapping_method}_snr_{mode.lower()}_mode.png"
+                output_name = (
+                    f"{config['general']['output_directory']}/{mapping_method}/"
+                    f"{config['general']['output_base_name']}_{mapping_method}_snr_{mode.lower()}_mode.png"
+                )
                 # Pass counts overlay if enabled and available
                 overlay = counts_overlay if config['general'].get('overlay_counts_map', False) else None
-                plot.plot_snr_map(sn_maps[mode], scaled_boundaries, true_boundaries, plot_config, output_name, counts_overlay=overlay)
-    
+                plot.plot_snr_map(sn_maps[mode], scaled_boundaries, true_boundaries, plot_config,
+                                  output_name, counts_overlay=overlay)
+
     # End timing
     end_time = time.time()
     if config['general'].get('print_timing', False):
         elapsed_time = end_time - start_time
         print(f"Time taken to create {mapping_method} SNR maps: {elapsed_time:.2f} seconds")
-    
+
     return sn_maps
 
 def run(config_path, convergence_maps, scaled_boundaries, true_boundaries):

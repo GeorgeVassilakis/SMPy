@@ -40,3 +40,14 @@ include = ["smpy*"]
 
 [tool.setuptools.package-data]
 smpy = ["configs/*.yaml"]
+
+[tool.ruff]
+line-length = 110
+extend-exclude = ["docs", "examples", "**/__init__.py"]
+
+[tool.ruff.lint]
+select = ["E", "F", "N", "W"]
+ignore = ["N802", "N803", "N806", "N812", "N813", "N815", "N816"]
+
+[tool.ruff.lint.pycodestyle]
+max-doc-length = 79

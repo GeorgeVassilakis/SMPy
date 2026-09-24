@@ -5,7 +5,8 @@ from smpy.filters.starlet import (
 
 
 def coarsest_support(nscales: int) -> int:
-    # nscales = J + 1 => J = nscales - 1, coarsest detail j = J - 1 = nscales - 2
+    # nscales = J + 1 => J = nscales - 1, coarsest detail j = J - 1 = nscales -
+    # 2
     j = nscales - 2
     return 4 * (2 ** j) + 1
 
