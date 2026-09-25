@@ -14,3 +14,4 @@ with sensible defaults while maintaining access to all underlying functionality.
    smpy.map_kaiser_squires
    smpy.map_aperture_mass
    smpy.map_ks_plus
+   smpy.MassMap

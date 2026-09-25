@@ -23,7 +23,8 @@ METHODS = {
 }
 COORDINATES = {
     "radec": {"coord_system": "radec", "pixel_scale": 0.4},
-    "pixel": {"coord_system": "pixel", "downsample_factor": 170},
+    "pixel": {"coord_system": "pixel", "downsample_factor": 170, "coord1_col": "X_IMAGE_se",
+              "coord2_col": "Y_IMAGE_se"},
 }
 FITS_KEYS = ("CRVAL1", "CRVAL2", "CRPIX1", "CRPIX2", "CD1_1", "CD1_2", "CD2_1", "CD2_2")
 RTOL = 1e-9
@@ -31,33 +32,28 @@ ATOL = 1e-12
 
 def run_case(output_dir, method, coordinates, snr=None, **settings):
     """Run SMPy on the example catalogue and return its result."""
-    config = Config.from_defaults(method)
-    config.update_from_kwargs(data=str(CATALOG), g1_col="g1_Rinv", g2_col="g2_Rinv", weight_col="weight",
-                              output_dir=str(output_dir), save_plots=False, mode=["E", "B"],
-                              **coordinates, **settings)
-    config_dict = config.to_dict()
-    config_dict["general"]["pixel"].update(coord1="X_IMAGE_se", coord2="Y_IMAGE_se")
-    config_dict["snr"].update(snr or {})
-    return run(config_dict)
+    config = Config.from_defaults(method, input_path=str(CATALOG), g1_col="g1_Rinv", g2_col="g2_Rinv",
+                                  weight_col="weight", output_directory=str(output_dir), save_plots=False,
+                                  mode=["E", "B"], snr=snr, **coordinates, **settings)
+    return run(config)
 
 def compute_outputs(output_dir):
     """Return every reference quantity, keyed by name."""
     outputs = {}
     for coords_name, coordinates in COORDINATES.items():
         for name, (method, settings) in METHODS.items():
-            maps = run_case(output_dir, method, coordinates, **settings)["maps"]
+            maps = run_case(output_dir, method, coordinates, **settings).maps
             for mode in ("E", "B"):
                 outputs[f"{coords_name}_{name}_{mode}"] = maps[mode]
 
     for shuffle_type in ("spatial", "orientation"):
         snr = {"shuffle_type": shuffle_type, "num_shuffles": 20}
         snr_maps = run_case(output_dir, "kaiser_squires", COORDINATES["radec"], snr=snr,
-                            create_snr=True)["snr_maps"]
+                            create_snr=True).snr
         for mode in ("E", "B"):
             outputs[f"snr_{shuffle_type}_{mode}"] = snr_maps[mode]
 
-    outputs["counts"] = run_case(output_dir, "kaiser_squires", COORDINATES["radec"],
-                                 create_counts_map=True)["counts_map"]
+    outputs["counts"] = run_case(output_dir, "kaiser_squires", COORDINATES["radec"]).grid.counts
 
     run_case(output_dir, "kaiser_squires", COORDINATES["radec"], save_fits=True)
     with fits.open(Path(output_dir) / "kaiser_squires" / "smpy_output_kaiser_squires_e_mode.fits") as hdul:

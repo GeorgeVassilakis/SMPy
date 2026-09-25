@@ -15,14 +15,15 @@ Factory Function
 
    smpy.coordinates.get_coordinate_system
 
-Base Class
-----------
+Base Class and Grid
+-------------------
 
 .. autosummary::
    :toctree: ../_autosummary
    :nosignatures:
 
    smpy.coordinates.base.CoordinateSystem
+   smpy.coordinates.base.ShearGrid
 
 Implementations
 ---------------

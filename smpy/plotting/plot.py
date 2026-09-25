@@ -1,7 +1,7 @@
 """Plotting functions for SMPy mass and SNR maps.
 
 Provides high-level plotting for pixel and RA/Dec coordinate systems
-with consistent styling, scaling, overlays, and saving. Helpers live in
+with consistent styling, scaling and overlays. Helpers live in
 ``smpy.plotting.utils`` to keep this module focused on public plotting
 APIs and orchestration.
 """
@@ -31,9 +31,9 @@ from smpy.plotting.utils import (
 # Local
 from smpy.utils import find_peaks2d
 
-def plot_mass_map(data, scaled_boundaries, true_boundaries, config, output_name=None,
-                  return_handles=False, map_category="convergence", counts_overlay=None):
-    """Plot a mass-like map (E/B mode) with styling and overlays.
+def plot_mass_map(data, scaled_boundaries, true_boundaries, config, ax=None,
+                  map_category="convergence", counts_overlay=None):
+    """Plot a mass, SNR or counts map with styling and overlays.
 
     Parameters
     ----------
@@ -47,36 +47,40 @@ def plot_mass_map(data, scaled_boundaries, true_boundaries, config, output_name=
         Plot configuration settings including figsize, cmap, scaling,
         'coordinate_system', optional 'axis_reference' (pixel only), and
         optional x-ray contour settings under ``xray_contours``.
-    output_name : `str`, optional
-        Path for saving the plot file.
-    return_handles : `bool`, optional
-        If ``True``, return ``(fig, ax, im)`` instead of closing.
+    ax : `matplotlib.axes.Axes`, optional
+        Axes to draw on. If `None`, a new figure is created.
     map_category : `str`, optional
         Map category used for scaling and overlays. Options: 'convergence',
         'snr', 'counts'.
     counts_overlay : `numpy.ndarray`, optional
         If provided, overlays integer per-pixel counts (using existing counts
-        labeling logic) on top of the rendered image. Used when
-        ``general.overlay_counts_map: true`` for convergence plots.
+        labeling logic) on top of the rendered image.
 
     Returns
     -------
-    handles : tuple, optional
-        Returns ``(fig, ax, im)`` if ``return_handles=True``.
+    fig : `matplotlib.figure.Figure`
+        Figure containing the plot. It is neither shown nor closed.
+    ax : `matplotlib.axes.Axes`
+        Axes the map was drawn on.
+    im : `matplotlib.image.AxesImage`
+        The map image.
     """
     # Dispatch to coordinate-system specific renderer based on config
     coord_system = config.get("coordinate_system", "radec").lower()
     if coord_system == "radec":
-        return _plot_radec(data, scaled_boundaries, true_boundaries, config, output_name, return_handles,
-                           map_category, counts_overlay)
-    return _plot_pixel(data, scaled_boundaries, true_boundaries, config, output_name, return_handles,
-                       map_category, counts_overlay)
+        return _plot_radec(data, scaled_boundaries, true_boundaries, config, ax, map_category,
+                           counts_overlay)
+    return _plot_pixel(data, scaled_boundaries, true_boundaries, config, ax, map_category, counts_overlay)
 
-def _plot_pixel(data, scaled_boundaries, true_boundaries, config, output_name, return_handles,
-                map_category, counts_overlay):
+def _plot_pixel(data, scaled_boundaries, true_boundaries, config, ax, map_category, counts_overlay):
     """Render pixel-coordinate plot with overlays and colorbar."""
-    # Create figure/axes and apply local styling (no global rc changes)
-    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=config.get("figsize", (12, 8)))
+    # Create figure/axes if needed and apply local styling (no global rc
+    # changes)
+    new_figure = ax is None
+    if new_figure:
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=config.get("figsize", (12, 8)))
+    else:
+        fig = ax.figure
     fontsize = int(config.get("fontsize", 15))
     apply_axes_style(ax, fontsize=fontsize)
 
@@ -144,17 +148,9 @@ def _plot_pixel(data, scaled_boundaries, true_boundaries, config, output_name, r
     # Attach colorbar to the right
     add_colorbar(ax, im, tick_fontsize=fontsize)
 
-    # Save and/or return figure
-    fig.tight_layout()
-    if output_name:
-        fig.savefig(output_name)
-        map_label = "Convergence" if map_category.lower() == "convergence" else "SNR"
-        print(f"{map_label} map saved as PNG file: {output_name}")
-
-    if return_handles:
-        return fig, ax, im
-    plt.close(fig)
-    return None
+    if new_figure:
+        fig.tight_layout()
+    return fig, ax, im
 
 def _overlay_counts_text_pixel(ax, data, scaled_boundaries, axis_reference, base_fontsize):
     """Draw count labels at pixel centers for pixel-coordinate plots."""
@@ -189,11 +185,15 @@ def _overlay_counts_text_pixel(ax, data, scaled_boundaries, axis_reference, base
                 path_effects=outline,
             )
 
-def _plot_radec(data, scaled_boundaries, true_boundaries, config, output_name, return_handles,
-                map_category, counts_overlay):
+def _plot_radec(data, scaled_boundaries, true_boundaries, config, ax, map_category, counts_overlay):
     """Render RA/Dec plot with astronomical orientation and ticks."""
-    # Create figure/axes and apply local styling (no global rc changes)
-    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=config.get("figsize", (12, 8)))
+    # Create figure/axes if needed and apply local styling (no global rc
+    # changes)
+    new_figure = ax is None
+    if new_figure:
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=config.get("figsize", (12, 8)))
+    else:
+        fig = ax.figure
     fontsize = int(config.get("fontsize", 15))
     apply_axes_style(ax, fontsize=fontsize)
 
@@ -289,17 +289,9 @@ def _plot_radec(data, scaled_boundaries, true_boundaries, config, output_name, r
     # Attach colorbar to the right
     add_colorbar(ax, im, tick_fontsize=fontsize)
 
-    # Save and/or return figure
-    fig.tight_layout()
-    if output_name:
-        fig.savefig(output_name)
-        map_label = "Convergence" if map_category.lower() == "convergence" else "SNR"
-        print(f"{map_label} map saved as PNG file: {output_name}")
-
-    if return_handles:
-        return fig, ax, im
-    plt.close(fig)
-    return None
+    if new_figure:
+        fig.tight_layout()
+    return fig, ax, im
 
 def _overlay_counts_text_radec(ax, data, scaled_boundaries, base_fontsize):
     """Draw count labels at pixel centers in scaled RA/Dec coordinates."""
@@ -326,24 +318,3 @@ def _overlay_counts_text_radec(ax, data, scaled_boundaries, base_fontsize):
                 fontsize=count_fontsize,
                 path_effects=outline,
             )
-
-
-def plot_snr_map(data, scaled_boundaries, true_boundaries, config, output_name=None,
-                 return_handles=False, counts_overlay=None):
-    """Plot an SNR map with styling and overlays.
-
-    Parameters
-    ----------
-    See :func:`plot_mass_map`.
-    """
-    # Delegate to mass_map with SNR category for proper scaling overrides
-    return plot_mass_map(
-        data=data,
-        scaled_boundaries=scaled_boundaries,
-        true_boundaries=true_boundaries,
-        config=config,
-        output_name=output_name,
-        return_handles=return_handles,
-        map_category="snr",
-        counts_overlay=counts_overlay,
-    )

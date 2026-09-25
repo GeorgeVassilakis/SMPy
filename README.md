@@ -107,33 +107,31 @@ Use the same example catalog for both API levels:
 
 ```python
 data_file = "examples/data/forecast_lum_annular.fits"
-common = dict(
-    data=data_file,
-    coord_system="radec",
-    pixel_scale=0.4,
-    g1_col="g1_Rinv",
-    g2_col="g2_Rinv",
-    weight_col="weight",
-    save_plots=False,
-)
+columns = dict(g1_col="g1_Rinv", g2_col="g2_Rinv", weight_col="weight")
 ```
 
-1. **High-level functional API (quick)**
+1. **High-level functional API (quick)**: returns a `MassMap` and writes nothing to disk
    ```python
    from smpy import map_kaiser_squires, map_aperture_mass, map_ks_plus
 
-   result_ks = map_kaiser_squires(**common)
-   result_am = map_aperture_mass(**common, filter_type="schirmer", filter_scale=60)
-   result_ksp = map_ks_plus(**common, inpainting_iterations=5, reduced_shear_iterations=1)
+   result_ks = map_kaiser_squires(data_file, pixel_scale=0.4, **columns)
+   result_am = map_aperture_mass(data_file, pixel_scale=0.4, filter_type="schirmer", filter_scale=60,
+                                 **columns)
+   result_ksp = map_ks_plus(data_file, pixel_scale=0.4, inpainting_iterations=5,
+                            reduced_shear_iterations=1, **columns)
+
+   result_ks.maps["E"]              # E-mode convergence map as a NumPy array
+   fig, ax, im = result_ks.plot("E")
+   result_ks.to_fits("ks_e_mode.fits")
    ```
 
-2. **Configuration-based API (recommended for reproducibility)**
+2. **Configuration-based API (recommended for reproducibility)**: `run` writes the outputs the configuration asks for
    ```python
-   from smpy import run
-   from smpy.config import Config
+   from smpy import Config, run
 
-   config = Config.from_defaults("kaiser_squires")
-   config.update_from_kwargs(**common, smoothing=2.0, mode=["E", "B"])
+   config = Config.from_defaults("kaiser_squires", input_path=data_file, pixel_scale=0.4,
+                                 mode=["E", "B"], **columns)
+   config.save("my_run.yaml")      # rerun later with: smpy -c my_run.yaml
    result_cfg = run(config)
    ```
 

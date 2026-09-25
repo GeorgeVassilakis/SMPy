@@ -16,32 +16,7 @@ class RADecSystem(CoordinateSystem):
     to account for spherical geometry effects.
     """
 
-    def get_grid_parameters(self, config):
-        """Get RA/Dec specific grid parameters.
-
-        Extract celestial coordinate system parameters including angular
-        resolution for grid spacing.
-
-        Parameters
-        ----------
-        config : `dict`
-            Configuration dictionary containing RA/Dec settings.
-
-        Returns
-        -------
-        grid_params : `dict`
-            Grid parameters dictionary containing:
-            - resolution_arcmin: Grid spacing in arcminutes
-        """
-        radec_config = config['general']['radec']
-        if 'resolution' not in radec_config:
-            print("Warning: No resolution specified in radec config, using default 0.4 arcmin")
-
-        return {
-            'resolution_arcmin': radec_config.get('resolution', 0.4)
-        }
-
-    def create_grid(self, data_df, boundaries, config):
+    def create_grid(self, data_df, boundaries, settings):
         """Create shear grid in RA/Dec space.
 
         Create a regular grid in celestial coordinates accounting for
@@ -53,22 +28,19 @@ class RADecSystem(CoordinateSystem):
             DataFrame with scaled coordinates and shear data.
         boundaries : `dict`
             Dictionary with coordinate boundaries.
-        config : `dict`
-            Configuration dictionary with RA/Dec parameters.
+        settings : `dict`
+            The ``general.radec`` settings, including ``pixel_scale`` in
+            arcminutes.
 
         Returns
         -------
-        g1_grid : `numpy.ndarray`
-            2D array containing binned first shear component values.
-        g2_grid : `numpy.ndarray`
-            2D array containing binned second shear component values.
+        grid : `smpy.coordinates.ShearGrid`
+            Binned shear, weights and counts.
         """
         # Ensure data is properly prepared
         data_df = self.prepare_data(data_df)
 
-        # Get grid parameters
-        grid_params = self.get_grid_parameters(config)
-        resolution_arcmin = grid_params['resolution_arcmin']
+        resolution_arcmin = settings['pixel_scale']
 
         # Get boundaries
         ra_min, ra_max = boundaries['coord1_min'], boundaries['coord1_max']
@@ -87,19 +59,7 @@ class RADecSystem(CoordinateSystem):
         ra_idx = np.digitize(data_df['coord1_scaled'], ra_bins) - 1
         dec_idx = np.digitize(data_df['coord2_scaled'], dec_bins) - 1
 
-        # Determine whether to accumulate counts based on config
-        accumulate_counts = bool(
-            config.get('general', {}).get('create_counts_map', False)
-            or config.get('general', {}).get('overlay_counts_map', False)
-        )
-        return self._create_shear_grid(
-            data_df,
-            ra_idx,
-            dec_idx,
-            npix_dec,
-            npix_ra,
-            accumulate_counts=accumulate_counts,
-        )
+        return self._create_shear_grid(data_df, ra_idx, dec_idx, npix_dec, npix_ra)
 
     def calculate_boundaries(self, coord1, coord2):
         """Calculate field boundaries in RA/Dec space.

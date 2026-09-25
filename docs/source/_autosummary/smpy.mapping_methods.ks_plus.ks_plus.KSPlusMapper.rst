@@ -15,16 +15,9 @@
    
       ~KSPlusMapper.__init__
       ~KSPlusMapper.create_maps
-      ~KSPlusMapper.run
    
    
 
    
-   
-   .. rubric:: Attributes
-
-   .. autosummary::
-   
-      ~KSPlusMapper.name
    
    

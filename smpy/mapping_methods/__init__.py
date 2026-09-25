@@ -1,14 +1,19 @@
-"""Mass mapping methods package.
+"""Mass mapping methods.
 
-This package provides implementations of various weak lensing mass mapping
-algorithms including Kaiser-Squires, aperture mass, and KS+ methods.
-All methods inherit from the MassMapper base class to ensure consistent
-interfaces and functionality.
+Each method is a `MassMapper` subclass, registered in `METHODS` under the name
+used by ``method=...`` and by the ``methods`` section of ``default.yaml``.
 """
 
+from .aperture_mass.aperture_mass import ApertureMassMapper
 from .base import MassMapper
 from .kaiser_squires.kaiser_squires import KaiserSquiresMapper
-from .aperture_mass.aperture_mass import ApertureMassMapper
 from .ks_plus.ks_plus import KSPlusMapper
 
-__all__ = ['MassMapper', 'KaiserSquiresMapper', 'ApertureMassMapper', 'KSPlusMapper']
+METHODS = {
+    "kaiser_squires": KaiserSquiresMapper,
+    "aperture_mass": ApertureMassMapper,
+    "ks_plus": KSPlusMapper,
+}
+"""Mass mapping methods by name (`dict` [`str`, `type`])."""
+
+__all__ = ["METHODS", "MassMapper", "KaiserSquiresMapper", "ApertureMassMapper", "KSPlusMapper"]

@@ -1,12 +1,5 @@
 """Filters package for SMPy.
 
-This package provides various filtering and smoothing operations for mass
-mapping including Gaussian smoothing, aperture mass filters (Schirmer and
-Schneider), and starlet wavelet transforms used in reconstruction algorithms.
+This package provides the aperture mass filters (Schirmer and Schneider) and
+the starlet wavelet transform used in reconstruction algorithms.
 """
-
-from .plotting import apply_filter
-
-__all__ = [
-    'apply_filter',           # From plotting.py
-]

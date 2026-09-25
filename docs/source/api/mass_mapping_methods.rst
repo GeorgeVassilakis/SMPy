@@ -4,7 +4,9 @@ Mass Mapping Methods
 Implementation classes for different mass mapping algorithms.
 
 These classes implement the core algorithms for reconstructing mass distributions
-from weak lensing shear measurements.
+from weak lensing shear measurements. Each is registered by name in
+``smpy.mapping_methods.METHODS``, and its settings come from the ``methods``
+section of ``default.yaml``.
 
 Base Class
 ----------

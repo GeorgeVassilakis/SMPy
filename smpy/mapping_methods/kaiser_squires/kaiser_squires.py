@@ -7,8 +7,7 @@ with optional Gaussian smoothing.
 """
 
 import numpy as np
-
-from smpy.filters import apply_filter
+from scipy.ndimage import gaussian_filter
 
 from ..base import MassMapper
 
@@ -20,6 +19,16 @@ class KaiserSquiresMapper(MassMapper):
     The algorithm uses Fourier transforms to perform the inversion and
     supports optional smoothing for noise reduction.
 
+    Parameters
+    ----------
+    smoothing : `float`
+        Gaussian smoothing sigma in map pixels; 0 for no smoothing.
+
+    Raises
+    ------
+    ValueError
+        Raised if ``smoothing`` is negative.
+
     Notes
     -----
     The Kaiser-Squires method directly inverts the shear-convergence relation:
@@ -27,30 +36,22 @@ class KaiserSquiresMapper(MassMapper):
     convergence to shear in Fourier space.
     """
 
-    @property
-    def name(self):
-        """Name identifier for the Kaiser-Squires method.
+    def __init__(self, smoothing):
+        if smoothing < 0:
+            raise ValueError(f"smoothing must be at least 0, got {smoothing}")
+        self.smoothing = smoothing
 
-        Returns
-        -------
-        method_name : `str`
-            String identifier 'kaiser_squires'.
-        """
-        return "kaiser_squires"
-
-    def create_maps(self, g1_grid, g2_grid):
+    def create_maps(self, grid):
         """Create convergence maps using Kaiser-Squires inversion.
 
         Perform direct inversion of shear components to reconstruct both
-        E-mode and B-mode convergence maps using Fourier transforms.
-        Applies optional smoothing if configured.
+        E-mode and B-mode convergence maps using Fourier transforms, then
+        apply the configured smoothing.
 
         Parameters
         ----------
-        g1_grid : `numpy.ndarray`
-            First shear component grid.
-        g2_grid : `numpy.ndarray`
-            Second shear component grid.
+        grid : `smpy.coordinates.ShearGrid`
+            Binned shear.
 
         Returns
         -------
@@ -66,11 +67,11 @@ class KaiserSquiresMapper(MassMapper):
         kappa_B = ((k1^2 - k2^2) * g2 - 2 * k1 * k2 * g1) / k^2
         """
         # Get grid dimensions
-        npix_dec, npix_ra = g1_grid.shape
+        npix_dec, npix_ra = grid.g1.shape
 
         # Fourier transform the shear components
-        g1_hat = np.fft.fft2(g1_grid)
-        g2_hat = np.fft.fft2(g2_grid)
+        g1_hat = np.fft.fft2(grid.g1)
+        g2_hat = np.fft.fft2(grid.g2)
 
         # Create wavenumber grids
         k1, k2 = np.meshgrid(np.fft.fftfreq(npix_ra), np.fft.fftfreq(npix_dec))
@@ -87,10 +88,4 @@ class KaiserSquiresMapper(MassMapper):
         kappa_e = np.real(np.fft.ifft2(kappa_e_hat))
         kappa_b = np.real(np.fft.ifft2(kappa_b_hat))
 
-        # Apply smoothing if configured
-        smoothing_config = self.method_config.get('smoothing')
-        if smoothing_config and smoothing_config.get('type'):
-            kappa_e = apply_filter(kappa_e, smoothing_config)
-            kappa_b = apply_filter(kappa_b, smoothing_config)
-
-        return kappa_e, kappa_b
+        return gaussian_filter(kappa_e, self.smoothing), gaussian_filter(kappa_b, self.smoothing)

@@ -1,28 +1,23 @@
 """Utility functions for SMPy mass mapping operations.
 
-This module provides core utility functions for data loading, peak detection,
-coordinate transformations, and statistical operations used throughout the
-SMPy package.
+This module provides catalogue loading, peak detection and tangential shear
+utilities used throughout the SMPy package.
 """
-
-import random
-import secrets
 
 import numpy as np
 import pandas as pd
-from astropy.io import fits
 from astropy.table import Table
 
-def load_shear_data(shear_cat_path, coord1_col, coord2_col, g1_col, g2_col, weight_col=None, hdu=0):
-    """Load shear catalog from FITS file.
+def load_shear_data(catalog, coord1_col, coord2_col, g1_col, g2_col, weight_col=None, hdu=0):
+    """Load a shear catalog with standardized column names.
 
-    Read shear catalog data from a FITS file and return as a pandas DataFrame
-    with standardized column names for use in mass mapping operations.
+    Return the catalog as a pandas DataFrame with standardized column names
+    for use in mass mapping operations.
 
     Parameters
     ----------
-    shear_cat_path : `str`
-        Path to FITS catalog file.
+    catalog : `str`, `pathlib.Path`, or `astropy.table.Table`
+        Catalog table, or the path to a FITS file.
     coord1_col : `str`
         Name of first coordinate column (e.g., 'ra' or 'x').
     coord2_col : `str`
@@ -34,7 +29,7 @@ def load_shear_data(shear_cat_path, coord1_col, coord2_col, g1_col, g2_col, weig
     weight_col : `str`, optional
         Name of weight column. If None, unit weights are assigned.
     hdu : `int`, optional
-        HDU number to read from FITS file.
+        HDU number to read when ``catalog`` is a FITS file path.
 
     Returns
     -------
@@ -49,11 +44,13 @@ def load_shear_data(shear_cat_path, coord1_col, coord2_col, g1_col, g2_col, weig
     KeyError
         If required columns are not found in the catalog.
     """
-    # Read data from FITS file
-    try:
-        shear_catalog = Table.read(shear_cat_path, hdu=hdu)
-    except IndexError:
-        raise IndexError(f"HDU {hdu} not found in {shear_cat_path}")
+    if isinstance(catalog, Table):
+        shear_catalog = catalog
+    else:
+        try:
+            shear_catalog = Table.read(catalog, hdu=hdu)
+        except IndexError:
+            raise IndexError(f"HDU {hdu} not found in {catalog}")
 
     # Convert to pandas DataFrame with generic column names
     try:
@@ -238,162 +235,3 @@ def g1g2_to_gt_gc(g1, g2, coord1, coord2, center_coord1, center_coord2, pix_coor
     gc = -g1 * np.sin(2 * phi) + g2 * np.cos(2 * phi)
 
     return gt, gc, phi
-
-def _shuffle_coordinates(shear_df, rng):
-    """Shuffle the scaled coordinates of the input DataFrame together.
-
-    Randomly permute coordinate pairs while maintaining the pairing between
-    coord1_scaled and coord2_scaled columns.
-
-    Parameters
-    ----------
-    shear_df : `pandas.DataFrame`
-        Input DataFrame with scaled coordinates.
-    rng : `random.Random`
-        Random number generator for the permutation.
-
-    Returns
-    -------
-    shuffled_df : `pandas.DataFrame`
-        DataFrame with shuffled coordinate pairs.
-    """
-    shuffled_df = shear_df.copy()
-
-    # Combine scaled coordinates into pairs
-    coord_pairs = list(zip(shuffled_df['coord1_scaled'],
-                          shuffled_df['coord2_scaled']))
-
-    # Shuffle the pairs
-    rng.shuffle(coord_pairs)
-
-    # Unzip the shuffled pairs
-    shuffled_coord1, shuffled_coord2 = zip(*coord_pairs)
-
-    # Update the scaled coordinates
-    shuffled_df['coord1_scaled'] = shuffled_coord1
-    shuffled_df['coord2_scaled'] = shuffled_coord2
-
-    return shuffled_df
-
-def _shuffle_galaxy_rotation(shear_df, rng):
-    """Shuffle galaxy orientations in the input shear DataFrame.
-
-    Randomly rotate galaxy orientations by adding random angles to the
-    shear components while preserving shear magnitudes.
-
-    Parameters
-    ----------
-    shear_df : `pandas.DataFrame`
-        Input DataFrame with shear components.
-    rng : `numpy.random.Generator`
-        Random number generator for the rotation angles.
-
-    Returns
-    -------
-    shuffled_df : `pandas.DataFrame`
-        DataFrame with randomly rotated shear components.
-    """
-    shuffled_df = shear_df.copy()
-
-    # Add a random angle to the galaxy rotation
-    g1, g2 = shuffled_df['g1'], shuffled_df['g2']
-    angle = rng.uniform(0, 2 * np.pi, len(g1))
-    g1g2_len = np.sqrt(np.array(g1)**2 + np.array(g2)**2)
-    g1g2_angle = np.arctan2(g2, g1) + angle
-
-    shuffled_df['g1'] = g1g2_len * np.cos(g1g2_angle)
-    shuffled_df['g2'] = g1g2_len * np.sin(g1g2_angle)
-
-    return shuffled_df
-
-def generate_multiple_shear_dfs(og_shear_df, num_shuffles=100, shuffle_type='spatial', seed=0):
-    """Generate shuffled versions of shear catalog.
-
-    Create multiple randomized versions of the input shear catalog for
-    null hypothesis testing and error estimation.
-
-    Parameters
-    ----------
-    og_shear_df : `pandas.DataFrame`
-        Original shear catalog.
-    num_shuffles : `int`, optional
-        Number of shuffled versions to generate.
-    shuffle_type : `str`, optional
-        Type of shuffling: 'spatial' (randomize positions) or 'orientation'
-        (randomize galaxy orientations).
-    seed : `int` or `str`, optional
-        Random seed for reproducibility. If 'random', the seed is drawn from
-        the `secrets` module.
-
-    Returns
-    -------
-    shuffled_catalogs : `list` of `pandas.DataFrame`
-        List of shuffled DataFrame copies.
-
-    Raises
-    ------
-    ValueError
-        If invalid shuffle_type is specified.
-
-    Notes
-    -----
-    Each shuffle type draws from its own generator seeded by ``seed``, so the
-    global `random` and `numpy.random` states are neither used nor changed.
-    """
-    if seed == 'random':
-        seed = secrets.randbits(128)
-
-    if shuffle_type == 'spatial':
-        return [_shuffle_coordinates(og_shear_df, random.Random(seed + i)) for i in range(num_shuffles)]
-    if shuffle_type == 'orientation':
-        rng = np.random.default_rng(seed)
-        return [_shuffle_galaxy_rotation(og_shear_df, rng) for _ in range(num_shuffles)]
-    raise ValueError(f"Invalid shuffle type: {shuffle_type}")
-
-def save_fits(data, true_boundaries, filename):
-    """Save a 2D array as a FITS file with proper WCS information.
-
-    Write mass map data to a FITS file with World Coordinate System (WCS)
-    headers for proper astronomical coordinate handling.
-
-    Parameters
-    ----------
-    data : `numpy.ndarray`
-        2D array containing the map data.
-    true_boundaries : `dict`
-        Dictionary with coordinate boundaries containing 'ra_min', 'ra_max',
-        'dec_min', 'dec_max' keys.
-    filename : `str`
-        Output FITS filename.
-
-    Notes
-    -----
-    The WCS information assumes a tangent plane projection (TAN) and sets
-    appropriate pixel scales based on the coordinate boundaries.
-    """
-    hdu = fits.PrimaryHDU(data)
-    header = hdu.header
-
-    ny, nx = data.shape
-    ra_min, ra_max = true_boundaries['ra_min'], true_boundaries['ra_max']
-    dec_min, dec_max = true_boundaries['dec_min'], true_boundaries['dec_max']
-
-    pixel_scale_ra = (ra_max - ra_min) / nx
-    pixel_scale_dec = (dec_max - dec_min) / ny
-
-    header["CTYPE1"] = "RA---TAN"
-    header["CUNIT1"] = "deg"
-    header["CRVAL1"] = (ra_max + ra_min) / 2
-    header["CRPIX1"] = nx / 2
-    header["CD1_1"]  = -pixel_scale_ra
-    header["CD1_2"]  = 0.0
-
-    header["CTYPE2"] = "DEC--TAN"
-    header["CUNIT2"] = "deg"
-    header["CRVAL2"] = (dec_max + dec_min) / 2
-    header["CRPIX2"] = ny / 2
-    header["CD2_1"]  = 0.0
-    header["CD2_2"]  = pixel_scale_dec
-
-    hdu.writeto(filename, overwrite=True)
-    print(f"Saved FITS file: {filename}")

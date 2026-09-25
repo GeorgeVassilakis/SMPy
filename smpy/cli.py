@@ -1,5 +1,6 @@
 """Command-line interface for SMPy."""
 
+import logging
 from argparse import ArgumentParser
 from pathlib import Path
 
@@ -19,4 +20,5 @@ def main(argv=None):
     args = parser.parse_args(argv)
     if not args.config.is_file():
         parser.error(f"configuration file not found: {args.config}")
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     run(args.config)

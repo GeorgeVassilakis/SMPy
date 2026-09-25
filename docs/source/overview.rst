@@ -19,13 +19,14 @@ CLI (example config)::
 
 Python API (3 lines)::
 
-   from smpy import api
-   result = api.map_kaiser_squires(data='examples/data/forecast_lum_annular.fits',
-                                   coord_system='radec', pixel_scale=0.4)
+   import smpy
+   result = smpy.map_kaiser_squires('examples/data/forecast_lum_annular.fits', pixel_scale=0.4,
+                                    g1_col='g1_Rinv', g2_col='g2_Rinv', weight_col='weight')
+   fig, ax, im = result.plot('E')
 
 Expected inputs: a FITS catalog with shear components ``g1`` and ``g2`` (optional ``weight`` column), and coordinates in either RA/Dec (``radec``) or pixel (``pixel``) form.
 
-Units: for RA/Dec, set resolution/``pixel_scale`` in arcminutes per pixel; for pixel coordinates, provide a ``downsample_factor``. Typical outputs (E- and B-mode maps, optional SNR maps, optional FITS) are written under ``<output_directory>/<method>/``. For a full walkthrough, see :doc:`tutorials`.
+Units: for RA/Dec, set ``pixel_scale`` in arcminutes per pixel; for pixel coordinates, provide a ``downsample_factor``. The Python functions return a `smpy.MassMap` (E- and B-mode maps, optional SNR maps, galaxy counts) and write nothing; ``smpy -c`` and `smpy.run` write the configured plots and FITS files under ``<output_directory>/<method>/``. For a full walkthrough, see :doc:`tutorials`.
 
 Methods at a glance
 -------------------

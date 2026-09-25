@@ -5,18 +5,22 @@ missing data, field borders, and reduced shear approximation using sparsity
 priors in the DCT domain and wavelet-based power spectrum constraints.
 """
 
+import logging
+import warnings
+
 import numpy as np
 from scipy import fft
 from scipy.ndimage import gaussian_filter
 
 from smpy.filters.starlet import (
-    compute_starlet_nscales_max,
     inverse_starlet_transform_2d,
     starlet_nscales_support_aware,
     starlet_transform_2d,
 )
 
 from ..base import MassMapper
+
+logger = logging.getLogger(__name__)
 
 class KSPlusMapper(MassMapper):
     """Implementation of Kaiser-Squires Plus mass mapping.
@@ -28,6 +32,33 @@ class KSPlusMapper(MassMapper):
     2. Reducing field border effects through field extension
     3. Iteratively correcting for reduced shear approximation
     4. Preserving proper statistical properties using wavelet constraints
+
+    Parameters
+    ----------
+    smoothing : `float`
+        Gaussian smoothing sigma in map pixels; 0 for no smoothing.
+    inpainting_iterations : `int`
+        DCT thresholding iterations per reduced-shear step.
+    reduced_shear_iterations : `int`
+        Number of reduced-shear correction steps.
+    nscales : `int` or `None`
+        Starlet scales for the power-spectrum constraint, or `None` for the
+        largest safe number. Larger values are clipped to it.
+    extension_size : `str` or `int`
+        'double' to pad each side by half the field, or pixels per side.
+    use_wavelet_constraints : `bool`
+        Whether to rescale wavelet power inside the gaps.
+    constrain_B : `bool`
+        Whether to apply the wavelet constraint to B modes as well.
+    threshold_tau : `float` or `None`
+        Decay constant of the DCT threshold in iterations, or `None` for a
+        quarter of ``inpainting_iterations``.
+
+    Raises
+    ------
+    ValueError
+        Raised if ``smoothing``, ``extension_size`` or ``threshold_tau`` is
+        invalid.
 
     Notes
     -----
@@ -42,18 +73,24 @@ class KSPlusMapper(MassMapper):
     must not be masked.
     """
 
-    @property
-    def name(self):
-        """Name identifier for the KS+ method.
+    def __init__(self, smoothing, inpainting_iterations, reduced_shear_iterations, nscales,
+                 extension_size, use_wavelet_constraints, constrain_B, threshold_tau):
+        if smoothing < 0:
+            raise ValueError(f"smoothing must be at least 0, got {smoothing}")
+        if extension_size != 'double' and not (isinstance(extension_size, int) and extension_size >= 0):
+            raise ValueError(f"extension_size must be 'double' or a pixel count, got {extension_size!r}")
+        if threshold_tau is not None and threshold_tau <= 0:
+            raise ValueError(f"threshold_tau must be positive or null, got {threshold_tau}")
+        self.smoothing = smoothing
+        self.inpainting_iterations = inpainting_iterations
+        self.reduced_shear_iterations = reduced_shear_iterations
+        self.nscales = nscales
+        self.extension_size = extension_size
+        self.use_wavelet_constraints = use_wavelet_constraints
+        self.constrain_B = constrain_B
+        self.threshold_tau = threshold_tau
 
-        Returns
-        -------
-        method_name : `str`
-            String identifier 'ks_plus'.
-        """
-        return "ks_plus"
-
-    def create_maps(self, g1_grid, g2_grid):
+    def create_maps(self, grid):
         """Create convergence maps using Kaiser-Squires Plus inversion.
 
         Perform enhanced mass mapping reconstruction with iterative
@@ -62,10 +99,9 @@ class KSPlusMapper(MassMapper):
 
         Parameters
         ----------
-        g1_grid : `numpy.ndarray`
-            First reduced shear component grid.
-        g2_grid : `numpy.ndarray`
-            Second reduced shear component grid.
+        grid : `smpy.coordinates.ShearGrid`
+            Binned reduced shear and weights. Pixels with zero weight are
+            gaps to be inpainted.
 
         Returns
         -------
@@ -83,39 +119,31 @@ class KSPlusMapper(MassMapper):
         4. Wavelet-based power spectrum preservation
         5. Optional Gaussian smoothing
         """
-        # Get dimensions and configuration
+        # Get dimensions
+        g1_grid, g2_grid = grid.g1, grid.g2
         npix_dec, npix_ra = g1_grid.shape
-        config = self.method_config
 
         # Initialize output
         kappa_e = np.zeros_like(g1_grid)
         kappa_b = np.zeros_like(g1_grid)
 
-        # Set up mask (1 where data exists, 0 in gaps). If a per-pixel
-        # weight grid has been provided by the pipeline, use it to derive
-        # data availability; otherwise fall back to finite checks only.
-        mask = self._create_mask(g1_grid, g2_grid)
+        # Set up mask (1 where data exists, 0 in gaps)
+        mask = self._create_mask(grid)
 
         # Extend field to handle border effects
-        extension_config = config.get('extension_size', 'double')
-        if extension_config == 'double':
+        if self.extension_size == 'double':
             # Double the field size (add half the field width on each side)
             extension_size_dec = npix_dec // 2
             extension_size_ra = npix_ra // 2
         else:
-            # Use the specified number of pixels
-            try:
-                extension_size_dec = extension_size_ra = int(extension_config)
-            except (ValueError, TypeError):
-                print(f"Warning: Invalid extension_size '{extension_config}', using default 'double'")
-                extension_size_dec = npix_dec // 2
-                extension_size_ra = npix_ra // 2
+            extension_size_dec = extension_size_ra = self.extension_size
 
         g1_extended, g2_extended, mask_extended = self._extend_field(
             g1_grid, g2_grid, mask, extension_size_dec, extension_size_ra)
+        nscales = self._starlet_nscales(*mask_extended.shape)
 
         # Reduced shear correction loop
-        max_iterations = config.get('reduced_shear_iterations', 3)
+        max_iterations = self.reduced_shear_iterations
         kappa_e_extended = np.zeros_like(g1_extended)
         for _ in range(max_iterations):
             # Correct for reduced shear: γ = g(1-κ)
@@ -126,7 +154,7 @@ class KSPlusMapper(MassMapper):
 
             # Perform inpainting-based reconstruction
             kappa_e_extended, kappa_b_extended = self._inpainting_reconstruction(
-                g1_corrected, g2_corrected, mask_extended, config)
+                g1_corrected, g2_corrected, mask_extended, nscales)
 
             # Extract the central part for next iteration
             start_dec = extension_size_dec
@@ -136,19 +164,12 @@ class KSPlusMapper(MassMapper):
             kappa_e = kappa_e_extended[start_dec:end_dec, start_ra:end_ra]
             kappa_b = kappa_b_extended[start_dec:end_dec, start_ra:end_ra]
 
-            # Apply smoothing if configured
-            smoothing_config = self.method_config.get('smoothing')
-            if smoothing_config and smoothing_config.get('type'):
-                sigma = smoothing_config.get('sigma')
-                if sigma is None:
-                    raise ValueError("Smoothing enabled but 'sigma' parameter missing. "
-                                     "Please specify smoothing.sigma in your configuration.")
-                kappa_e = gaussian_filter(kappa_e, sigma=sigma)
-                kappa_b = gaussian_filter(kappa_b, sigma=sigma)
+            kappa_e = gaussian_filter(kappa_e, sigma=self.smoothing)
+            kappa_b = gaussian_filter(kappa_b, sigma=self.smoothing)
 
         return kappa_e, kappa_b
 
-    def _create_mask(self, g1_grid, g2_grid):
+    def _create_mask(self, grid):
         """Create binary mask from data presence/validity.
 
         Construct the KS+ data-availability mask with the convention
@@ -158,30 +179,21 @@ class KSPlusMapper(MassMapper):
 
         Data presence is defined as:
         - Both shear components are finite (not NaN/Inf); and
-        - If a per-pixel weight/count grid is available, weight > 0.
+        - The pixel weight is positive.
 
         Parameters
         ----------
-        g1_grid : `numpy.ndarray`
-            First shear component grid.
-        g2_grid : `numpy.ndarray`
-            Second shear component grid.
+        grid : `smpy.coordinates.ShearGrid`
+            Binned shear and weights.
 
         Returns
         -------
         mask : `numpy.ndarray`
             Binary mask where 1 indicates data present and 0 indicates a gap.
         """
-        finite_data = np.isfinite(g1_grid) & np.isfinite(g2_grid)
-
-        weight_grid = getattr(self, '_weight_grid', None)
-        if weight_grid is not None:
-            positive_weight = np.isfinite(weight_grid) & (weight_grid > 0)
-            mask = (finite_data & positive_weight).astype(g1_grid.dtype)
-        else:
-            mask = finite_data.astype(g1_grid.dtype)
-
-        return mask
+        finite_data = np.isfinite(grid.g1) & np.isfinite(grid.g2)
+        positive_weight = np.isfinite(grid.weights) & (grid.weights > 0)
+        return (finite_data & positive_weight).astype(grid.g1.dtype)
 
     def _extend_field(self, g1_grid, g2_grid, mask, extension_size_dec, extension_size_ra):
         """Extend field to reduce border effects.
@@ -232,7 +244,7 @@ class KSPlusMapper(MassMapper):
 
         return g1_extended, g2_extended, mask_extended
 
-    def _inpainting_reconstruction(self, g1_grid, g2_grid, mask, config):
+    def _inpainting_reconstruction(self, g1_grid, g2_grid, mask, nscales):
         """Perform inpainting-based reconstruction.
 
         Execute the core KS+ inpainting algorithm using DCT-domain
@@ -246,8 +258,8 @@ class KSPlusMapper(MassMapper):
             Second shear component grid.
         mask : `numpy.ndarray`
             Binary mask indicating data locations.
-        config : `dict`
-            Configuration dictionary with algorithm parameters.
+        nscales : `int`
+            Number of starlet scales for the wavelet constraint.
 
         Returns
         -------
@@ -268,8 +280,7 @@ class KSPlusMapper(MassMapper):
         # Initialize for DCT inpainting
         kappa_complex = kappa_e + 1j * kappa_b
 
-        # Get algorithm parameters
-        max_iterations = config.get('inpainting_iterations', 100)
+        max_iterations = self.inpainting_iterations
 
         # Calculate initial threshold max (min fraction deprecated)
         dct_coeffs = fft.dctn(kappa_e, norm='ortho')
@@ -281,7 +292,7 @@ class KSPlusMapper(MassMapper):
             kappa_b_dct = fft.dctn(np.imag(kappa_complex), norm='ortho')
 
             # Calculate threshold for current iteration
-            lambda_i = self._update_threshold(i, max_iterations, 0.0, lambda_max)
+            lambda_i = self._update_threshold(i, lambda_max)
 
             # Apply threshold
             kappa_e_dct[np.abs(kappa_e_dct) < lambda_i] = 0
@@ -292,13 +303,12 @@ class KSPlusMapper(MassMapper):
             kappa_b = fft.idctn(kappa_b_dct, norm='ortho')
 
             # Wavelet-based power spectrum constraints
-            if config.get('use_wavelet_constraints', True):
+            if self.use_wavelet_constraints:
                 # Apply power matching to E-mode only by default. KS+ leaves B
                 # free.
-                kappa_e = self._apply_wavelet_constraints(kappa_e, mask)
-                constrain_B = bool(config.get('constrain_B', False))
-                if constrain_B:
-                    kappa_b = self._apply_wavelet_constraints(kappa_b, mask)
+                kappa_e = self._apply_wavelet_constraints(kappa_e, mask, nscales)
+                if self.constrain_B:
+                    kappa_b = self._apply_wavelet_constraints(kappa_b, mask, nscales)
 
             # Enforce consistency with observed data
             gamma1, gamma2 = self._kappa_to_gamma(kappa_e, kappa_b)
@@ -445,7 +455,29 @@ class KSPlusMapper(MassMapper):
         # This is the standard KS inversion
         return self._standard_ks_inversion(gamma1, gamma2)
 
-    def _apply_wavelet_constraints(self, kappa, mask):
+    def _starlet_nscales(self, height, width):
+        """Choose the number of starlet scales for an image.
+
+        Parameters
+        ----------
+        height : `int`
+            Image height in pixels.
+        width : `int`
+            Image width in pixels.
+
+        Returns
+        -------
+        nscales : `int`
+            The configured number of scales, clipped to the safe maximum for
+            this image size, or the safe maximum if none is configured.
+        """
+        nscales = starlet_nscales_support_aware(height, width, self.nscales)
+        if self.nscales is not None and self.nscales != nscales:
+            warnings.warn(f"KS+ nscales={self.nscales} was clipped to {nscales} for a {height}x{width} image")
+        logger.info("KS+ uses %d starlet scales for a %dx%d image", nscales, height, width)
+        return nscales
+
+    def _apply_wavelet_constraints(self, kappa, mask, nscales):
         """Apply wavelet-based power spectrum constraints.
 
         Preserve statistical properties of the convergence field by
@@ -458,6 +490,8 @@ class KSPlusMapper(MassMapper):
             Convergence map.
         mask : `numpy.ndarray`
             Binary mask (1 where data exists, 0 in gaps).
+        nscales : `int`
+            Number of starlet scales.
 
         Returns
         -------
@@ -470,27 +504,6 @@ class KSPlusMapper(MassMapper):
         scales and ensures that the reconstructed field maintains proper
         statistical properties in both observed and inpainted regions.
         """
-        # Determine number of scales with support-aware cap and optional user
-        # override
-        height, width = kappa.shape
-        cfg_nscales = self.method_config.get('nscales') if self.method_config else None
-        nscales_max = compute_starlet_nscales_max(height, width)
-        nscales = starlet_nscales_support_aware(height, width, cfg_nscales)
-
-        # Log selection once per mapper instance to avoid excessive output
-        # during iterations
-        if not hasattr(self, '_wavelet_nscales_logged'):
-            print(
-                f"KS+: nscales chosen = {nscales} (user={cfg_nscales!r}, "
-                f"safe_max={nscales_max}, image={height}x{width})"
-            )
-            if cfg_nscales is not None and int(cfg_nscales) != nscales:
-                print(
-                    "Warning: KS+ wavelet.nscales override was clipped to the safe maximum "
-                    f"({nscales_max})."
-                )
-            self._wavelet_nscales_logged = True
-
         # Decompose into wavelet coefficients
         wavelet_bands = starlet_transform_2d(kappa, nscales)
 
@@ -543,60 +556,26 @@ class KSPlusMapper(MassMapper):
 
         return kappa_corrected
 
-    def _update_threshold(self, iteration, max_iterations, lambda_min, lambda_max):
-        """Update threshold using a stable exponential schedule.
-
-        Compute the DCT coefficient threshold for the current iteration
-        using exponential decay from maximum to minimum values.
+    def _update_threshold(self, iteration, lambda_max):
+        """Return the DCT threshold for an inpainting iteration.
 
         Parameters
         ----------
         iteration : `int`
             Current iteration number (0-indexed).
-        max_iterations : `int`
-            Maximum number of iterations.
-        lambda_min : `float`
-            Minimum threshold value (kept for backward compatibility; not used
-            in 'exp').
         lambda_max : `float`
-            Maximum threshold value (first iteration).
+            Threshold at the first iteration.
 
         Returns
         -------
         lambda_i : `float`
-            Threshold for current iteration.
+            Threshold for this iteration.
 
         Notes
         -----
-        The previous schedule collapsed to zero when ``lambda_min=0`` after
-        the first iteration. We switch to ``exp`` schedule:
-            lambda_i = lambda_max * exp(-i / tau),
-        with ``tau`` configurable (default: ``max_iterations/4``).
-
-        Configuration (optional, under method config):
-        - threshold_schedule: 'exp' (default and currently only supported)
-        - threshold_tau: float, decay constant in iterations
+        The threshold decays as ``lambda_max * exp(-iteration / tau)``, where
+        ``tau`` is ``threshold_tau`` or, if that is `None`, a quarter of
+        ``inpainting_iterations`` (at least 1).
         """
-        schedule = 'exp'
-        cfg = self.method_config or {}
-        schedule = cfg.get('threshold_schedule', schedule)
-        if schedule != 'exp':
-            # Fallback gracefully to 'exp'
-            schedule = 'exp'
-
-        # Exponential schedule parameters
-        tau = cfg.get('threshold_tau')
-        if tau is None:
-            # default decay: a quarter of max_iterations (at least 1)
-            tau = max(1.0, float(max_iterations) / 4.0)
-        else:
-            try:
-                tau = float(tau)
-                if not np.isfinite(tau) or tau <= 0:
-                    tau = max(1.0, float(max_iterations) / 4.0)
-            except Exception:
-                tau = max(1.0, float(max_iterations) / 4.0)
-
-        # Compute threshold with exponential decay
-        lam = float(lambda_max) * float(np.exp(-float(iteration) / tau))
-        return lam
+        tau = self.threshold_tau or max(1.0, float(self.inpainting_iterations) / 4.0)
+        return float(lambda_max) * float(np.exp(-float(iteration) / tau))

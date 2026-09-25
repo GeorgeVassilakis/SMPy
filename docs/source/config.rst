@@ -1,40 +1,55 @@
 Configuration Guide
 ===================
 
-SMPy uses YAML configuration files to control all aspects of the mass mapping process.
+SMPy settings live in one place: ``smpy/configs/default.yaml`` holds every
+setting and its default. A YAML file passed to ``smpy -c`` or
+`smpy.Config.from_file`, and keyword arguments to `smpy.map_mass` or
+`smpy.Config.from_defaults`, only give the settings that differ. Keyword
+arguments use the same names as the YAML keys.
 
 Configuration Structure
 -----------------------
 
-The configuration file has four main sections:
+The configuration has four sections:
 
 .. code-block:: yaml
 
-   general:      # Input/output paths, coordinate system, analysis settings
+   general:      # Input catalog, coordinate system, method and outputs
    methods:      # Method-specific parameters (kaiser_squires, aperture_mass, ks_plus)
    plotting:     # Visualization settings
    snr:          # Signal-to-noise ratio calculation settings
 
-Loading Configuration
----------------------
+How Settings Combine
+--------------------
 
-Configuration files can be loaded using the Config class:
+- Settings you give replace the defaults key by key; everything else keeps its
+  default. An empty file or section keeps all defaults.
+- A setting that does not exist raises an error naming it, so a typo such as
+  ``smoothng`` fails instead of being ignored.
+- ``validate`` (called by `smpy.run` and `smpy.map_mass`) reports missing
+  required settings and invalid values by name.
+- Relative paths in a YAML file (``input_path``, ``output_directory`` and
+  ``plotting.xray_contours.ctr_file``) resolve from that file's directory.
+  `smpy.Config.save` rewrites them so they still point at the same files from
+  the new location.
+- `smpy.run` writes ``<output_base_name>_<method>_settings.yaml`` next to its
+  outputs: every setting used, with absolute paths and the SMPy version. It can
+  be passed back to ``smpy -c`` to repeat the run.
 
 .. code-block:: python
 
-   from smpy.config import Config
-   
-   # Load from file
-   config = Config.from_file('my_config.yaml')
-   
-   # Load defaults for a specific method
-   config = Config.from_defaults('kaiser_squires')
+   from smpy import Config
+
+   config = Config.from_file('my_config.yaml')        # defaults + file
+   config = Config.from_defaults('ks_plus', input_path='catalog.fits',
+                                 pixel_scale=0.4, inpainting_iterations=50)
+   config.save('my_run.yaml')
+   print(config)                                      # every setting as YAML
 
 Parameter Reference
 -------------------
 
 .. note::
-   The following tables describe all available configuration parameters.
    Required parameters are marked with an asterisk (*).
 
 General Settings
@@ -51,64 +66,64 @@ General Settings
    * - input_path*
      - string
      - ""
-     - Path to input FITS file containing shear catalog. In a YAML file, a
-       relative path is resolved from that file's directory.
+     - Input FITS catalog. Required by ``smpy.run``; `smpy.map_mass` takes
+       the catalog as its first argument instead
    * - input_hdu
      - integer
      - 1
-     - FITS extension number to read data from
-   * - output_directory
-     - string
-     - "."
-     - Directory to save output files. Resolved like ``input_path``.
-   * - output_base_name
-     - string
-     - "smpy_output"
-     - Base name for output files
-   * - coordinate_system*
+     - FITS extension holding the catalog
+   * - coord_system
      - string
      - "radec"
      - Coordinate system: 'radec' or 'pixel'
-   * - method
-     - string
-     - "kaiser_squires"
-     - Mass mapping method: 'kaiser_squires', 'aperture_mass', or 'ks_plus'
    * - g1_col
      - string
      - "g1"
-     - Column name for first shear component
+     - Column name for the first shear component
    * - g2_col
      - string
      - "g2"
-     - Column name for second shear component
+     - Column name for the second shear component
    * - weight_col
      - string/null
      - null
      - Column name for weights (null for unit weights)
-   * - mode
-     - list
-     - ['E']
-     - Modes to compute: ['E'], ['B'], or ['E', 'B']
+   * - method
+     - string
+     - "kaiser_squires"
+     - Mass mapping method: 'kaiser_squires', 'aperture_mass', or 'ks_plus'
    * - create_snr
      - boolean
      - false
-     - Whether to create signal-to-noise ratio map
-   * - create_counts_map
+     - Also compute signal-to-noise ratio maps
+   * - output_directory
+     - string
+     - "."
+     - Directory for outputs, which go to ``<output_directory>/<method>/``
+   * - output_base_name
+     - string
+     - "smpy_output"
+     - Base name for output files
+   * - mode
+     - list
+     - ['E']
+     - Modes to write: ['E'], ['B'], or ['E', 'B']. Both modes are always
+       computed
+   * - save_plots
      - boolean
-     - false
-     - Whether to create and save per-pixel object counts map as PNG
-   * - overlay_counts_map
-     - boolean
-     - false
-     - Overlay per-pixel counts as text on the convergence map plots (uses the same grid used for mass maps).
+     - true
+     - Write PNG plots
    * - save_fits
      - boolean
      - false
-     - Whether to save maps as FITS files
-   * - print_timing
+     - Write FITS maps with a WCS header
+   * - create_counts_map
      - boolean
      - false
-     - Whether to print timing information
+     - Write a plot of galaxies per pixel
+
+Only ``smpy.run`` and ``smpy -c`` write outputs; `smpy.map_mass` ignores the
+output settings.
 
 RA/Dec Coordinate Settings
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -123,18 +138,18 @@ Under ``general.radec``:
      - Type
      - Default
      - Description
-   * - resolution*
+   * - pixel_scale*
      - float
-     - 0.4
-     - Grid resolution in arcminutes (API: ``pixel_scale``)
-   * - coord1
+     - null
+     - Map pixel size in arcminutes
+   * - coord1_col
      - string
      - "ra"
-     - RA column name in catalog
-   * - coord2
+     - RA column name, in degrees
+   * - coord2_col
      - string
      - "dec"
-     - Dec column name in catalog
+     - Dec column name, in degrees
 
 Pixel Coordinate Settings
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -151,32 +166,16 @@ Under ``general.pixel``:
      - Description
    * - downsample_factor*
      - integer
-     - 1
-     - Grid reduction factor (API: ``downsample_factor``)
-   * - coord1
+     - null
+     - Catalog pixels per map pixel
+   * - coord1_col
      - string
      - "X_IMAGE"
      - X coordinate column name
-   * - coord2
+   * - coord2_col
      - string
      - "Y_IMAGE"
      - Y coordinate column name
-   * - pixel_axis_reference
-     - string
-     - "catalog"
-     - Which axes to use for pixel plots: 'catalog' (input-pixel coordinates) or 'map' (map-pixel indices)
-
-Validation Behavior and Error Messages
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-- Validation is strict only when ``general.input_path`` is set to a non-empty value. Loading defaults or inspecting configs without a real input path will not trigger hard errors.
-- If ``coordinate_system='radec'`` and the required scale is missing, SMPy raises:
-
-  ``Missing required parameter for coordinate_system='radec'. Provide 'pixel_scale' (API: pixel_scale=..., YAML: general.radec.resolution).``
-
-- If ``coordinate_system='pixel'`` and the required factor is missing, SMPy raises:
-
-  ``Missing required parameter for coordinate_system='pixel'. Provide 'downsample_factor' (API: downsample_factor=..., YAML: general.pixel.downsample_factor).``
 
 Method-Specific Settings
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -194,14 +193,10 @@ Under ``methods.kaiser_squires``:
      - Type
      - Default
      - Description
-   * - smoothing.type
-     - string/null
-     - "gaussian"
-     - Smoothing type ('gaussian' or null)
-   * - smoothing.sigma
+   * - smoothing
      - float
      - 2.0
-     - Gaussian smoothing scale in pixels
+     - Gaussian smoothing sigma in map pixels; 0 for no smoothing
 
 Aperture Mass Settings
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -216,22 +211,22 @@ Under ``methods.aperture_mass``:
      - Type
      - Default
      - Description
-   * - filter.type*
+   * - filter_type
      - string
      - "schirmer"
      - Filter type: 'schirmer' or 'schneider'
-   * - filter.scale*
+   * - filter_scale
      - float
      - 60
-     - Filter scale in pixels
-   * - filter.truncation
+     - Aperture radius in map pixels
+   * - truncation
      - float
      - 1.0
-     - Truncation radius in units of scale
-   * - filter.l
+     - Kernel radius in units of ``filter_scale``
+   * - ell
      - integer
      - 3
-     - Polynomial order for Schneider filter
+     - Polynomial order of the Schneider filter
 
 KS+ Settings
 ^^^^^^^^^^^^
@@ -246,18 +241,28 @@ Under ``methods.ks_plus``:
      - Type
      - Default
      - Description
+   * - smoothing
+     - float
+     - 2.0
+     - Gaussian smoothing sigma in map pixels; 0 for no smoothing
    * - inpainting_iterations
      - integer
      - 100
-     - Number of iterations for inpainting algorithm
+     - DCT thresholding iterations per reduced-shear step
    * - reduced_shear_iterations
      - integer
      - 3
-     - Number of iterations for reduced shear correction
+     - Number of reduced-shear correction steps
+   * - nscales
+     - integer/null
+     - null
+     - Starlet scales for the power-spectrum constraint. If set, it is
+       clipped to a safe maximum derived from the image size and the B3-spline
+       kernel support; if null, the safe maximum is used.
    * - extension_size
      - string/int
      - "double"
-     - Field extension: 'double' or number of pixels
+     - Field extension: 'double' or pixels added on each side
    * - use_wavelet_constraints
      - boolean
      - true
@@ -265,29 +270,12 @@ Under ``methods.ks_plus``:
    * - constrain_B
      - boolean
      - false
-     - Whether to apply wavelet power matching to B-modes as well (KS+ leaves B free by default)
-   * - threshold_schedule
-     - string
-     - "exp"
-     - DCT threshold schedule; currently only 'exp' (exponential decay) is supported
+     - Also apply the wavelet constraint to B modes
    * - threshold_tau
      - float/null
      - null
-     - Decay constant in iterations for the exponential schedule. If null, defaults to one quarter of ``inpainting_iterations``.
-   * - nscales
-     - integer/null
-     - null
-     - Desired number of starlet scales (detail bands + coarse). If set, the value is clipped to a
-       safe maximum derived from the image size and the B3–spline à trous kernel support. If null,
-       the safe maximum is used automatically.
-   * - smoothing.type
-     - string/null
-     - "gaussian"
-     - Smoothing type ('gaussian' or null)
-   * - smoothing.sigma
-     - float
-     - 2.0
-     - Gaussian smoothing scale in pixels
+     - Decay constant, in iterations, of the exponential DCT threshold
+       schedule. If null, a quarter of ``inpainting_iterations``.
 
 Plotting Settings
 ~~~~~~~~~~~~~~~~~
@@ -349,12 +337,17 @@ Plotting Settings
      - null
      - Center position: null, 'auto', or a dictionary. For RA/Dec plots use {ra_center: float, dec_center: float}. For pixel plots use {x_center: float, y_center: float}.
    * - axis_reference
-     - string/null
-     - null
-     - For pixel plots only: overrides which axes are used for plotting ('catalog' or 'map'). If null, defaults to the value of ``general.pixel.pixel_axis_reference``.
+     - string
+     - "catalog"
+     - Pixel plots only: label axes in catalog pixel coordinates ('catalog')
+       or map pixel indices ('map')
+   * - overlay_counts
+     - boolean
+     - false
+     - Write the number of galaxies in each pixel on map plots
    * - scaling
-     - dict/string/null
-     - null
+     - dict/string
+     - {type: linear}
      - Color scaling configuration. If a string, treated as {type: <string>}.
    * - xray_contours
      - dict/null
@@ -459,23 +452,20 @@ SNR Settings
    * - num_shuffles
      - integer
      - 100
-     - Number of random realizations
+     - Number of shuffled catalogs
    * - seed
      - int/string
      - 0
-     - Random seed (integer or 'random' for secure seed)
-   * - smoothing.type
-     - string/null
-     - "gaussian"
-     - Smoothing type for SNR maps
-   * - smoothing.sigma
+     - Random seed (integer, or 'random' for a seed from the secrets module)
+   * - smoothing
      - float
      - 2.0
-     - Smoothing scale for SNR maps
+     - Gaussian sigma in map pixels applied to signal and noise maps; 0 for
+       none
    * - plot_title
      - string
      - "Signal-to-Noise Map"
-     - Title for SNR plots
+     - Title for SNR plots; the mode is appended
 
 Example Configuration Files
 ---------------------------
@@ -487,7 +477,7 @@ Basic Kaiser-Squires Example
    :language: yaml
    :caption: example_config.yaml
 
-Full Featured Example
+Truth Catalog Example
 ~~~~~~~~~~~~~~~~~~~~~
 
 .. literalinclude:: ../../examples/configs/example_config_truth.yaml

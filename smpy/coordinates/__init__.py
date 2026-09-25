@@ -5,7 +5,7 @@ pixel coordinate transformations and gridding operations used in weak
 lensing mass mapping.
 """
 
-from .base import CoordinateSystem
+from .base import CoordinateSystem, ShearGrid
 from .radec import RADecSystem
 from .pixel import PixelSystem
 

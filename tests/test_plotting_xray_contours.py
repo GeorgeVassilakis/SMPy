@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from smpy.plotting.plot import plot_mass_map, plot_snr_map
+from smpy.plotting.plot import plot_mass_map
 from smpy.plotting.utils import read_ds9_ctr
 
 class TestXRayContourPlotting(unittest.TestCase):
@@ -88,17 +88,16 @@ class TestXRayContourPlotting(unittest.TestCase):
             scaled_boundaries=self.scaled_boundaries,
             true_boundaries=self.true_boundaries,
             config=config,
-            return_handles=True,
         )
         self.assertGreater(len(ax.lines), 0)
         plt.close(fig)
 
-        fig, ax, _ = plot_snr_map(
+        fig, ax, _ = plot_mass_map(
             data=self.data,
             scaled_boundaries=self.scaled_boundaries,
             true_boundaries=self.true_boundaries,
             config=config,
-            return_handles=True,
+            map_category="snr",
         )
         self.assertEqual(len(ax.lines), 0)
         plt.close(fig)
@@ -124,17 +123,16 @@ class TestXRayContourPlotting(unittest.TestCase):
             scaled_boundaries=self.scaled_boundaries,
             true_boundaries=self.true_boundaries,
             config=config,
-            return_handles=True,
         )
         self.assertEqual(len(ax.lines), 0)
         plt.close(fig)
 
-        fig, ax, _ = plot_snr_map(
+        fig, ax, _ = plot_mass_map(
             data=self.data,
             scaled_boundaries=self.scaled_boundaries,
             true_boundaries=self.true_boundaries,
             config=config,
-            return_handles=True,
+            map_category="snr",
         )
         self.assertGreater(len(ax.lines), 0)
         plt.close(fig)
@@ -160,7 +158,6 @@ class TestXRayContourPlotting(unittest.TestCase):
             scaled_boundaries=self.scaled_boundaries,
             true_boundaries=self.true_boundaries,
             config=config,
-            return_handles=True,
         )
 
         self.assertEqual(len(ax.lines), 1)

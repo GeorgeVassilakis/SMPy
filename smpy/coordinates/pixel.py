@@ -5,9 +5,14 @@ coordinates, including downsampling for grid creation and safety checks
 for large pixel dimensions.
 """
 
+import warnings
+
 import numpy as np
 
 from .base import CoordinateSystem
+
+MAX_GRID_SIZE = 10000
+"""Largest grid dimension before the downsampling is increased (`int`)."""
 
 class PixelSystem(CoordinateSystem):
     """Implementation for pixel coordinates.
@@ -17,34 +22,7 @@ class PixelSystem(CoordinateSystem):
     coordinate transformations since no scaling is needed for pixel data.
     """
 
-    def get_grid_parameters(self, config):
-        """Get pixel-specific grid parameters.
-
-        Extract pixel coordinate system parameters including downsampling
-        factors and safety limits for grid dimensions.
-
-        Parameters
-        ----------
-        config : `dict`
-            Configuration dictionary containing pixel system settings.
-
-        Returns
-        -------
-        grid_params : `dict`
-            Grid parameters dictionary containing:
-            - downsample_factor: Factor to reduce grid resolution
-            - max_grid_size: Safety limit for grid dimensions
-        """
-        pixel_config = config['general']['pixel']
-        if 'downsample_factor' not in pixel_config:
-            print("Warning: No downsample_factor specified in pixel config, using default 1")
-
-        return {
-            'downsample_factor': pixel_config.get('downsample_factor', 1),
-            'max_grid_size': 10000  # Safety parameter
-        }
-
-    def create_grid(self, data_df, boundaries, config):
+    def create_grid(self, data_df, boundaries, settings):
         """Create shear grid in pixel space.
 
         Create a regular grid by binning shear data. Includes automatic
@@ -57,23 +35,19 @@ class PixelSystem(CoordinateSystem):
             DataFrame with scaled coordinates and shear data.
         boundaries : `dict`
             Dictionary with coordinate boundaries.
-        config : `dict`
-            Configuration dictionary with pixel parameters.
+        settings : `dict`
+            The ``general.pixel`` settings, including ``downsample_factor``.
 
         Returns
         -------
-        g1_grid : `numpy.ndarray`
-            2D array containing binned first shear component values.
-        g2_grid : `numpy.ndarray`
-            2D array containing binned second shear component values.
+        grid : `smpy.coordinates.ShearGrid`
+            Binned shear, weights and counts.
         """
         # Ensure data is properly prepared
         data_df = self.prepare_data(data_df)
 
-        # Get grid parameters
-        grid_params = self.get_grid_parameters(config)
-        downsample = grid_params['downsample_factor']
-        max_size = grid_params['max_grid_size']
+        downsample = settings['downsample_factor']
+        max_size = MAX_GRID_SIZE
 
         # Get boundaries
         x_min, x_max = boundaries['coord1_min'], boundaries['coord1_max']
@@ -89,14 +63,12 @@ class PixelSystem(CoordinateSystem):
 
         # Safety check for grid size
         if npix_x > max_size or npix_y > max_size:
-            print(f"Warning: Large grid size detected ({npix_x}x{npix_y})")
-            print(f"Original size: {raw_npix_x}x{raw_npix_y}")
-            print(f"Adjusting downsample factor to limit grid size to {max_size} pixels")
             min_downsample = max(raw_npix_x, raw_npix_y) / max_size
             downsample = max(downsample, min_downsample)
+            warnings.warn(f"A {npix_x}x{npix_y} grid exceeds {max_size} pixels; downsample_factor "
+                          f"raised to {downsample:.1f}")
             npix_x = int(np.ceil(raw_npix_x / downsample))
             npix_y = int(np.ceil(raw_npix_y / downsample))
-            print(f"New grid size: {npix_x}x{npix_y} with downsample factor {downsample:.1f}")
 
         # Create bins for scaled pixels
         x_bins = np.linspace(x_min, x_max, npix_x + 1)
@@ -106,19 +78,7 @@ class PixelSystem(CoordinateSystem):
         x_idx = np.digitize(data_df['coord1_scaled'], x_bins) - 1
         y_idx = np.digitize(data_df['coord2_scaled'], y_bins) - 1
 
-        # Determine whether to accumulate counts based on config
-        accumulate_counts = bool(
-            config.get('general', {}).get('create_counts_map', False)
-            or config.get('general', {}).get('overlay_counts_map', False)
-        )
-        return self._create_shear_grid(
-            data_df,
-            x_idx,
-            y_idx,
-            npix_y,
-            npix_x,
-            accumulate_counts=accumulate_counts,
-        )
+        return self._create_shear_grid(data_df, x_idx, y_idx, npix_y, npix_x)
 
     def calculate_boundaries(self, coord1, coord2):
         """Calculate field boundaries in pixel space.
@@ -159,9 +119,9 @@ class PixelSystem(CoordinateSystem):
 
         # Check for potentially problematic coordinate ranges
         if np.ptp(coord1) > 1e5 or np.ptp(coord2) > 1e5:
-            print("Warning: Large pixel coordinate range detected")
-            print(f"X range: {boundaries['coord1_min']} to {boundaries['coord1_max']}")
-            print(f"Y range: {boundaries['coord2_min']} to {boundaries['coord2_max']}")
+            warnings.warn(f"Large pixel coordinate range: x {boundaries['coord1_min']} to "
+                          f"{boundaries['coord1_max']}, y {boundaries['coord2_min']} to "
+                          f"{boundaries['coord2_max']}")
 
         # For pixel coordinates, scaled and true boundaries are the same
         return boundaries, boundaries
