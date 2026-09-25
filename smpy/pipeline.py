@@ -212,8 +212,8 @@ def run(config_input):
     - Method-specific output directory creation
     - Coordinate system conversions for file output
 
-    For command-line usage, this function can be called directly with
-    a configuration file path.
+    The ``smpy`` command-line tool calls this function with the path to a
+    configuration file.
     """
     from .config import Config
 
@@ -334,7 +334,3 @@ def run(config_input):
                                    map_category="counts")
 
     return result
-
-if __name__ == "__main__":
-    import sys
-    run(sys.argv[1])

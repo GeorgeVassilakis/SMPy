@@ -18,7 +18,7 @@ Command
 
 .. code-block:: bash
 
-   python runner.py -c smpy/configs/example_config.yaml
+   smpy -c smpy/configs/example_config.yaml
 
 What happens
 ^^^^^^^^^^^^

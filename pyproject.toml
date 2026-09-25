@@ -28,6 +28,9 @@ dependencies = [
 [project.optional-dependencies]
 test = ["pytest"]
 
+[project.scripts]
+smpy = "smpy.cli:main"
+
 [project.urls]
 Documentation = "https://smpy-docs.readthedocs.io/"
 Source = "https://github.com/GeorgeVassilakis/SMPy"

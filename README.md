@@ -65,7 +65,7 @@ The package provides a robust implementation supporting both weighted and unweig
   - Visualization settings
   - SNR calculation parameters
 - **Multiple Interfaces**: 
-  - Command-line interface using a runner script
+  - Command-line interface (`smpy -c config.yaml`)
   - Python API for notebook integration
 - **Modular Design**: Extensible architecture supporting multiple mapping methods including Kaiser-Squires inversion, KS+, and aperture mass
 
@@ -90,16 +90,16 @@ The package provides a robust implementation supporting both weighted and unweig
 - Pedagogical examples are shown in the `SMPy/examples/notebooks` directory.
   - The notebooks run SMPy on mock observations and corresponding truth data.
 
-### With runner script
+### From the command line
 1. **Prepare your configuration file**
    - Copy and modify the example configuration file from `smpy/configs/example_config.yaml`
    - Set your input/output paths and data-specific parameters (coordinate system type, shear column names, etc.)
    - Configure visualization settings like smoothing, color maps, and plot titles
 
-2. **Run the runner.py script:** Use the `-c` or `-config` flag to pass your .yaml file
+2. **Run SMPy:** Pass your .yaml file with the `-c` (or `--config`) flag
    
    ```bash
-   python runner.py -c /path/to/example_config.yaml
+   smpy -c /path/to/example_config.yaml
    ```
 
 ### With Jupyter Notebook (Quickstart: 2 API Levels)
