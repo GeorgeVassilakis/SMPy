@@ -18,7 +18,7 @@ from .api import (
 
 # Config API - for power users who want more control
 from .config import Config
-from .run import run
+from .pipeline import run
 
 # Version info
 __version__ = "0.5.0"

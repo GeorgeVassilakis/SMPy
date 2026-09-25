@@ -141,7 +141,7 @@ def map_mass(
     config.validate()
 
     # Execute the mapping
-    from .run import run
+    from .pipeline import run
     return run(config)
 
 

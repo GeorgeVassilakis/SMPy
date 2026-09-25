@@ -56,7 +56,7 @@ class TestAPIConfigGeneration(unittest.TestCase):
         # This is done by mocking the run function
         from unittest.mock import patch
 
-        with patch('smpy.run.run') as mock_run:
+        with patch('smpy.pipeline.run') as mock_run:
             # Call the API function
             map_mass(
                 data=self.temp_file_path,
@@ -96,7 +96,7 @@ class TestAPIConfigGeneration(unittest.TestCase):
         """
         from unittest.mock import patch
 
-        with patch('smpy.run.run') as mock_run:
+        with patch('smpy.pipeline.run') as mock_run:
             map_kaiser_squires(
                 data=self.temp_file_path,
                 coord_system='radec',
@@ -119,7 +119,7 @@ class TestAPIConfigGeneration(unittest.TestCase):
         """
         from unittest.mock import patch
 
-        with patch('smpy.run.run') as mock_run:
+        with patch('smpy.pipeline.run') as mock_run:
             map_aperture_mass(
                 data=self.temp_file_path,
                 coord_system='radec',
@@ -147,7 +147,7 @@ class TestAPIConfigGeneration(unittest.TestCase):
         """
         from unittest.mock import patch
 
-        with patch('smpy.run.run') as mock_run:
+        with patch('smpy.pipeline.run') as mock_run:
             map_ks_plus(
                 data=self.temp_file_path,
                 coord_system='radec',
@@ -178,7 +178,7 @@ class TestAPIConfigGeneration(unittest.TestCase):
         """
         from unittest.mock import patch
 
-        with patch('smpy.run.run') as mock_run:
+        with patch('smpy.pipeline.run') as mock_run:
             map_mass(
                 data=self.temp_file_path,
                 coord_system='pixel',
@@ -201,7 +201,7 @@ class TestAPIConfigGeneration(unittest.TestCase):
         """
         from unittest.mock import patch
 
-        with patch('smpy.run.run') as mock_run:
+        with patch('smpy.pipeline.run') as mock_run:
             map_mass(
                 data=self.temp_file_path,
                 coord_system='radec',
@@ -234,7 +234,7 @@ class TestAPIConfigGeneration(unittest.TestCase):
         from unittest.mock import patch
 
         # Test that valid config passes validation (should not raise)
-        with patch('smpy.run.run'):
+        with patch('smpy.pipeline.run'):
             try:
                 map_mass(
                     data=self.temp_file_path,
@@ -246,7 +246,7 @@ class TestAPIConfigGeneration(unittest.TestCase):
                 self.fail("Valid configuration should not raise ValueError during validation")
 
         # Test that invalid config fails validation with specific error
-        with patch('smpy.run.run'):
+        with patch('smpy.pipeline.run'):
             with self.assertRaises(ValueError) as context:
                 map_mass(
                     data=self.temp_file_path,
