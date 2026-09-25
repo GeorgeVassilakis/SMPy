@@ -92,7 +92,7 @@ The package provides a robust implementation supporting both weighted and unweig
 
 ### From the command line
 1. **Prepare your configuration file**
-   - Copy and modify the example configuration file from `smpy/configs/example_config.yaml`
+   - Copy and modify the example configuration file from `examples/configs/example_config.yaml`
    - Set your input/output paths and data-specific parameters (coordinate system type, shear column names, etc.)
    - Configure visualization settings like smoothing, color maps, and plot titles
 

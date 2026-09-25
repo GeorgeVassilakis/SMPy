@@ -2,11 +2,11 @@
 
 #------General settings------#
 general:
-  # Input/Output paths
-  input_path: "/Users/vassig/research/SMPy/examples/data/forecast_lum_truth.fits"
+  # Input/Output paths (relative paths resolve from this file's directory)
+  input_path: "../data/forecast_lum_annular.fits"
   input_hdu: 1  # FITS extension number to read data from
-  output_directory: "/Users/vassig/research/SMPy/examples/outputs"
-  output_base_name: "truth_testing"
+  output_directory: "../outputs"
+  output_base_name: "simulation_testing"
 
   # Coordinate system settings
   coordinate_system: "radec"  # 'radec' or 'pixel'
@@ -21,9 +21,9 @@ general:
     pixel_axis_reference: 'catalog'  # 'catalog' or 'map' for plotting axes
   
   # Data columns
-  g1_col: 'nfw_g1'
-  g2_col: 'nfw_g2'
-  weight_col: null  # Set to null if no weights
+  g1_col: 'g1_Rinv'
+  g2_col: 'g2_Rinv'
+  weight_col: 'weight'  # Set to null if no weights
   
   # Analysis settings
   method: "kaiser_squires"  # "kaiser_squires", "aperture_mass", or "ks_plus"
@@ -51,7 +51,7 @@ methods:
 
       # Schneider filter settings
       l: 3  # Polynomial order for Schneider filter
-
+      
   # KS+ settings
   ks_plus:
     inpainting_iterations: 100  # Number of iterations for inpainting algorithm
@@ -71,6 +71,7 @@ methods:
       type: 'gaussian'  # 'gaussian' or null
       sigma: 2.0        # Smoothing scale
 
+
 #------Plot Settings------#
 plotting:
   # Basic plotting
@@ -85,8 +86,8 @@ plotting:
   # Advanced plotting
   vmax: null
   vmin: null
-  threshold: null    # Peak detection threshold
-  verbose: null      # Print peak information
+  threshold: 3    # Peak detection threshold
+  verbose: true      # Print peak information
   cluster_center: null  # null, 'auto', or {ra/x_center: float, dec/y_center: float}
   xray_contours:
     ctr_file: null  # Path to DS9 .ctr file; null disables contour loading

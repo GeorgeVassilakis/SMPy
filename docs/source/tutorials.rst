@@ -11,14 +11,13 @@ Prerequisites
 
 - SMPy installed and this repository cloned.
 - Example data available at ``examples/data/forecast_lum_annular.fits``.
-- Ensure the configuration file path is valid for your local system: ``smpy/configs/example_config.yaml``.
 
 Command
 ^^^^^^^
 
 .. code-block:: bash
 
-   smpy -c smpy/configs/example_config.yaml
+   smpy -c examples/configs/example_config.yaml
 
 What happens
 ^^^^^^^^^^^^

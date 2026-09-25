@@ -10,8 +10,6 @@ import os
 import time
 from pathlib import Path
 
-import yaml
-
 from smpy import utils
 from smpy.coordinates import get_coordinate_system
 from smpy.error_quantification.snr.run import create_sn_map as create_snr_map
@@ -220,8 +218,7 @@ def run(config_input):
     # Handle different input types
     if isinstance(config_input, (str, Path)):
         # Load from file
-        with open(config_input, 'r') as f:
-            config = yaml.safe_load(f)
+        config = Config.from_file(config_input).to_dict()
     elif isinstance(config_input, Config):
         # Extract dictionary from Config object
         config = config_input.to_dict()

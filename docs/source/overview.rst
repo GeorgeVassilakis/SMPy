@@ -15,7 +15,7 @@ See :doc:`installation` for setup.
 
 CLI (example config)::
 
-   smpy -c smpy/configs/example_config.yaml
+   smpy -c examples/configs/example_config.yaml
 
 Python API (3 lines)::
 

@@ -51,7 +51,8 @@ General Settings
    * - input_path*
      - string
      - ""
-     - Path to input FITS file containing shear catalog
+     - Path to input FITS file containing shear catalog. In a YAML file, a
+       relative path is resolved from that file's directory.
    * - input_hdu
      - integer
      - 1
@@ -59,7 +60,7 @@ General Settings
    * - output_directory
      - string
      - "."
-     - Directory to save output files
+     - Directory to save output files. Resolved like ``input_path``.
    * - output_base_name
      - string
      - "smpy_output"
@@ -418,7 +419,7 @@ Under ``plotting.xray_contours``:
      - string/null
      - null
      - Path to DS9 contour file (``.ctr``). If null, contour overlay is
-       disabled.
+       disabled. Resolved like ``general.input_path``.
    * - show_on_convergence
      - boolean
      - false
@@ -482,13 +483,13 @@ Example Configuration Files
 Basic Kaiser-Squires Example
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. literalinclude:: ../../smpy/configs/example_config.yaml
+.. literalinclude:: ../../examples/configs/example_config.yaml
    :language: yaml
    :caption: example_config.yaml
 
 Full Featured Example
 ~~~~~~~~~~~~~~~~~~~~~
 
-.. literalinclude:: ../../smpy/configs/example_config_truth.yaml
+.. literalinclude:: ../../examples/configs/example_config_truth.yaml
    :language: yaml
    :caption: example_config_truth.yaml

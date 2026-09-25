@@ -96,9 +96,23 @@ class Config:
         -------
         config : `Config`
             Configuration instance loaded from file.
+
+        Notes
+        -----
+        Relative ``general.input_path``, ``general.output_directory`` and
+        ``plotting.xray_contours.ctr_file`` values are resolved against the
+        directory containing the YAML file.
         """
+        path = Path(path)
         with open(path, 'r') as f:
             config_dict = yaml.safe_load(f)
+
+        base = path.resolve().parent
+        general = config_dict['general']
+        contours = config_dict.get('plotting', {}).get('xray_contours') or {}
+        for section, key in ((general, 'input_path'), (general, 'output_directory'), (contours, 'ctr_file')):
+            if section.get(key):
+                section[key] = str((base / section[key]).resolve())
         return cls(config_dict)
 
     @classmethod
