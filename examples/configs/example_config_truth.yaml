@@ -10,8 +10,8 @@ general:
     pixel_scale: 0.4
   pixel:
     downsample_factor: 170
-    coord1_col: "X_IMAGE_se"
-    coord2_col: "Y_IMAGE_se"
+    coord1_col: "x_image"
+    coord2_col: "y_image"
   g1_col: "nfw_g1"
   g2_col: "nfw_g2"
   create_snr: true
