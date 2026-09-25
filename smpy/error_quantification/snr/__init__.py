@@ -5,6 +5,6 @@ maps from mass reconstruction results using randomized null hypothesis
 testing through spatial or orientation shuffling of the input data.
 """
 
-from .run import run
+from .run import create_sn_map
 
-__all__ = ['run']
+__all__ = ['create_sn_map']

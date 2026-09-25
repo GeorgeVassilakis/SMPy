@@ -9,31 +9,12 @@ import os
 import time
 
 import numpy as np
-import yaml
 
 from smpy import utils
 from smpy.coordinates import get_coordinate_system
 from smpy.filters import plotting
 from smpy.mapping_methods import ApertureMassMapper, KaiserSquiresMapper, KSPlusMapper
 from smpy.plotting import plot
-
-def read_config(file_path):
-    """Read configuration from YAML file.
-
-    Load and parse the YAML configuration file for SNR computation.
-
-    Parameters
-    ----------
-    file_path : `str`
-        Path to configuration file.
-
-    Returns
-    -------
-    config : `dict`
-        Configuration dictionary.
-    """
-    with open(file_path, 'r') as file:
-        return yaml.safe_load(file)
 
 def perform_mapping(grid_list, config, mapping_method='kaiser_squires'):
     """Perform mass mapping on list of shear grids.
@@ -101,6 +82,9 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries, 
         Scaled coordinate boundaries.
     true_boundaries : `dict`
         True coordinate boundaries.
+    counts_overlay : `numpy.ndarray`, optional
+        Per-pixel galaxy counts drawn on the SNR plots when
+        ``general.overlay_counts_map`` is enabled.
 
     Returns
     -------
@@ -219,33 +203,3 @@ def create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries, 
         print(f"Time taken to create {mapping_method} SNR maps: {elapsed_time:.2f} seconds")
 
     return sn_maps
-
-def run(config_path, convergence_maps, scaled_boundaries, true_boundaries):
-    """Run SNR map generation.
-
-    Main entry point for signal-to-noise ratio map computation from
-    convergence maps using randomized null hypothesis testing.
-
-    Parameters
-    ----------
-    config_path : `str`
-        Path to configuration file.
-    convergence_maps : `dict`
-        Dictionary containing E/B mode convergence maps.
-    scaled_boundaries : `dict`
-        Scaled coordinate boundaries.
-    true_boundaries : `dict`
-        True coordinate boundaries.
-
-    Returns
-    -------
-    snr_maps : `dict`
-        Dictionary containing E/B mode SNR maps.
-
-    Notes
-    -----
-    This function loads the configuration and delegates to create_sn_map
-    for the actual SNR computation and visualization.
-    """
-    config = read_config(config_path)
-    return create_sn_map(config, convergence_maps, scaled_boundaries, true_boundaries)
