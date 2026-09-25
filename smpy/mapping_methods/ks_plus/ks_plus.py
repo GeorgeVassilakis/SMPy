@@ -8,13 +8,15 @@ priors in the DCT domain and wavelet-based power spectrum constraints.
 import numpy as np
 from scipy import fft
 from scipy.ndimage import gaussian_filter
-from ..base import MassMapper
+
 from smpy.filters.starlet import (
-    starlet_transform_2d,
-    inverse_starlet_transform_2d,
     compute_starlet_nscales_max,
+    inverse_starlet_transform_2d,
     starlet_nscales_support_aware,
+    starlet_transform_2d,
 )
+
+from ..base import MassMapper
 
 class KSPlusMapper(MassMapper):
     """Implementation of Kaiser-Squires Plus mass mapping.

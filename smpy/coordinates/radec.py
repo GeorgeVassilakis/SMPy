@@ -5,6 +5,7 @@ including spherical corrections and appropriate binning for sky projections.
 """
 
 import numpy as np
+
 from .base import CoordinateSystem
 
 class RADecSystem(CoordinateSystem):

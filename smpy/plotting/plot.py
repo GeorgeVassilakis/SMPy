@@ -8,12 +8,12 @@ APIs and orchestration.
 # Standard Library
 from __future__ import annotations
 
+import matplotlib.patheffects as patheffects
+
 # Third Party
 import matplotlib.pyplot as plt
 import numpy as np
 
-# Local
-from smpy.utils import find_peaks2d
 from smpy.plotting.utils import (
     add_colorbar,
     apply_axes_style,
@@ -27,8 +27,9 @@ from smpy.plotting.utils import (
     propose_ticks,
     set_ticks,
 )
-import matplotlib.patheffects as patheffects
 
+# Local
+from smpy.utils import find_peaks2d
 
 def plot_mass_map(data, scaled_boundaries, true_boundaries, config, output_name=None,
                   return_handles=False, map_category="convergence", counts_overlay=None):

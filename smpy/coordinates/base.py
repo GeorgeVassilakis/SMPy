@@ -6,6 +6,7 @@ and pixel coordinate transformations and gridding.
 """
 
 from abc import ABC, abstractmethod
+
 import numpy as np
 
 class CoordinateSystem(ABC):

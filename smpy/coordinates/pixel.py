@@ -6,6 +6,7 @@ for large pixel dimensions.
 """
 
 import numpy as np
+
 from .base import CoordinateSystem
 
 class PixelSystem(CoordinateSystem):

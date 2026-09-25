@@ -7,13 +7,13 @@ axes/inputs for predictable behavior.
 
 # Standard Library
 from __future__ import annotations
+
 import warnings
 
 # Third Party
 import numpy as np
 from matplotlib import colors
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-
 
 def create_normalization(scaling, data, vmin=None, vmax=None, map_type="convergence"):
     """Create a matplotlib normalization object from config.

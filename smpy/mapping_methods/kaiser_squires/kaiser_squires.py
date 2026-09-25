@@ -7,8 +7,10 @@ with optional Gaussian smoothing.
 """
 
 import numpy as np
-from ..base import MassMapper
+
 from smpy.filters import apply_filter
+
+from ..base import MassMapper
 
 class KaiserSquiresMapper(MassMapper):
     """Implementation of Kaiser-Squires mass mapping.

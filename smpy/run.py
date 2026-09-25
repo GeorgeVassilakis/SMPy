@@ -16,6 +16,7 @@ from smpy import utils
 from smpy.coordinates import get_coordinate_system
 from smpy.error_quantification.snr.run import create_sn_map as create_snr_map
 from smpy.mapping_methods import ApertureMassMapper, KaiserSquiresMapper, KSPlusMapper
+
 def prepare_method_config(config, method):
     """Validate method configuration and return nested config unchanged.
 

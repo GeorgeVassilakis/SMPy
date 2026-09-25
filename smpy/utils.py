@@ -5,13 +5,13 @@ coordinate transformations, and statistical operations used throughout the
 SMPy package.
 """
 
-import numpy as np
-import pandas as pd
 import random
 import secrets
 
-from astropy.table import Table
+import numpy as np
+import pandas as pd
 from astropy.io import fits
+from astropy.table import Table
 
 def load_shear_data(shear_cat_path, coord1_col, coord2_col, g1_col, g2_col, weight_col=None, hdu=0):
     """Load shear catalog from FITS file.

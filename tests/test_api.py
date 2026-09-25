@@ -5,17 +5,16 @@ ensuring correct configuration generation, parameter validation, and
 integration with the core mass mapping functionality.
 """
 
-import unittest
-import tempfile
 import os
+import sys
+import tempfile
+import unittest
 from pathlib import Path
 
-import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from smpy.api import map_aperture_mass, map_kaiser_squires, map_ks_plus, map_mass
 from smpy.config import Config
-from smpy.api import map_mass, map_kaiser_squires, map_aperture_mass, map_ks_plus
-
 
 class TestAPIConfigGeneration(unittest.TestCase):
     """Test suite for API function configuration generation.

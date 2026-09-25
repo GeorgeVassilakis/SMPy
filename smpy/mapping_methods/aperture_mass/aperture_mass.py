@@ -6,9 +6,10 @@ mass reconstruction from weak lensing shear measurements.
 """
 
 import numpy as np
-from smpy.mapping_methods.base import MassMapper
-from smpy.filters.processing import schirmer_filter, schneider_filter
 from scipy.ndimage import convolve
+
+from smpy.filters.processing import schirmer_filter, schneider_filter
+from smpy.mapping_methods.base import MassMapper
 
 class ApertureMassMapper(MassMapper):
     """Implementation of aperture mass mapping using configurable filters.

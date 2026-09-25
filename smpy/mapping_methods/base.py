@@ -5,9 +5,10 @@ implementations must inherit from, providing a consistent interface
 for mass mapping operations.
 """
 
-from abc import ABC, abstractmethod
-from smpy.plotting import plot
 import os
+from abc import ABC, abstractmethod
+
+from smpy.plotting import plot
 
 class MassMapper(ABC):
     """Abstract base class for mass mapping methods.

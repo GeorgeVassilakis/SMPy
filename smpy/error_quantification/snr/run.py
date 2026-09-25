@@ -5,15 +5,17 @@ realizations through spatial or orientation shuffling to estimate noise
 properties of the mass maps for statistical significance assessment.
 """
 
-import yaml
-import numpy as np
-import time
-from smpy import utils
-from smpy.filters import plotting
-from smpy.mapping_methods import KaiserSquiresMapper, ApertureMassMapper, KSPlusMapper
-from smpy.plotting import plot
-from smpy.coordinates import get_coordinate_system
 import os
+import time
+
+import numpy as np
+import yaml
+
+from smpy import utils
+from smpy.coordinates import get_coordinate_system
+from smpy.filters import plotting
+from smpy.mapping_methods import ApertureMassMapper, KaiserSquiresMapper, KSPlusMapper
+from smpy.plotting import plot
 
 def read_config(file_path):
     """Read configuration from YAML file.

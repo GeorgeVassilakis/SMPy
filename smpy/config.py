@@ -10,7 +10,6 @@ from pathlib import Path
 
 import yaml
 
-
 class Config:
     """Manage configuration dictionaries for SMPy mass mapping analysis.
 

@@ -46,8 +46,11 @@ line-length = 110
 extend-exclude = ["docs", "examples", "**/__init__.py"]
 
 [tool.ruff.lint]
-select = ["E", "F", "N", "W"]
+select = ["E", "F", "I", "N", "W"]
 ignore = ["N802", "N803", "N806", "N812", "N813", "N815", "N816"]
+
+[tool.ruff.lint.isort]
+lines-after-imports = 1
 
 [tool.ruff.lint.pycodestyle]
 max-doc-length = 79

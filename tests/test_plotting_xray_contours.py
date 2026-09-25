@@ -9,14 +9,14 @@ import matplotlib
 import numpy as np
 
 matplotlib.use("Agg", force=True)
+import sys
+
 import matplotlib.pyplot as plt
 
-import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from smpy.plotting.plot import plot_mass_map, plot_snr_map
 from smpy.plotting.utils import read_ds9_ctr
-
 
 class TestXRayContourPlotting(unittest.TestCase):
     """Test DS9 contour parsing and map-type overlay toggles."""

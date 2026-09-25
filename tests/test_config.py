@@ -5,17 +5,16 @@ ensuring proper default configuration generation, parameter validation,
 YAML serialization, and integration with mass mapping methods.
 """
 
-import unittest
-import tempfile
-import os
 import io
+import os
 import sys
+import tempfile
+import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from smpy.config import Config
-
 
 class TestConfig(unittest.TestCase):
     """Test suite for Config class functionality.
@@ -675,7 +674,7 @@ class TestConfig(unittest.TestCase):
         """
         # This test prevents "reward hacking" by ensuring the config works in
         # practice
-        from smpy.mapping_methods import KaiserSquiresMapper, ApertureMassMapper, KSPlusMapper
+        from smpy.mapping_methods import ApertureMassMapper, KaiserSquiresMapper, KSPlusMapper
 
         methods_and_mappers = [
             ('kaiser_squires', KaiserSquiresMapper),

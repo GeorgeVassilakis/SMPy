@@ -3,7 +3,6 @@ from smpy.filters.starlet import (
     starlet_nscales_support_aware,
 )
 
-
 def coarsest_support(nscales: int) -> int:
     # nscales = J + 1 => J = nscales - 1, coarsest detail j = J - 1 = nscales -
     # 2

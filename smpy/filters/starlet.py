@@ -14,9 +14,10 @@ This code draws from the CosmoStat implementation:
     (MIT Licensed)
 """
 
+from typing import Optional
+
 import numpy as np
 from scipy.ndimage import convolve1d
-from typing import Optional
 
 def b3spline_filter(step=1):
     """Create a B3-spline filter for the starlet transform.

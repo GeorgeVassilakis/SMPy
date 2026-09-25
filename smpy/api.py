@@ -6,7 +6,6 @@ operations without requiring detailed YAML configuration knowledge.
 
 from .config import Config
 
-
 def map_mass(
     data,
     method='kaiser_squires',
