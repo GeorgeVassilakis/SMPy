@@ -11,6 +11,7 @@ from astropy.table import Table
 
 import smpy
 from smpy import Config
+from smpy.cli import main
 from smpy.mapping_methods import METHODS
 
 CATALOG = Path(__file__).resolve().parents[1] / "examples" / "data" / "forecast_lum_annular.fits"
@@ -53,23 +54,25 @@ def test_map_mass_has_no_side_effects(table, tmp_path, monkeypatch, shuffle_type
     assert random.getstate() == python_state
     assert np.array_equal(after[1], numpy_state[1]) and after[2:] == numpy_state[2:]
 
-def test_python_and_yaml_routes_agree(tmp_path):
-    """Keywords and YAML keys of the same names give the same run, and the
-    settings record written by run repeats it."""
+def test_smpy_command_matches_map_mass(tmp_path):
+    """The smpy command and map_mass give the same maps from settings of the
+    same names, and the settings record the command writes repeats its run."""
     config_path = tmp_path / "run.yaml"
     config_path.write_text(
-        f"general:\n  input_path: {CATALOG}\n  output_directory: out\n  save_plots: false\n"
-        "  radec: {pixel_scale: 0.4}\n  g1_col: g1_Rinv\n  g2_col: g2_Rinv\n  weight_col: weight\n"
+        f"general:\n  input_path: {CATALOG}\n  output_directory: out\n  mode: [E, B]\n"
+        "  save_plots: false\n  save_fits: true\n  radec: {pixel_scale: 0.4}\n"
+        "  g1_col: g1_Rinv\n  g2_col: g2_Rinv\n  weight_col: weight\n"
         "methods:\n  kaiser_squires: {smoothing: 1.5}\n")
-    from_yaml = smpy.run(config_path)
+    main(["-c", str(config_path)])
     from_python = smpy.map_mass(CATALOG, smoothing=1.5, **RADEC)
 
-    assert from_yaml.settings["methods"] == from_python.settings["methods"]
+    output = tmp_path / "out" / "kaiser_squires"
     for mode in "EB":
-        np.testing.assert_array_equal(from_yaml.maps[mode], from_python.maps[mode])
-
-    record = tmp_path / "out" / "kaiser_squires" / "smpy_output_kaiser_squires_settings.yaml"
-    assert Config.from_file(record).resolved() == from_yaml.settings
+        written = fits.getdata(output / f"smpy_output_kaiser_squires_{mode.lower()}_mode.fits")
+        np.testing.assert_array_equal(written, from_python.maps[mode])
+    record = Config.from_file(output / "smpy_output_kaiser_squires_settings.yaml").resolved()
+    assert record == Config.from_file(config_path).resolved()
+    assert record["methods"] == from_python.settings["methods"]
 
 INVALID = {
     "other method's setting": ({"inpainting_iterations": 5, **RADEC},
@@ -92,6 +95,17 @@ def test_invalid_settings_name_the_setting(settings, name, tmp_path):
             smpy.run(tmp_path / "run.yaml")
         else:
             smpy.map_mass(CATALOG, **settings)
+
+def test_ks_plus_clips_too_many_scales():
+    """KS+ reduces an nscales too large for the map to the largest that fits,
+    and warns."""
+    # 8 is just above the limit for this map, so an unclipped run stays fast
+    settings = dict(inpainting_iterations=2, reduced_shear_iterations=1, **RADEC)
+    with pytest.warns(UserWarning, match="nscales=8 was clipped"):
+        clipped = smpy.map_mass(CATALOG, "ks_plus", nscales=8, **settings)
+    largest = smpy.map_mass(CATALOG, "ks_plus", **settings)
+    for mode in "EB":
+        np.testing.assert_array_equal(clipped.maps[mode], largest.maps[mode])
 
 @pytest.mark.parametrize("settings", [RADEC, PIXEL], ids=["radec", "pixel"])
 def test_plot_draws_on_given_axes(settings):
