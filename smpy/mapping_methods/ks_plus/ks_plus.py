@@ -11,6 +11,7 @@ import warnings
 import numpy as np
 from scipy import fft
 from scipy.ndimage import gaussian_filter
+from scipy.special import erf
 
 from smpy.filters.starlet import (
     inverse_starlet_transform_2d,
@@ -19,7 +20,7 @@ from smpy.filters.starlet import (
 )
 
 from ..base import MassMapper
-from ..kaiser_squires.kaiser_squires import shear_from_convergence
+from ..kaiser_squires.kaiser_squires import convergence_from_shear, shear_from_convergence
 
 logger = logging.getLogger(__name__)
 
@@ -48,25 +49,20 @@ class KSPlusMapper(MassMapper):
     extension_size : `str` or `int`
         'double' to pad each side by half the field, or pixels per side.
     use_wavelet_constraints : `bool`
-        Whether to rescale wavelet power inside the gaps.
-    constrain_B : `bool`
-        Whether to apply the wavelet constraint to B modes as well.
-    threshold_tau : `float` or `None`
-        Decay constant of the DCT threshold in iterations, or `None` for a
-        quarter of ``inpainting_iterations``.
+        Whether to match the wavelet power of E and B inside the gaps to that
+        outside.
 
     Raises
     ------
     ValueError
-        Raised if ``smoothing``, ``extension_size`` or ``threshold_tau`` is
-        invalid.
+        Raised if ``smoothing`` or ``extension_size`` is invalid.
 
     Notes
     -----
-    The KS+ algorithm implements the iterative inpainting scheme described
-    in the literature, combining sparsity priors in the DCT domain with
-    wavelet-based power spectrum preservation for robust mass map
-    reconstruction in the presence of missing data and systematic effects.
+    This follows Algorithm 1 of Pires et al. (2020, A&A 638, A141): sparse
+    inpainting of E + iB in the DCT domain with a threshold that falls from
+    its largest coefficient towards zero, a wavelet power-spectrum constraint
+    in the gaps, and an outer loop that corrects for reduced shear.
 
     The binary mask encodes data availability only. Pixels are marked as
     data (1) if measurements exist and are valid; gaps (0) are used solely
@@ -75,21 +71,17 @@ class KSPlusMapper(MassMapper):
     """
 
     def __init__(self, smoothing, inpainting_iterations, reduced_shear_iterations, nscales,
-                 extension_size, use_wavelet_constraints, constrain_B, threshold_tau):
+                 extension_size, use_wavelet_constraints):
         if smoothing < 0:
             raise ValueError(f"smoothing must be at least 0, got {smoothing}")
         if extension_size != 'double' and not (isinstance(extension_size, int) and extension_size >= 0):
             raise ValueError(f"extension_size must be 'double' or a pixel count, got {extension_size!r}")
-        if threshold_tau is not None and threshold_tau <= 0:
-            raise ValueError(f"threshold_tau must be positive or null, got {threshold_tau}")
         self.smoothing = smoothing
         self.inpainting_iterations = inpainting_iterations
         self.reduced_shear_iterations = reduced_shear_iterations
         self.nscales = nscales
         self.extension_size = extension_size
         self.use_wavelet_constraints = use_wavelet_constraints
-        self.constrain_B = constrain_B
-        self.threshold_tau = threshold_tau
 
     def create_maps(self, grid):
         """Create convergence maps using Kaiser-Squires Plus inversion.
@@ -143,6 +135,12 @@ class KSPlusMapper(MassMapper):
             g1_grid, g2_grid, mask, extension_size_dec, extension_size_ra)
         nscales = self._starlet_nscales(*mask_extended.shape)
 
+        # The DCT threshold starts at the largest coefficient of the first
+        # reconstruction
+        kappa_e_dct, kappa_b_dct = (fft.dctn(kappa, norm='ortho')
+                                    for kappa in convergence_from_shear(g1_extended, g2_extended))
+        lambda_max = np.abs(kappa_e_dct + 1j * kappa_b_dct).max()
+
         # Reduced shear correction loop
         max_iterations = self.reduced_shear_iterations
         kappa_e_extended = np.zeros_like(g1_extended)
@@ -155,7 +153,7 @@ class KSPlusMapper(MassMapper):
 
             # Perform inpainting-based reconstruction
             kappa_e_extended, kappa_b_extended = self._inpainting_reconstruction(
-                g1_corrected, g2_corrected, mask_extended, nscales)
+                g1_corrected, g2_corrected, mask_extended, nscales, lambda_max)
 
             # Extract the central part for next iteration
             start_dec = extension_size_dec
@@ -245,11 +243,8 @@ class KSPlusMapper(MassMapper):
 
         return g1_extended, g2_extended, mask_extended
 
-    def _inpainting_reconstruction(self, g1_grid, g2_grid, mask, nscales):
-        """Perform inpainting-based reconstruction.
-
-        Execute the core KS+ inpainting algorithm using DCT-domain
-        sparsity constraints and wavelet-based power spectrum preservation.
+    def _inpainting_reconstruction(self, g1_grid, g2_grid, mask, nscales, lambda_max):
+        """Fill the gaps in a shear field by sparse inpainting.
 
         Parameters
         ----------
@@ -261,6 +256,8 @@ class KSPlusMapper(MassMapper):
             Binary mask indicating data locations.
         nscales : `int`
             Number of starlet scales for the wavelet constraint.
+        lambda_max : `float`
+            DCT threshold at the first iteration.
 
         Returns
         -------
@@ -271,136 +268,30 @@ class KSPlusMapper(MassMapper):
 
         Notes
         -----
-        The inpainting algorithm alternates between DCT thresholding
-        and data consistency enforcement, with wavelet-based
-        power spectrum constraints to preserve statistical properties.
+        Steps 7 to 18 of Algorithm 1 of Pires et al. (2020): threshold the
+        DCT of kappa_E + i kappa_B, match the wavelet power in the gaps, and
+        restore the observed shear where there is data.
         """
-        # Initial KS inversion to estimate convergence
-        kappa_e, kappa_b = self._standard_ks_inversion(g1_grid, g2_grid)
+        kappa_e, kappa_b = convergence_from_shear(g1_grid, g2_grid)
+        for i in range(self.inpainting_iterations):
+            # Keep the DCT coefficients of kappa_E + i kappa_B whose magnitude
+            # reaches the threshold
+            coefficients = fft.dctn(kappa_e, norm='ortho') + 1j * fft.dctn(kappa_b, norm='ortho')
+            coefficients[np.abs(coefficients) < self._update_threshold(i, lambda_max)] = 0
+            kappa_e = fft.idctn(coefficients.real, norm='ortho')
+            kappa_b = fft.idctn(coefficients.imag, norm='ortho')
 
-        # Initialize for DCT inpainting
-        kappa_complex = kappa_e + 1j * kappa_b
-
-        max_iterations = self.inpainting_iterations
-
-        # Calculate initial threshold max (min fraction deprecated)
-        dct_coeffs = fft.dctn(kappa_e, norm='ortho')
-        lambda_max = np.max(np.abs(dct_coeffs))
-
-        for i in range(max_iterations):
-            # DCT thresholding
-            kappa_e_dct = fft.dctn(np.real(kappa_complex), norm='ortho')
-            kappa_b_dct = fft.dctn(np.imag(kappa_complex), norm='ortho')
-
-            # Calculate threshold for current iteration
-            lambda_i = self._update_threshold(i, lambda_max)
-
-            # Apply threshold
-            kappa_e_dct[np.abs(kappa_e_dct) < lambda_i] = 0
-            kappa_b_dct[np.abs(kappa_b_dct) < lambda_i] = 0
-
-            # Inverse DCT
-            kappa_e = fft.idctn(kappa_e_dct, norm='ortho')
-            kappa_b = fft.idctn(kappa_b_dct, norm='ortho')
-
-            # Wavelet-based power spectrum constraints
             if self.use_wavelet_constraints:
-                # Apply power matching to E-mode only by default. KS+ leaves B
-                # free.
                 kappa_e = self._apply_wavelet_constraints(kappa_e, mask, nscales)
-                if self.constrain_B:
-                    kappa_b = self._apply_wavelet_constraints(kappa_b, mask, nscales)
+                kappa_b = self._apply_wavelet_constraints(kappa_b, mask, nscales)
 
-            # Enforce consistency with observed data
+            # Keep the observed shear where there is data
             gamma1, gamma2 = shear_from_convergence(kappa_e, kappa_b)
-
-            # Replace with observed data on data pixels (mask==1)
             gamma1[mask > 0] = g1_grid[mask > 0]
             gamma2[mask > 0] = g2_grid[mask > 0]
-
-            # Convert back to convergence
-            kappa_e, kappa_b = self._gamma_to_kappa(gamma1, gamma2)
-            kappa_complex = kappa_e + 1j * kappa_b
+            kappa_e, kappa_b = convergence_from_shear(gamma1, gamma2)
 
         return kappa_e, kappa_b
-
-    def _standard_ks_inversion(self, g1_grid, g2_grid):
-        """Perform standard Kaiser-Squires inversion.
-
-        Apply the classical Kaiser-Squires Fourier-domain inversion
-        to convert shear components to convergence maps.
-
-        Parameters
-        ----------
-        g1_grid : `numpy.ndarray`
-            First shear component grid.
-        g2_grid : `numpy.ndarray`
-            Second shear component grid.
-
-        Returns
-        -------
-        kappa_e : `numpy.ndarray`
-            E-mode convergence map.
-        kappa_b : `numpy.ndarray`
-            B-mode convergence map.
-
-        Notes
-        -----
-        Uses the standard KS relations in Fourier space:
-        kappa_E = ((k1^2 - k2^2) * g1 + 2 * k1 * k2 * g2) / k^2
-        kappa_B = ((k1^2 - k2^2) * g2 - 2 * k1 * k2 * g1) / k^2
-        """
-        # Get dimensions
-        npix_dec, npix_ra = g1_grid.shape
-
-        # Fourier transform the shear components
-        g1_hat = np.fft.fft2(g1_grid)
-        g2_hat = np.fft.fft2(g2_grid)
-
-        # Create wavenumber grids
-        k1, k2 = np.meshgrid(np.fft.fftfreq(npix_ra), np.fft.fftfreq(npix_dec))
-        k_squared = k1**2 + k2**2
-
-        # Avoid division by zero
-        k_squared[k_squared == 0] = np.finfo(float).eps
-
-        # Kaiser-Squires inversion in Fourier space
-        kappa_e_hat = (1 / k_squared) * ((k1**2 - k2**2) * g1_hat + 2 * k1 * k2 * g2_hat)
-        kappa_b_hat = (1 / k_squared) * ((k1**2 - k2**2) * g2_hat - 2 * k1 * k2 * g1_hat)
-
-        # Inverse Fourier transform
-        kappa_e = np.real(np.fft.ifft2(kappa_e_hat))
-        kappa_b = np.real(np.fft.ifft2(kappa_b_hat))
-
-        return kappa_e, kappa_b
-
-    def _gamma_to_kappa(self, gamma1, gamma2):
-        """Convert shear to convergence using Fourier space relation.
-
-        Apply the inverse Kaiser-Squires transform to convert shear
-        components back to convergence maps.
-
-        Parameters
-        ----------
-        gamma1 : `numpy.ndarray`
-            First shear component grid.
-        gamma2 : `numpy.ndarray`
-            Second shear component grid.
-
-        Returns
-        -------
-        kappa_e : `numpy.ndarray`
-            E-mode convergence map.
-        kappa_b : `numpy.ndarray`
-            B-mode convergence map.
-
-        Notes
-        -----
-        This method uses the standard KS inversion to maintain consistency
-        in the forward-backward transform cycle during inpainting.
-        """
-        # This is the standard KS inversion
-        return self._standard_ks_inversion(gamma1, gamma2)
 
     def _starlet_nscales(self, height, width):
         """Choose the number of starlet scales for an image.
@@ -425,11 +316,7 @@ class KSPlusMapper(MassMapper):
         return nscales
 
     def _apply_wavelet_constraints(self, kappa, mask, nscales):
-        """Apply wavelet-based power spectrum constraints.
-
-        Preserve statistical properties of the convergence field by
-        normalizing wavelet coefficients in missing data regions to
-        match the statistics of observed regions.
+        """Match the wavelet power of a map inside the gaps to that outside.
 
         Parameters
         ----------
@@ -443,65 +330,25 @@ class KSPlusMapper(MassMapper):
         Returns
         -------
         kappa_corrected : `numpy.ndarray`
-            Convergence map with corrected power spectrum.
+            Convergence map whose detail bands have the same standard
+            deviation inside the gaps as outside.
 
         Notes
         -----
-        Uses starlet wavelet decomposition to analyze power at different
-        scales and ensures that the reconstructed field maintains proper
-        statistical properties in both observed and inpainted regions.
+        Each starlet detail band is multiplied inside the gaps by its standard
+        deviation outside the gaps over that inside, which constrains the power
+        spectrum in the gaps (Pires et al. 2020). Bands with no power in the
+        gaps are left as they are.
         """
-        # Decompose into wavelet coefficients
-        wavelet_bands = starlet_transform_2d(kappa, nscales)
-
-        # Use true binary mask across scales (no wavelet of mask)
-        data_mask = mask.astype(bool)
-
-        # Stability parameters (hard-coded defaults; not exposed to YAML)
-        clip_min = 0.1
-        clip_max = 10.0
-        sigma_floor_abs = 1e-12
-        sigma_floor_rel = 1e-6
-        min_samples = 16
-
-        # Process each scale except the coarsest
-        for j in range(nscales - 1):
-            band = wavelet_bands[j]
-
-            # Collect observed/gap samples using the same mask at all scales
-            obs_vals = band[data_mask]
-            gap_vals = band[~data_mask]
-
-            # Require minimum sample counts for stable statistics
-            if obs_vals.size < min_samples or gap_vals.size < min_samples:
-                continue
-
-            # Compute standard deviations
-            std_obs = np.std(obs_vals)
-            std_gap = np.std(gap_vals)
-            std_band = np.std(band)
-
-            # Skip if non-finite
-            if not (np.isfinite(std_obs) and np.isfinite(std_gap) and np.isfinite(std_band)):
-                continue
-
-            # Robust floor on denominator to avoid huge ratios
-            sigma_floor = max(sigma_floor_abs, sigma_floor_rel * std_band)
-            denom = max(std_gap, sigma_floor)
-
-            # Compute and clip scale factor
-            scale = float(std_obs / denom) if denom > 0 else 1.0
-            scale = float(np.clip(scale, clip_min, clip_max))
-
-            # Apply scaling inside gaps only
-            band_gap_scaled = gap_vals * scale
-            band[~data_mask] = band_gap_scaled
-            wavelet_bands[j] = band
-
-        # Reconstruct
-        kappa_corrected = inverse_starlet_transform_2d(wavelet_bands)
-
-        return kappa_corrected
+        gaps = mask == 0
+        if not gaps.any():
+            return kappa
+        bands = starlet_transform_2d(kappa, nscales)
+        for band in bands[:-1]:
+            sigma_in = band[gaps].std()
+            if sigma_in > 0:
+                band[gaps] *= band[~gaps].std() / sigma_in
+        return inverse_starlet_transform_2d(bands)
 
     def _update_threshold(self, iteration, lambda_max):
         """Return the DCT threshold for an inpainting iteration.
@@ -520,9 +367,8 @@ class KSPlusMapper(MassMapper):
 
         Notes
         -----
-        The threshold decays as ``lambda_max * exp(-iteration / tau)``, where
-        ``tau`` is ``threshold_tau`` or, if that is `None`, a quarter of
-        ``inpainting_iterations`` (at least 1).
+        The threshold falls towards zero as
+        ``lambda_max * (1 - erf(2.8 * iteration / inpainting_iterations))``
+        (Pires et al. 2009, MNRAS 395, 1265).
         """
-        tau = self.threshold_tau or max(1.0, float(self.inpainting_iterations) / 4.0)
-        return float(lambda_max) * float(np.exp(-float(iteration) / tau))
+        return lambda_max * (1 - erf(2.8 * iteration / self.inpainting_iterations))

@@ -110,8 +110,7 @@ def map_ks_plus(catalog, **settings):
     **settings
         Arguments of `map_mass`. The method settings are ``smoothing``,
         ``inpainting_iterations``, ``reduced_shear_iterations``, ``nscales``,
-        ``extension_size``, ``use_wavelet_constraints``, ``constrain_B`` and
-        ``threshold_tau``.
+        ``extension_size`` and ``use_wavelet_constraints``.
 
     Returns
     -------

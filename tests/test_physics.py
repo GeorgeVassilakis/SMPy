@@ -12,13 +12,14 @@ import numpy as np
 import pytest
 from astropy.coordinates import SkyCoord
 from astropy.table import Table
+from scipy import fft
 from scipy.ndimage import gaussian_filter
 
 import smpy
 from smpy.coordinates import ShearGrid
 from smpy.filters.starlet import inverse_starlet_transform_2d, starlet_transform_2d
 from smpy.mapping_methods import METHODS
-from smpy.mapping_methods.kaiser_squires import shear_from_convergence
+from smpy.mapping_methods.kaiser_squires import convergence_from_shear, shear_from_convergence
 
 TRUTH = Path(__file__).resolve().parents[1] / "examples" / "data" / "forecast_lum_truth.fits"
 SHEAR = dict(g1_col="nfw_g1", g2_col="nfw_g2")
@@ -78,7 +79,8 @@ def test_kaiser_squires_relations_are_exact():
 
     The grid has odd sides. On an even side the highest frequency stands for
     both +1/2 and -1/2 cycles per pixel, and the shear term 2 k1 k2 / k^2
-    changes sign between them, so a convergence mode there has no real shear.
+    changes sign between them, so a mode there that also varies along the
+    other axis has no real shear.
     """
     rng = np.random.default_rng(0)
     kappa = rng.normal(size=(47, 63)) + 1j * rng.normal(size=(47, 63))
@@ -94,6 +96,24 @@ def test_kaiser_squires_relations_are_exact():
     map_e, map_b = METHODS["kaiser_squires"](smoothing=0).create_maps(grid)
     np.testing.assert_allclose(map_e, kappa.real, rtol=0, atol=1e-12)
     np.testing.assert_allclose(map_b, kappa.imag, rtol=0, atol=1e-12)
+
+def test_shear_relations_agree_on_even_grids():
+    """A Kaiser-Squires map, turned back into shear and inverted again, is
+    unchanged on a grid with even sides, and a convergence mode at the
+    highest frequency of one axis only, whose shear is unambiguous, is
+    recovered."""
+    rng = np.random.default_rng(0)
+    ones = np.ones((48, 64))
+    mapper = METHODS["kaiser_squires"](smoothing=0)
+    maps = mapper.create_maps(ShearGrid(*rng.normal(size=(2, 48, 64)), ones, ones))
+    again = mapper.create_maps(ShearGrid(*shear_from_convergence(*maps), ones, ones))
+    np.testing.assert_allclose(again, maps, rtol=0, atol=1e-12)
+
+    # kappa_E = gamma1 = cos(pi x), with gamma2 = 0
+    alternating = np.cos(np.pi * np.arange(64)) * ones
+    map_e, map_b = mapper.create_maps(ShearGrid(alternating, 0 * ones, ones, ones))
+    np.testing.assert_allclose(map_e, alternating, rtol=0, atol=1e-12)
+    np.testing.assert_allclose(map_b, 0, rtol=0, atol=1e-12)
 
 def test_inverse_starlet_transform_restores_image():
     """The inverse starlet transform returns the image that was transformed."""
@@ -121,21 +141,82 @@ def test_truth_catalog_recovers_cluster(truth, method, coord_system):
     if method != "aperture_mass":
         assert np.corrcoef(map_e.ravel(), kappa.ravel())[0, 1] > 0.9
 
-@pytest.mark.parametrize("method", ["kaiser_squires", "aperture_mass"])
-def test_rotating_shear_swaps_e_and_b(truth, method):
-    """Turning every shear by 45 degrees swaps the E and B maps.
+@pytest.mark.parametrize("method, method_settings, degrees", [
+    ("kaiser_squires", {}, 15),
+    ("aperture_mass", METHOD_SETTINGS["aperture_mass"], 15),
+    # KS+'s reduced-shear correction divides by 1 - kappa_E alone, and its
+    # wavelet constraint rescales E and B separately, which commutes only
+    # with quarter turns
+    ("ks_plus", {"reduced_shear_iterations": 1}, 45),
+    ("ks_plus", {"reduced_shear_iterations": 1, "use_wavelet_constraints": False}, 15),
+], ids=["kaiser_squires", "aperture_mass", "ks_plus", "ks_plus without wavelet constraint"])
+def test_rotating_shear_rotates_e_and_b(truth, method, method_settings, degrees):
+    """Turning every shear by an angle turns E + iB by twice that angle.
 
-    (g1, g2) -> (-g2, g1) multiplies the complex shear, and so the complex
-    convergence E + iB, by i: (E, B) -> (-B, E).
+    Turning a shear by phi multiplies g1 + i g2 by exp(2i phi). Kaiser-Squires
+    and aperture mass are linear in the shear, and KS+ thresholds E + iB by
+    its magnitude, so E + iB is multiplied by the same factor. At 45 degrees
+    this swaps E and B: (E, B) -> (-B, E).
     """
+    turn = np.exp(2j * np.deg2rad(degrees))
+    shear = (truth["nfw_g1"] + 1j * truth["nfw_g2"]) * turn
     turned = truth.copy()
-    turned["nfw_g1"], turned["nfw_g2"] = -truth["nfw_g2"], truth["nfw_g1"]
-    settings = dict(**SHEAR, **COORDINATES["radec"], **METHOD_SETTINGS[method])
+    turned["nfw_g1"], turned["nfw_g2"] = shear.real, shear.imag
+    settings = dict(**SHEAR, **COORDINATES["radec"], **method_settings)
     before = smpy.map_mass(truth, method, **settings)
     after = smpy.map_mass(turned, method, **settings)
 
-    np.testing.assert_allclose(after.maps["E"], -before.maps["B"], rtol=0, atol=1e-12)
-    np.testing.assert_allclose(after.maps["B"], before.maps["E"], rtol=0, atol=1e-12)
+    expected = (before.maps["E"] + 1j * before.maps["B"]) * turn
+    np.testing.assert_allclose(after.maps["E"], expected.real, rtol=0, atol=1e-12)
+    np.testing.assert_allclose(after.maps["B"], expected.imag, rtol=0, atol=1e-12)
+
+def test_ks_plus_fills_a_hole_in_a_sparse_field():
+    """Inside a hole, KS+ recovers a convergence field made of a few cosine
+    modes as Kaiser-Squires does from the complete shear, weakest modes
+    included.
+
+    The weakest modes return only if the DCT threshold falls to zero. The
+    wavelet constraint and field extension are off, so this checks the
+    sparse inpainting alone.
+    """
+    rng = np.random.default_rng(2)
+    coefficients = np.zeros((48, 64), complex)
+    for amplitude in (1.0, 0.3, 0.1, 0.03, 0.01, 0.005):
+        coefficients[tuple(rng.integers(1, 12, 2))] += amplitude * np.exp(2j * np.pi * rng.random())
+    gamma1, gamma2 = shear_from_convergence(fft.idctn(coefficients.real, norm="ortho"),
+                                            fft.idctn(coefficients.imag, norm="ortho"))
+    complete = np.array(convergence_from_shear(gamma1, gamma2))
+    y, x = np.mgrid[:48, :64]
+    weights = np.where((y - 24) ** 2 + (x - 30) ** 2 < 36, 0.0, 1.0)
+    mapper = METHODS["ks_plus"](smoothing=0, inpainting_iterations=100, reduced_shear_iterations=1,
+                                nscales=None, extension_size=0, use_wavelet_constraints=False)
+    maps = np.array(mapper.create_maps(ShearGrid(gamma1 * weights, gamma2 * weights, weights, weights)))
+    hole = weights == 0
+    assert np.abs(maps[:, hole] - complete[:, hole]).max() < 1e-3 * np.abs(complete).max()
+
+def test_ks_plus_beats_kaiser_squires_in_holes(truth):
+    """Inside holes in the truth catalogue, KS+ recovers the true convergence
+    better than Kaiser-Squires.
+
+    Galaxies in the holes get zero weight, so the map grid is unchanged.
+    Each map is compared after removing its mean over the observed pixels,
+    which shear does not determine.
+    """
+    rng = np.random.default_rng(3)
+    truth["weight"] = 1.0
+    for ra, dec in zip(rng.uniform(truth["ra"].min(), truth["ra"].max(), 8),
+                       rng.uniform(truth["dec"].min(), truth["dec"].max(), 8)):
+        offset = np.hypot((truth["ra"] - ra) * np.cos(np.deg2rad(dec)), truth["dec"] - dec)
+        truth["weight"][offset < 0.02] = 0.0
+    kappa = binned_kappa(truth, COORDINATES["radec"])
+    settings = dict(weight_col="weight", smoothing=0, **SHEAR, **COORDINATES["radec"])
+    errors = {}
+    for method in ("kaiser_squires", "ks_plus"):
+        result = smpy.map_mass(truth, method, **settings)
+        observed, holes = result.grid.weights > 0, result.grid.weights == 0
+        difference = (result.maps["E"] - result.maps["E"][observed].mean()) - (kappa - kappa[observed].mean())
+        errors[method] = np.sqrt(np.mean(difference[holes] ** 2))
+    assert errors["ks_plus"] < 0.8 * errors["kaiser_squires"]
 
 def test_lens_far_from_field_centre_makes_no_b_mode():
     """Tangential shear around a lens far from the centre of a wide field

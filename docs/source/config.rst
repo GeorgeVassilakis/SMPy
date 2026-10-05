@@ -276,16 +276,12 @@ Under ``methods.ks_plus``:
    * - use_wavelet_constraints
      - boolean
      - true
-     - Apply wavelet-based power spectrum constraints
-   * - constrain_B
-     - boolean
-     - false
-     - Also apply the wavelet constraint to B modes
-   * - threshold_tau
-     - float/null
-     - null
-     - Decay constant, in iterations, of the exponential DCT threshold
-       schedule. If null, a quarter of ``inpainting_iterations``.
+     - Match the E- and B-mode wavelet power inside the gaps to that
+       outside
+
+KS+ follows Algorithm 1 of Pires et al. (2020). Its DCT threshold falls from
+the largest coefficient towards zero over ``inpainting_iterations`` as
+``1 - erf(2.8 i / inpainting_iterations)`` (Pires et al. 2009).
 
 Plotting Settings
 ~~~~~~~~~~~~~~~~~

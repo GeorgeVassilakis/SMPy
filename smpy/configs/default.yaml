@@ -51,9 +51,7 @@ methods:
     reduced_shear_iterations: 3
     nscales: null  # Starlet scales; null for the largest safe number, larger values are clipped
     extension_size: 'double'  # 'double', or pixels added on each side
-    use_wavelet_constraints: true
-    constrain_B: false  # Also match wavelet power for B modes
-    threshold_tau: null  # DCT threshold decay in iterations; null for inpainting_iterations / 4
+    use_wavelet_constraints: true  # Match E- and B-mode wavelet power inside the gaps to that outside
 
 #------Plot settings------#
 plotting:
