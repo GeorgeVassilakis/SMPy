@@ -14,8 +14,8 @@ import numpy as np
 class ShearGrid:
     """Shear catalogue binned onto a regular map grid.
 
-    All arrays have shape ``(ny, nx)``: rows follow the second coordinate
-    (Dec or y) and columns the first (RA or x).
+    All arrays have shape ``(ny, nx)``: rows follow the map's y axis (north
+    for RA/Dec) and columns its x axis (west for RA/Dec).
 
     Parameters
     ----------
@@ -38,62 +38,31 @@ class CoordinateSystem(ABC):
     """Abstract base class for coordinate systems.
 
     Provides interface for RA/Dec and pixel coordinate systems used in mass
-    mapping. Each coordinate system must implement methods for creating grids,
-    handling boundaries, and transforming coordinates appropriately.
-
-    Notes
-    -----
-    Subclasses must implement all abstract methods to provide coordinate
-    system specific functionality for gridding shear data and handling
-    coordinate transformations.
+    mapping. Each coordinate system transforms a catalog into its gridding
+    coordinates and places the map grid around it; binning onto the grid is
+    shared.
     """
 
     @abstractmethod
-    def create_grid(self, data_df, boundaries, settings):
-        """Create a shear grid by binning data in the coordinate system.
-
-        Bin shear measurements onto a regular 2D grid using coordinate system
-        specific binning strategies.
+    def calculate_boundaries(self, data_df, settings):
+        """Calculate the map grid around a catalog.
 
         Parameters
         ----------
         data_df : `pandas.DataFrame`
-            DataFrame containing coordinates, shear components and weights.
-            Must include coord1_scaled and coord2_scaled from
-            transform_coordinates.
-        boundaries : `dict`
-            Coordinate boundaries from calculate_boundaries().
+            Catalog from `transform_coordinates`.
         settings : `dict`
             The coordinate system's section of ``general``, such as
             ``general.radec``.
 
         Returns
         -------
-        grid : `ShearGrid`
-            Binned shear, weights and counts.
-        """
-
-    @abstractmethod
-    def calculate_boundaries(self, coord1, coord2):
-        """Calculate field boundaries and setup coordinate labels.
-
-        Determine coordinate ranges and set up appropriate labels and units
-        for the coordinate system.
-
-        Parameters
-        ----------
-        coord1 : `numpy.ndarray`
-            First coordinate values (RA or X pixel coordinates).
-        coord2 : `numpy.ndarray`
-            Second coordinate values (Dec or Y pixel coordinates).
-
-        Returns
-        -------
         scaled_boundaries : `dict`
-            Dictionary containing scaled coordinate ranges and labels:
-            coord1_min/max, coord2_min/max, coord1_name, coord2_name, units.
+            Map edges in the gridding coordinates (coord1_min/max,
+            coord2_min/max), the map ``pixel_size`` in the same units, and
+            labels: coord1_name, coord2_name, units.
         true_boundaries : `dict`
-            Dictionary containing true coordinate ranges and labels.
+            Ranges of the catalog's own coordinates, with the same labels.
         """
 
     @abstractmethod
@@ -114,6 +83,59 @@ class CoordinateSystem(ABC):
             DataFrame with additional coord1_scaled, coord2_scaled columns
             containing transformed coordinates ready for gridding.
         """
+
+    def create_grid(self, data_df, boundaries):
+        """Bin a catalog onto the map grid.
+
+        Parameters
+        ----------
+        data_df : `pandas.DataFrame`
+            Catalog with coord1_scaled and coord2_scaled from
+            `transform_coordinates`, g1, g2 and weight.
+        boundaries : `dict`
+            Map edges and ``pixel_size`` from `calculate_boundaries`.
+
+        Returns
+        -------
+        grid : `ShearGrid`
+            Binned shear, weights and counts.
+        """
+        data_df = self.prepare_data(data_df)
+        size = boundaries['pixel_size']
+        indices = []
+        for axis in ('coord1', 'coord2'):
+            npix = round((boundaries[f'{axis}_max'] - boundaries[f'{axis}_min']) / size)
+            index = np.floor((data_df[f'{axis}_scaled'].to_numpy() - boundaries[f'{axis}_min']) / size)
+            # Rounding can put a galaxy on the outer edge just outside the map
+            indices.append((np.clip(index, 0, npix - 1).astype(int), npix))
+        (idx1, npix1), (idx2, npix2) = indices
+        return self._create_shear_grid(data_df, idx1, idx2, npix2, npix1)
+
+    @staticmethod
+    def _grid_edges(data_df, pixel_size):
+        """Return the edges of a map of whole pixels centred on a catalog.
+
+        Parameters
+        ----------
+        data_df : `pandas.DataFrame`
+            Catalog with coord1_scaled and coord2_scaled.
+        pixel_size : `float`
+            Pixel width in the same units.
+
+        Returns
+        -------
+        boundaries : `dict`
+            coord1_min/max, coord2_min/max and ``pixel_size``. Every galaxy
+            lies inside the map.
+        """
+        boundaries = {'pixel_size': pixel_size}
+        for axis in ('coord1', 'coord2'):
+            values = data_df[f'{axis}_scaled']
+            npix = int(np.floor((values.max() - values.min()) / pixel_size)) + 1
+            middle = (values.max() + values.min()) / 2
+            boundaries[f'{axis}_min'] = middle - npix * pixel_size / 2
+            boundaries[f'{axis}_max'] = middle + npix * pixel_size / 2
+        return boundaries
 
     def _create_shear_grid(self, data_df, idx1, idx2, npix1, npix2):
         """Create weighted shear grid from binning indices.
@@ -139,13 +161,9 @@ class CoordinateSystem(ABC):
         grid : `ShearGrid`
             Weighted mean shear, summed weights and galaxy counts per pixel.
         """
-        # Filter out indices outside the grid
-        valid_mask = (idx1 >= 0) & (idx1 < npix2) & (idx2 >= 0) & (idx2 < npix1)
-        idx1 = idx1[valid_mask]
-        idx2 = idx2[valid_mask]
-        g1 = data_df['g1'].values[valid_mask]
-        g2 = data_df['g2'].values[valid_mask]
-        weight = data_df['weight'].values[valid_mask]
+        g1 = data_df['g1'].values
+        g2 = data_df['g2'].values
+        weight = data_df['weight'].values
 
         # Initialize grids
         g1_grid = np.zeros((npix1, npix2))

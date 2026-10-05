@@ -46,7 +46,6 @@ def compute_snr(shear_df, coord_system, boundaries, maps, settings):
     general, snr_settings = settings["general"], settings["snr"]
     method = "kaiser_squires" if general["method"] == "ks_plus" else general["method"]
     mapper = METHODS[method](**settings["methods"][method])
-    grid_settings = general[general["coord_system"]]
     sigma = snr_settings["smoothing"]
 
     start = time.perf_counter()
@@ -54,7 +53,7 @@ def compute_snr(shear_df, coord_system, boundaries, maps, settings):
     shuffled_dfs = generate_multiple_shear_dfs(shear_df, snr_settings["num_shuffles"],
                                                snr_settings["shuffle_type"], snr_settings["seed"])
     for shuffled_df in shuffled_dfs:
-        grid = coord_system.create_grid(shuffled_df, boundaries, grid_settings)
+        grid = coord_system.create_grid(shuffled_df, boundaries)
         for mode, noise_map in zip("EB", mapper.create_maps(grid)):
             noise[mode].append(gaussian_filter(noise_map, sigma))
     snr = {mode: gaussian_filter(maps[mode], sigma) / np.sqrt(np.var(np.stack(noise[mode], axis=0), axis=0))

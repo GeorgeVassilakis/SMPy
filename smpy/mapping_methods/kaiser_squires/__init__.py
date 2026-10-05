@@ -6,6 +6,6 @@ using Fourier transforms. Includes optional Gaussian smoothing for noise
 reduction.
 """
 
-from .kaiser_squires import KaiserSquiresMapper
+from .kaiser_squires import KaiserSquiresMapper, shear_from_convergence
 
-__all__ = ['KaiserSquiresMapper']
+__all__ = ['KaiserSquiresMapper', 'shear_from_convergence']

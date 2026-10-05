@@ -19,6 +19,7 @@ from smpy.filters.starlet import (
 )
 
 from ..base import MassMapper
+from ..kaiser_squires.kaiser_squires import shear_from_convergence
 
 logger = logging.getLogger(__name__)
 
@@ -311,7 +312,7 @@ class KSPlusMapper(MassMapper):
                     kappa_b = self._apply_wavelet_constraints(kappa_b, mask, nscales)
 
             # Enforce consistency with observed data
-            gamma1, gamma2 = self._kappa_to_gamma(kappa_e, kappa_b)
+            gamma1, gamma2 = shear_from_convergence(kappa_e, kappa_b)
 
             # Replace with observed data on data pixels (mask==1)
             gamma1[mask > 0] = g1_grid[mask > 0]
@@ -372,60 +373,6 @@ class KSPlusMapper(MassMapper):
         kappa_b = np.real(np.fft.ifft2(kappa_b_hat))
 
         return kappa_e, kappa_b
-
-    def _kappa_to_gamma(self, kappa_e, kappa_b):
-        """Convert convergence to shear using Fourier space relation.
-
-        Apply the forward Kaiser-Squires transform to convert convergence
-        maps to shear components for data consistency enforcement.
-
-        Parameters
-        ----------
-        kappa_e : `numpy.ndarray`
-            E-mode convergence map.
-        kappa_b : `numpy.ndarray`
-            B-mode convergence map.
-
-        Returns
-        -------
-        gamma1 : `numpy.ndarray`
-            First shear component grid.
-        gamma2 : `numpy.ndarray`
-            Second shear component grid.
-
-        Notes
-        -----
-        Implements the forward KS transform in Fourier space to ensure
-        consistency between convergence and shear during the iterative
-        inpainting process.
-        """
-        # Get dimensions
-        npix_dec, npix_ra = kappa_e.shape
-
-        # Combine E and B modes
-        kappa_complex = kappa_e + 1j * kappa_b
-        kappa_hat = np.fft.fft2(kappa_complex)
-
-        # Create wavenumber grids
-        k1, k2 = np.meshgrid(np.fft.fftfreq(npix_ra), np.fft.fftfreq(npix_dec))
-        k_squared = k1**2 + k2**2
-
-        # Avoid division by zero
-        mask = k_squared > 0
-
-        # Initialize shear components in Fourier space
-        gamma1_hat = np.zeros_like(kappa_hat, dtype=complex)
-        gamma2_hat = np.zeros_like(kappa_hat, dtype=complex)
-
-        # Apply KS forward transform
-        gamma1_hat[mask] = ((k1**2 - k2**2) / k_squared)[mask] * kappa_hat[mask]
-        gamma2_hat[mask] = (2 * k1 * k2 / k_squared)[mask] * kappa_hat[mask]
-
-        # Inverse Fourier transform
-        gamma1 = np.real(np.fft.ifft2(gamma1_hat))
-        gamma2 = np.real(np.fft.ifft2(gamma2_hat))
-
-        return gamma1, gamma2
 
     def _gamma_to_kappa(self, gamma1, gamma2):
         """Convert shear to convergence using Fourier space relation.

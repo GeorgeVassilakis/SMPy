@@ -1,145 +1,139 @@
 """RA/Dec celestial coordinate system implementation.
 
-This module provides the RADecSystem class for handling celestial coordinates
-including spherical corrections and appropriate binning for sky projections.
+Catalogs in RA/Dec are projected onto the plane tangent to the sky at the
+field centre (the gnomonic, or TAN, projection) and gridded there. The map x
+axis points west and y north, so east is to the left as the sky is seen.
 """
 
 import numpy as np
 
 from .base import CoordinateSystem
 
-class RADecSystem(CoordinateSystem):
-    """Implementation for RA/Dec celestial coordinates.
+def project(ra, dec, ra_center, dec_center):
+    """Project sky positions onto the plane tangent at the field centre.
 
-    Handles celestial coordinates including spherical corrections and
-    appropriate binning for sky projections. Applies coordinate transformations
-    to account for spherical geometry effects.
+    Parameters
+    ----------
+    ra, dec : `float` or `numpy.ndarray`
+        Sky positions in degrees.
+    ra_center, dec_center : `float`
+        Tangent point in degrees.
+
+    Returns
+    -------
+    x, y : `float` or `numpy.ndarray`
+        Gnomonic plane coordinates in degrees, x towards the west and y
+        towards the north.
+    """
+    ra, dec = np.deg2rad(ra), np.deg2rad(dec)
+    ra0, dec0 = np.deg2rad(ra_center), np.deg2rad(dec_center)
+    cos_distance = np.sin(dec0) * np.sin(dec) + np.cos(dec0) * np.cos(dec) * np.cos(ra - ra0)
+    x = -np.cos(dec) * np.sin(ra - ra0) / cos_distance
+    y = (np.cos(dec0) * np.sin(dec) - np.sin(dec0) * np.cos(dec) * np.cos(ra - ra0)) / cos_distance
+    return np.rad2deg(x), np.rad2deg(y)
+
+def unproject(x, y, ra_center, dec_center):
+    """Return the sky positions of points on the plane tangent at the field
+    centre; the inverse of `project`.
+
+    Parameters
+    ----------
+    x, y : `float` or `numpy.ndarray`
+        Gnomonic plane coordinates in degrees, x towards the west and y
+        towards the north.
+    ra_center, dec_center : `float`
+        Tangent point in degrees.
+
+    Returns
+    -------
+    ra, dec : `float` or `numpy.ndarray`
+        Sky positions in degrees, with RA in [0, 360).
+    """
+    xi, eta = -np.deg2rad(x), np.deg2rad(y)
+    ra0, dec0 = np.deg2rad(ra_center), np.deg2rad(dec_center)
+    denominator = np.cos(dec0) - eta * np.sin(dec0)
+    ra = ra0 + np.arctan2(xi, denominator)
+    dec = np.arctan2(np.sin(dec0) + eta * np.cos(dec0), np.hypot(xi, denominator))
+    return np.rad2deg(ra) % 360, np.rad2deg(dec)
+
+def _sky_coordinates(data_df):
+    """Return RA without the jump at 0/360, Dec, and the field centre.
+
+    The field centre is the middle of the RA and Dec ranges.
+    """
+    ra, dec = data_df['coord1'].to_numpy(dtype=float), data_df['coord2'].to_numpy(dtype=float)
+    ra = ra[0] + (ra - ra[0] + 180) % 360 - 180
+    return ra, dec, (ra.min() + ra.max()) / 2, (dec.min() + dec.max()) / 2
+
+class RADecSystem(CoordinateSystem):
+    """RA/Dec coordinates, gridded on the plane tangent at the field centre.
+
+    The catalog's g1 and g2 are taken in each galaxy's local frame, with x
+    towards the west and y towards the north. They are turned into the map
+    frame, whose y axis points north only along the central meridian.
     """
 
-    def create_grid(self, data_df, boundaries, settings):
-        """Create shear grid in RA/Dec space.
-
-        Create a regular grid in celestial coordinates accounting for
-        spherical projection effects and appropriate angular binning.
+    def calculate_boundaries(self, data_df, settings):
+        """Calculate the map grid around a catalog.
 
         Parameters
         ----------
         data_df : `pandas.DataFrame`
-            DataFrame with scaled coordinates and shear data.
-        boundaries : `dict`
-            Dictionary with coordinate boundaries.
+            Catalog from `transform_coordinates`.
         settings : `dict`
             The ``general.radec`` settings, including ``pixel_scale`` in
             arcminutes.
 
         Returns
         -------
-        grid : `smpy.coordinates.ShearGrid`
-            Binned shear, weights and counts.
-        """
-        # Ensure data is properly prepared
-        data_df = self.prepare_data(data_df)
-
-        resolution_arcmin = settings['pixel_scale']
-
-        # Get boundaries
-        ra_min, ra_max = boundaries['coord1_min'], boundaries['coord1_max']
-        dec_min, dec_max = boundaries['coord2_min'], boundaries['coord2_max']
-
-        # Calculate number of pixels based on field size and resolution
-        # (arcmin)
-        npix_ra = int(np.ceil((ra_max - ra_min) * 60 / resolution_arcmin))
-        npix_dec = int(np.ceil((dec_max - dec_min) * 60 / resolution_arcmin))
-
-        # Create bins
-        ra_bins = np.linspace(ra_min, ra_max, npix_ra + 1)
-        dec_bins = np.linspace(dec_min, dec_max, npix_dec + 1)
-
-        # Digitize the RA and Dec to find bin indices
-        ra_idx = np.digitize(data_df['coord1_scaled'], ra_bins) - 1
-        dec_idx = np.digitize(data_df['coord2_scaled'], dec_bins) - 1
-
-        return self._create_shear_grid(data_df, ra_idx, dec_idx, npix_dec, npix_ra)
-
-    def calculate_boundaries(self, coord1, coord2):
-        """Calculate field boundaries in RA/Dec space.
-
-        Determine coordinate ranges for celestial coordinates and set up
-        both scaled boundaries (accounting for spherical projection) and
-        true boundaries (preserving original coordinates).
-
-        Parameters
-        ----------
-        coord1 : `numpy.ndarray`
-            RA values in degrees.
-        coord2 : `numpy.ndarray`
-            Dec values in degrees.
-
-        Returns
-        -------
         scaled_boundaries : `dict`
-            Dictionary with scaled coordinate boundaries accounting for
-            spherical projection effects.
+            Map edges on the tangent plane, in degrees, and ``pixel_size``.
         true_boundaries : `dict`
-            Dictionary with original celestial coordinate boundaries.
+            RA and Dec ranges of the catalog and the field centre
+            (``coord1_center``, ``coord2_center``), in degrees. RA may run
+            past 360 or below 0 for fields that cross RA = 0.
         """
-        # True boundaries (original coordinates)
+        scaled_boundaries = self._grid_edges(data_df, settings['pixel_scale'] / 60)
+        scaled_boundaries.update(coord1_name='Projected RA', coord2_name='Projected Dec', units='deg')
+        ra, dec, ra_center, dec_center = _sky_coordinates(data_df)
         true_boundaries = {
-            'coord1_min': np.min(coord1),
-            'coord1_max': np.max(coord1),
-            'coord2_min': np.min(coord2),
-            'coord2_max': np.max(coord2),
+            'coord1_min': ra.min(),
+            'coord1_max': ra.max(),
+            'coord2_min': dec.min(),
+            'coord2_max': dec.max(),
+            'coord1_center': ra_center,
+            'coord2_center': dec_center,
             'coord1_name': 'RA',
             'coord2_name': 'Dec',
             'units': 'deg'
         }
-
-        # Calculate central coordinates for scaling
-        coord1_0 = (true_boundaries['coord1_max'] + true_boundaries['coord1_min']) / 2
-        coord2_0 = (true_boundaries['coord2_max'] + true_boundaries['coord2_min']) / 2
-
-        # Calculate scaled coordinates (flatten RA by cos(Dec))
-        scaled_coords1 = (coord1 - coord1_0) * np.cos(np.deg2rad(coord2))
-        scaled_coords2 = coord2 - coord2_0
-
-        scaled_boundaries = {
-            'coord1_min': np.min(scaled_coords1),
-            'coord1_max': np.max(scaled_coords1),
-            'coord2_min': np.min(scaled_coords2),
-            'coord2_max': np.max(scaled_coords2),
-            'coord1_name': 'Scaled RA',
-            'coord2_name': 'Scaled Dec',
-            'units': 'deg'
-        }
-
         return scaled_boundaries, true_boundaries
 
     def transform_coordinates(self, data_df):
-        """Transform RA/Dec coordinates by centering and flattening RA.
-
-        Apply coordinate transformations to account for spherical geometry
-        by centering coordinates and flattening RA using cos(Dec) correction.
+        """Project the catalog onto the tangent plane and turn its shear into
+        the map frame.
 
         Parameters
         ----------
         data_df : `pandas.DataFrame`
-            DataFrame with coord1(RA), coord2(Dec) columns.
+            DataFrame with coord1 (RA), coord2 (Dec), g1 and g2 columns.
 
         Returns
         -------
         transformed_df : `pandas.DataFrame`
-            DataFrame with additional scaled coordinates corrected for
-            spherical projection effects.
+            Copy with tangent-plane coordinates in coord1_scaled and
+            coord2_scaled, and g1 and g2 in the map frame.
         """
         transformed_df = data_df.copy()
+        ra, dec, ra_center, dec_center = _sky_coordinates(data_df)
+        transformed_df['coord1_scaled'], transformed_df['coord2_scaled'] = project(ra, dec, ra_center,
+                                                                                   dec_center)
 
-        # Compute central coordinates
-        ra_0 = (data_df['coord1'].max() + data_df['coord1'].min()) / 2
-        dec_0 = (data_df['coord2'].max() + data_df['coord2'].min()) / 2
-
-        # Apply the transformation
-        # Flatten RA by cos(Dec) and center both coordinates
-        transformed_df['coord1_scaled'] = (data_df['coord1'] - ra_0) * np.cos(np.deg2rad(data_df['coord2']))
-        transformed_df['coord2_scaled'] = data_df['coord2'] - dec_0
-
+        # Angle from the map's y axis to each galaxy's local north
+        ra_offset = np.deg2rad(ra - ra_center)
+        north = np.arctan2(np.sin(ra_offset) * np.sin(np.deg2rad(dec_center)), np.cos(ra_offset))
+        cos_turn, sin_turn = np.cos(2 * north), np.sin(2 * north)
+        g1, g2 = data_df['g1'].to_numpy(), data_df['g2'].to_numpy()
+        transformed_df['g1'] = g1 * cos_turn + g2 * sin_turn
+        transformed_df['g2'] = g2 * cos_turn - g1 * sin_turn
         return transformed_df

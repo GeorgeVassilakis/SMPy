@@ -12,12 +12,11 @@ import matplotlib.patheffects as patheffects
 
 # Third Party
 import matplotlib.pyplot as plt
-import numpy as np
 
+from smpy.coordinates.radec import project
 from smpy.plotting.utils import (
     add_colorbar,
     apply_axes_style,
-    apply_ra_orientation,
     compute_pixel_extent,
     configure_labels,
     convert_center_to_scaled,
@@ -259,32 +258,19 @@ def _plot_radec(data, scaled_boundaries, true_boundaries, config, ax, map_catego
     if ra_center is not None:
         ax.plot(ra_center, dec_center, "rx", markersize=10)
 
-    # Generate ticks: propose in true coordinate space, then map to scaled
-    # plotting space
-    ra_ticks_true, ra_labels = propose_ticks(true_boundaries["coord1_min"],
-                                             true_boundaries["coord1_max"], 5)
-    dec_ticks_true, dec_labels = propose_ticks(true_boundaries["coord2_min"],
-                                               true_boundaries["coord2_max"], 5)
-    # Transform tick positions from true to scaled coordinates for plotting
-    scaled_x = np.interp(
-        ra_ticks_true,
-        [true_boundaries["coord1_min"], true_boundaries["coord1_max"]],
-        [scaled_boundaries["coord1_min"], scaled_boundaries["coord1_max"]],
-    )
-    scaled_y = np.interp(
-        dec_ticks_true,
-        [true_boundaries["coord2_min"], true_boundaries["coord2_max"]],
-        [scaled_boundaries["coord2_min"], scaled_boundaries["coord2_max"]],
-    )
-    set_ticks(ax, scaled_x, scaled_y, ra_labels, dec_labels)
+    # Ticks mark where RA crosses the central Dec and Dec crosses the central
+    # RA
+    ra_center, dec_center = true_boundaries["coord1_center"], true_boundaries["coord2_center"]
+    ra_ticks, _ = propose_ticks(true_boundaries["coord1_min"], true_boundaries["coord1_max"], 5)
+    dec_ticks, dec_labels = propose_ticks(true_boundaries["coord2_min"], true_boundaries["coord2_max"], 5)
+    x_ticks, _ = project(ra_ticks, dec_center, ra_center, dec_center)
+    _, y_ticks = project(ra_center, dec_ticks, ra_center, dec_center)
+    set_ticks(ax, x_ticks, y_ticks, [f"{tick % 360:.2f}" for tick in ra_ticks], dec_labels)
 
     # Labels, title, optional grid
     configure_labels(ax, config, coord_system_type="radec", fontsize=fontsize)
     if config.get("gridlines", False):
         ax.grid(color="black")
-
-    # Astronomical convention: RA increases to the left
-    apply_ra_orientation(ax)
 
     # Attach colorbar to the right
     add_colorbar(ax, im, tick_fontsize=fontsize)

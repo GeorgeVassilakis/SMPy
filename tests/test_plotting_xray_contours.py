@@ -9,8 +9,9 @@ import pytest
 import smpy
 
 CATALOG = Path(__file__).resolve().parents[1] / "examples" / "data" / "forecast_lum_annular.fits"
+COLUMNS = dict(g1_col="g1_Rinv", g2_col="g2_Rinv", weight_col="weight")
 PIXEL = dict(coord_system="pixel", downsample_factor=170, coord1_col="X_IMAGE_se", coord2_col="Y_IMAGE_se",
-             g1_col="g1_Rinv", g2_col="g2_Rinv", weight_col="weight")
+             **COLUMNS)
 
 @pytest.fixture
 def result():
@@ -43,4 +44,20 @@ def test_image_contours_land_on_their_pixels(result, tmp_path, axis_reference):
     expected = np.column_stack((left + (pixels[:, 0] - 0.5) * (right - left) / nx,
                                 bottom + (pixels[:, 1] - 0.5) * (top - bottom) / ny))
     np.testing.assert_allclose(ax.lines[0].get_xydata(), expected)
+    plt.close(fig)
+
+def test_sky_contours_land_where_the_wcs_puts_them(tmp_path):
+    """A contour point given in RA/Dec is drawn at the centre of the map pixel
+    where the WCS puts it."""
+    result = smpy.map_mass(CATALOG, pixel_scale=0.4, **COLUMNS)
+    pixels = np.array([[10, 5], [40, 30]])
+    ra, dec = result.wcs.wcs_pix2world(pixels, 0).T
+    ctr_file = tmp_path / "xray.ctr"
+    ctr_file.write_text("fk5\n" + "".join(f"{r:.10f} {d:.10f}\n" for r, d in zip(ra, dec)))
+    fig, ax, image = result.plot("E", xray_contours={"ctr_file": str(ctr_file), "show_on_convergence": True})
+    left, right, bottom, top = image.get_extent()
+    ny, nx = result.maps["E"].shape
+    expected = np.column_stack((left + (pixels[:, 0] + 0.5) * (right - left) / nx,
+                                bottom + (pixels[:, 1] + 0.5) * (top - bottom) / ny))
+    np.testing.assert_allclose(ax.lines[0].get_xydata(), expected, rtol=0, atol=1e-9)
     plt.close(fig)

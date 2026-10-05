@@ -6,7 +6,6 @@ configuration asks for and writes its plots, FITS files and settings record.
 
 import logging
 import time
-from dataclasses import replace
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -45,15 +44,9 @@ def compute(catalog, settings):
     shear_df = load_shear_data(catalog, grid_settings["coord1_col"], grid_settings["coord2_col"],
                                general["g1_col"], general["g2_col"], general["weight_col"],
                                general["input_hdu"])
-    scaled_boundaries, true_boundaries = coord_system.calculate_boundaries(shear_df['coord1'],
-                                                                           shear_df['coord2'])
     shear_df = coord_system.transform_coordinates(shear_df)
-    grid = coord_system.create_grid(shear_df, scaled_boundaries, grid_settings)
-
-    # RA increases to the left on the sky, so g2 changes sign in the grid's
-    # right-handed x-y frame
-    if general["coord_system"] == "radec":
-        grid = replace(grid, g2=-grid.g2)
+    scaled_boundaries, true_boundaries = coord_system.calculate_boundaries(shear_df, grid_settings)
+    grid = coord_system.create_grid(shear_df, scaled_boundaries)
 
     start = time.perf_counter()
     mapper = METHODS[method](**settings["methods"][method])

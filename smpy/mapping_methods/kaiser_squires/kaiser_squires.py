@@ -11,6 +11,37 @@ from scipy.ndimage import gaussian_filter
 
 from ..base import MassMapper
 
+def shear_from_convergence(kappa_e, kappa_b):
+    """Compute the shear produced by E- and B-mode convergence maps.
+
+    Parameters
+    ----------
+    kappa_e : `numpy.ndarray`
+        E-mode convergence map.
+    kappa_b : `numpy.ndarray`
+        B-mode convergence map, with the same shape.
+
+    Returns
+    -------
+    gamma1 : `numpy.ndarray`
+        First shear component.
+    gamma2 : `numpy.ndarray`
+        Second shear component.
+
+    Notes
+    -----
+    In Fourier space gamma1 + i gamma2 = D (kappa_E + i kappa_B), with
+    D = (k1^2 - k2^2 + 2i k1 k2) / k^2. This is the relation that
+    `KaiserSquiresMapper` inverts. A uniform convergence produces no shear.
+    """
+    npix_dec, npix_ra = kappa_e.shape
+    k1, k2 = np.meshgrid(np.fft.fftfreq(npix_ra), np.fft.fftfreq(npix_dec))
+    k_squared = k1**2 + k2**2
+    k_squared[0, 0] = 1.0
+    gamma_hat = (k1**2 - k2**2 + 2j * k1 * k2) / k_squared * np.fft.fft2(kappa_e + 1j * kappa_b)
+    gamma = np.fft.ifft2(gamma_hat)
+    return gamma.real, gamma.imag
+
 class KaiserSquiresMapper(MassMapper):
     """Implementation of Kaiser-Squires mass mapping.
 

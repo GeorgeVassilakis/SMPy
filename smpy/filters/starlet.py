@@ -140,9 +140,6 @@ def starlet_transform_2d(data, nscales):
 def inverse_starlet_transform_2d(wavelet_bands):
     """Reconstruct an image from its starlet transform coefficients.
 
-    Perform the inverse starlet transform using the second generation
-    reconstruction algorithm to recover the original image.
-
     Parameters
     ----------
     wavelet_bands : `numpy.ndarray`
@@ -156,30 +153,10 @@ def inverse_starlet_transform_2d(wavelet_bands):
 
     Notes
     -----
-    The reconstruction starts with the coarsest scale and progressively
-    adds detail bands from coarse to fine scales, applying appropriate
-    smoothing at each step to ensure perfect reconstruction.
+    Each detail band is the difference between two successive smoothings of
+    the image, so the detail bands and the coarse residual sum to the image.
     """
-    nscales, _, _ = wavelet_bands.shape
-
-    # Start with the coarsest scale
-    reconstructed = np.copy(wavelet_bands[nscales-1])
-
-    # Process each detail band from coarse to fine
-    for j in range(nscales-2, -1, -1):
-        # Calculate step size for the filter
-        step = 2**(j)
-
-        # Get filter for current scale
-        kernel = b3spline_filter(step)
-
-        # Apply filter to current reconstruction
-        filtered = apply_filter(reconstructed, kernel)
-
-        # Add the wavelet coefficients
-        reconstructed = filtered + wavelet_bands[j]
-
-    return reconstructed
+    return np.sum(wavelet_bands, axis=0)
 
 
 def compute_starlet_nscales_max(height: int, width: int) -> int:

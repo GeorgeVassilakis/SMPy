@@ -34,3 +34,13 @@ Implementations
 
    smpy.coordinates.radec.RADecSystem
    smpy.coordinates.pixel.PixelSystem
+
+Tangent-Plane Projection
+------------------------
+
+.. autosummary::
+   :toctree: ../_autosummary
+   :nosignatures:
+
+   smpy.coordinates.radec.project
+   smpy.coordinates.radec.unproject

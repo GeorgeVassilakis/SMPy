@@ -15,6 +15,8 @@ import numpy as np
 from matplotlib import colors
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+from smpy.coordinates.radec import project
+
 def create_normalization(scaling, data, vmin=None, vmax=None, map_type="convergence"):
     """Create a matplotlib normalization object from config.
 
@@ -145,16 +147,6 @@ def configure_labels(ax, cfg, axis_reference=None, coord_system_type=None, fonts
     ax.set_title(title, fontsize=fontsize)
 
 
-def apply_ra_orientation(ax):
-    """Orient RA to increase leftward by inverting x-axis.
-
-    Notes
-    -----
-    Prefer axis inversion to data reversal; keeps overlays straightforward.
-    """
-    ax.invert_xaxis()
-
-
 def propose_ticks(range_min, range_max, target_count=5):
     """Propose tick positions and labels for a range.
 
@@ -251,17 +243,11 @@ def convert_center_to_scaled(cluster_center, scaled_boundaries, true_boundaries,
             warnings.warn(f"Expected '{k1}' and '{k2}' in cluster_center; ignoring center.")
             return None, None
 
-        # Transform from true coordinates to scaled plot coordinates
-        cx = np.interp(
-            cluster_center[k1],
-            [true_boundaries["coord1_min"], true_boundaries["coord1_max"]],
-            [scaled_boundaries["coord1_min"], scaled_boundaries["coord1_max"]],
-        )
-        cy = np.interp(
-            cluster_center[k2],
-            [true_boundaries["coord2_min"], true_boundaries["coord2_max"]],
-            [scaled_boundaries["coord2_min"], scaled_boundaries["coord2_max"]],
-        )
+        # Pixel plots use catalog coordinates; RA/Dec plots the tangent plane
+        if coord_system_type != "radec":
+            return float(cluster_center[k1]), float(cluster_center[k2])
+        cx, cy = project(cluster_center[k1], cluster_center[k2], true_boundaries["coord1_center"],
+                         true_boundaries["coord2_center"])
         return float(cx), float(cy)
 
     warnings.warn("Unrecognized cluster_center format; ignoring center.")
@@ -516,11 +502,7 @@ def _transform_contours_for_plot(
                 RuntimeWarning,
             )
             return []
-        return _convert_world_contours_to_scaled(
-            contours=contours,
-            scaled_boundaries=scaled_boundaries,
-            true_boundaries=true_boundaries,
-        )
+        return _convert_world_contours_to_scaled(contours, true_boundaries)
 
     if coord_type in {"image", "physical"}:
         return _convert_image_contours_to_plot_coords(
@@ -538,33 +520,10 @@ def _transform_contours_for_plot(
     return []
 
 
-def _convert_world_contours_to_scaled(contours, scaled_boundaries, true_boundaries):
-    """Convert RA/Dec contours to scaled plot coordinates."""
-    x_true_min = true_boundaries["coord1_min"]
-    x_true_max = true_boundaries["coord1_max"]
-    y_true_min = true_boundaries["coord2_min"]
-    y_true_max = true_boundaries["coord2_max"]
-
-    x_scaled_min = scaled_boundaries["coord1_min"]
-    x_scaled_max = scaled_boundaries["coord1_max"]
-    y_scaled_min = scaled_boundaries["coord2_min"]
-    y_scaled_max = scaled_boundaries["coord2_max"]
-
-    transformed = []
-    for contour in contours:
-        x_coords = np.interp(
-            contour[:, 0],
-            [x_true_min, x_true_max],
-            [x_scaled_min, x_scaled_max],
-        )
-        y_coords = np.interp(
-            contour[:, 1],
-            [y_true_min, y_true_max],
-            [y_scaled_min, y_scaled_max],
-        )
-        transformed.append(np.column_stack((x_coords, y_coords)))
-
-    return transformed
+def _convert_world_contours_to_scaled(contours, true_boundaries):
+    """Project RA/Dec contours onto the map's tangent plane."""
+    center = (true_boundaries["coord1_center"], true_boundaries["coord2_center"])
+    return [np.column_stack(project(contour[:, 0], contour[:, 1], *center)) for contour in contours]
 
 
 def _convert_image_contours_to_plot_coords(

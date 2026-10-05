@@ -27,8 +27,6 @@ class MassMap:
         E- and B-mode signal-to-noise maps, or `None` if not computed.
     grid : `smpy.coordinates.ShearGrid`
         Binned shear, weights and galaxy counts the maps were made from.
-        For RA/Dec, ``g2`` has the opposite sign to the catalog's because
-        RA increases to the left on the sky.
     scaled_boundaries : `dict`
         Map extent in the flattened coordinates used for gridding.
     true_boundaries : `dict`
@@ -139,10 +137,9 @@ class MassMap:
     def wcs(self):
         """World coordinate system of the map pixels (`astropy.wcs.WCS`).
 
-        For RA/Dec maps it declares a TAN projection, which does not yet match
-        how SMPy flattens RA/Dec before gridding, so sky positions derived
-        from it are approximate. For pixel maps it maps map pixels to catalog
-        pixel coordinates.
+        For RA/Dec maps it is the gnomonic (TAN) projection the catalog was
+        gridded in, with east to the left. For pixel maps it maps map pixels
+        to catalog pixel coordinates.
         """
         return WCS(fits.Header(self._wcs_cards()))
 
@@ -161,19 +158,19 @@ class MassMap:
 
     def _wcs_cards(self):
         """Return FITS WCS header cards for the map grid."""
-        ny, nx = self.maps["E"].shape
-        bounds = self.true_boundaries
-        c1_min, c1_max = bounds["coord1_min"], bounds["coord1_max"]
-        c2_min, c2_max = bounds["coord2_min"], bounds["coord2_max"]
+        edges = self.scaled_boundaries
+        size = edges["pixel_size"]
+        # FITS pixel numbers start at 1 and fall on pixel centres
+        crpix1, crpix2 = 0.5 - edges["coord1_min"] / size, 0.5 - edges["coord2_min"] / size
         if self.settings["general"]["coord_system"] == "radec":
+            sky = self.true_boundaries
             return [
-                ("CTYPE1", "RA---TAN"), ("CUNIT1", "deg"), ("CRVAL1", (c1_max + c1_min) / 2),
-                ("CRPIX1", nx / 2), ("CD1_1", -((c1_max - c1_min) / nx)), ("CD1_2", 0.0),
-                ("CTYPE2", "DEC--TAN"), ("CUNIT2", "deg"), ("CRVAL2", (c2_max + c2_min) / 2),
-                ("CRPIX2", ny / 2), ("CD2_1", 0.0), ("CD2_2", (c2_max - c2_min) / ny),
+                ("CTYPE1", "RA---TAN"), ("CUNIT1", "deg"), ("CRVAL1", sky["coord1_center"] % 360),
+                ("CRPIX1", crpix1), ("CD1_1", -size), ("CD1_2", 0.0),
+                ("CTYPE2", "DEC--TAN"), ("CUNIT2", "deg"), ("CRVAL2", sky["coord2_center"]),
+                ("CRPIX2", crpix2), ("CD2_1", 0.0), ("CD2_2", size),
             ]
-        dx, dy = (c1_max - c1_min) / nx, (c2_max - c2_min) / ny
         return [
-            ("CTYPE1", "X"), ("CRPIX1", 1.0), ("CRVAL1", c1_min + dx / 2), ("CDELT1", dx),
-            ("CTYPE2", "Y"), ("CRPIX2", 1.0), ("CRVAL2", c2_min + dy / 2), ("CDELT2", dy),
+            ("CTYPE1", "X"), ("CRPIX1", crpix1), ("CRVAL1", 0.0), ("CDELT1", size),
+            ("CTYPE2", "Y"), ("CRPIX2", crpix2), ("CRVAL2", 0.0), ("CDELT2", size),
         ]

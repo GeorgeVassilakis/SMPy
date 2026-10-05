@@ -151,6 +151,13 @@ Under ``general.radec``:
      - "dec"
      - Dec column name, in degrees
 
+RA/Dec catalogs are projected onto the plane tangent to the sky at the field
+centre (the gnomonic, or TAN, projection), with north up and east to the left,
+and binned into square pixels of ``pixel_scale``. ``g1`` and ``g2`` are read in
+each galaxy's local frame, with the first axis towards the west and the second
+towards the north, and are turned into the map frame. FITS files carry the
+matching TAN WCS.
+
 Pixel Coordinate Settings
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -176,6 +183,9 @@ Under ``general.pixel``:
      - string
      - "Y_IMAGE"
      - Y coordinate column name
+
+Pixel catalogs are binned into square pixels of ``downsample_factor`` catalog
+pixels. ``g1`` and ``g2`` are read along the catalog's x and y axes.
 
 Method-Specific Settings
 ~~~~~~~~~~~~~~~~~~~~~~~~

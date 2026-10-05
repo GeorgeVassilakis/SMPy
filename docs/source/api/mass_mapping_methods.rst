@@ -27,3 +27,12 @@ Algorithm Implementations
    smpy.mapping_methods.kaiser_squires.kaiser_squires.KaiserSquiresMapper
    smpy.mapping_methods.aperture_mass.aperture_mass.ApertureMassMapper
    smpy.mapping_methods.ks_plus.ks_plus.KSPlusMapper
+
+Shear Relation
+--------------
+
+.. autosummary::
+   :toctree: ../_autosummary
+   :nosignatures:
+
+   smpy.mapping_methods.kaiser_squires.kaiser_squires.shear_from_convergence

@@ -8,6 +8,8 @@ import numpy as np
 import pandas as pd
 from astropy.table import Table
 
+from smpy.coordinates.radec import unproject
+
 def load_shear_data(catalog, coord1_col, coord2_col, g1_col, g2_col, weight_col=None, hdu=0):
     """Load a shear catalog with standardized column names.
 
@@ -150,19 +152,13 @@ def find_peaks2d(image, threshold=None, verbose=False, true_boundaries=None, sca
                 scaled_boundaries['coord2_max'] - scaled_boundaries['coord2_min']
             ) / image.shape[0]
 
-            # Convert scaled coordinates to true coordinates
-            true_coord1 = np.interp(
-                scaled_coord1,
-                [scaled_boundaries['coord1_min'], scaled_boundaries['coord1_max']],
-                [true_boundaries['coord1_min'], true_boundaries['coord1_max']]
-            )
-            true_coord2 = np.interp(
-                scaled_coord2,
-                [scaled_boundaries['coord2_min'], scaled_boundaries['coord2_max']],
-                [true_boundaries['coord2_min'], true_boundaries['coord2_max']]
-            )
-
-            coords.append((true_coord1, true_coord2))
+            # RA/Dec maps lie on the tangent plane; pixel coordinates are not
+            # transformed
+            if coord_system == 'radec':
+                coords.append(unproject(scaled_coord1, scaled_coord2, true_boundaries['coord1_center'],
+                                        true_boundaries['coord2_center']))
+            else:
+                coords.append((scaled_coord1, scaled_coord2))
 
         # Print peak information with appropriate coordinate labels
         if coord_system == 'radec':
