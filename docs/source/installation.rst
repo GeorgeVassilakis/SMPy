@@ -1,13 +1,40 @@
 Installation
 ============
 
-.. note::
-   This section is under development. Content will be added in future updates.
+SMPy needs Python 3.10 or newer. Install it from a clone of the repository:
 
-This section will contain:
+.. code-block:: bash
 
-* Installation with conda
-* Installation with pip
-* Building from source
-* Dependencies and requirements
-* Troubleshooting installation issues
+   git clone https://github.com/GeorgeVassilakis/SMPy.git
+   cd SMPy
+   pip install .
+
+pip also installs SMPy's dependencies: NumPy, SciPy, Astropy, pandas,
+Matplotlib and PyYAML. To edit the code in place, use ``pip install -e .``
+instead.
+
+To check the installation, print the version and the command-line help:
+
+.. code-block:: bash
+
+   python -c "import smpy; print(smpy.__version__)"
+   smpy --help
+
+Running the tests
+-----------------
+
+.. code-block:: bash
+
+   pip install ".[test]"
+   pytest
+
+Building the documentation
+--------------------------
+
+Building the documentation also runs the tutorials, which needs
+`pandoc <https://pandoc.org/installing.html>`_:
+
+.. code-block:: bash
+
+   pip install -r docs/requirements.txt
+   sphinx-build -b html docs/source docs/_build/html
