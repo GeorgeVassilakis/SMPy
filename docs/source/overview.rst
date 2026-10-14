@@ -1,8 +1,8 @@
 Overview
 ========
 
-.. image:: ../../examples/outputs/kaiser_squires/simulation_testing_kaiser_squires_e_mode.png
-   :alt: Kaiser–Squires E-mode convergence map
+.. image:: ../../paper/mass_maps.png
+   :alt: Kaiser-Squires, KS+ and aperture-mass maps of a simulated galaxy cluster
    :align: center
    :width: 100%
 

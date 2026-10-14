@@ -86,9 +86,9 @@ The package provides a robust implementation supporting both weighted and unweig
    ```
 
 ## How to Run
-### Examples
-- Pedagogical examples are shown in the `SMPy/examples/notebooks` directory.
-  - The notebooks run SMPy on mock observations and corresponding truth data.
+### Tutorials
+- The [tutorials](https://smpy-docs.readthedocs.io/en/latest/tutorials.html) are notebooks in `docs/source/tutorials`
+  that run SMPy on a simulated cluster observation and its noiseless truth catalogue.
 
 ### From the command line
 1. **Prepare your configuration file**
@@ -148,5 +148,5 @@ Run the test suite from the repository root:
 python -m pytest
 ```
 
-## Example Kaiser Squires Convergence Map
-![Kaiser Squires Convergence Map](examples/outputs/kaiser_squires/simulation_testing_kaiser_squires_e_mode.png)
+## Example Mass Maps
+![Kaiser-Squires, KS+ and aperture-mass maps of a simulated galaxy cluster](paper/mass_maps.png)
