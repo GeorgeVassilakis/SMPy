@@ -27,8 +27,6 @@ COORDINATES = {
     "radec": dict(pixel_scale=0.4),
     "pixel": dict(coord_system="pixel", downsample_factor=170, coord1_col="x_image", coord2_col="y_image"),
 }
-# The default aperture-mass filter is wider than the truth map
-METHOD_SETTINGS = {"kaiser_squires": {}, "aperture_mass": {"filter_scale": 10}, "ks_plus": {}}
 
 @pytest.fixture
 def truth():
@@ -122,7 +120,7 @@ def test_inverse_starlet_transform_restores_image():
     np.testing.assert_allclose(restored, image, rtol=0, atol=1e-12)
 
 @pytest.mark.parametrize("coord_system", COORDINATES)
-@pytest.mark.parametrize("method", METHOD_SETTINGS)
+@pytest.mark.parametrize("method", METHODS)
 def test_truth_catalog_recovers_cluster(truth, method, coord_system):
     """Each method finds the NFW cluster in E, where it is, with little B.
 
@@ -130,7 +128,7 @@ def test_truth_catalog_recovers_cluster(truth, method, coord_system):
     and B are checked.
     """
     coordinates = COORDINATES[coord_system]
-    result = smpy.map_mass(truth, method, **SHEAR, **coordinates, **METHOD_SETTINGS[method])
+    result = smpy.map_mass(truth, method, **SHEAR, **coordinates)
     map_e, map_b = result.maps["E"], result.maps["B"]
     kappa = gaussian_filter(binned_kappa(truth, coordinates), 2.0)  # Smoothed like the maps
 
@@ -143,7 +141,7 @@ def test_truth_catalog_recovers_cluster(truth, method, coord_system):
 
 @pytest.mark.parametrize("method, method_settings, degrees", [
     ("kaiser_squires", {}, 15),
-    ("aperture_mass", METHOD_SETTINGS["aperture_mass"], 15),
+    ("aperture_mass", {}, 15),
     # KS+'s reduced-shear correction divides by 1 - kappa_E alone, and its
     # wavelet constraint rescales E and B separately, which commutes only
     # with quarter turns
@@ -169,6 +167,26 @@ def test_rotating_shear_rotates_e_and_b(truth, method, method_settings, degrees)
     expected = (before.maps["E"] + 1j * before.maps["B"]) * turn
     np.testing.assert_allclose(after.maps["E"], expected.real, rtol=0, atol=1e-12)
     np.testing.assert_allclose(after.maps["B"], expected.imag, rtol=0, atol=1e-12)
+
+def test_constant_shear_has_no_aperture_mass():
+    """A constant shear has no aperture mass where the aperture lies inside
+    the field, as its tangential part averages to zero around every circle."""
+    y, x = np.mgrid[:41, :41]
+    table = Table({"x": x.ravel(), "y": y.ravel(), "g1": np.full(x.size, 0.1), "g2": np.full(x.size, 0.05)})
+    result = smpy.map_mass(table, "aperture_mass", coord_system="pixel", downsample_factor=1, coord1_col="x",
+                           coord2_col="y", filter_scale=4)
+    np.testing.assert_allclose(result.maps["E"][4:-4, 4:-4], 0, rtol=0, atol=1e-14)
+
+def test_aperture_ends_at_its_radius():
+    """A shear just outside the aperture radius adds nothing at the centre of
+    the aperture, and one just inside does."""
+    y, x = np.mgrid[:25, :25]
+    g2 = np.where((x == 16) & (y == 16), 0.1, 0.0)
+    table = Table({"x": x.ravel(), "y": y.ravel(), "g1": np.zeros(x.size), "g2": g2.ravel()})
+    result = smpy.map_mass(table, "aperture_mass", coord_system="pixel", downsample_factor=1, coord1_col="x",
+                           coord2_col="y", filter_scale=10, truncation=0.5)
+    assert result.maps["E"][12, 12] == 0  # 5.66 pixels away, beyond the radius of 5
+    assert result.maps["E"][13, 13] != 0  # 4.24 pixels away
 
 def test_ks_plus_fills_a_hole_in_a_sparse_field():
     """Inside a hole, KS+ recovers a convergence field made of a few cosine

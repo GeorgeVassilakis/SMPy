@@ -115,7 +115,7 @@ columns = dict(g1_col="g1_Rinv", g2_col="g2_Rinv", weight_col="weight")
    from smpy import map_kaiser_squires, map_aperture_mass, map_ks_plus
 
    result_ks = map_kaiser_squires(data_file, pixel_scale=0.4, **columns)
-   result_am = map_aperture_mass(data_file, pixel_scale=0.4, filter_type="schirmer", filter_scale=60,
+   result_am = map_aperture_mass(data_file, pixel_scale=0.4, filter_type="schirmer", filter_scale=10,
                                  **columns)
    result_ksp = map_ks_plus(data_file, pixel_scale=0.4, inpainting_iterations=5,
                             reduced_shear_iterations=1, **columns)

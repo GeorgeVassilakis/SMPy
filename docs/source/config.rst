@@ -231,7 +231,7 @@ Under ``methods.aperture_mass``:
      - Filter type: 'schirmer' or 'schneider'
    * - filter_scale
      - float
-     - 60
+     - 10
      - Aperture radius in map pixels
    * - truncation
      - float
@@ -241,6 +241,16 @@ Under ``methods.aperture_mass``:
      - integer
      - 3
      - Polynomial order of the Schneider filter
+
+The aperture mass at each pixel is the sum, over the pixels within
+``truncation * filter_scale``, of the filter Q times the tangential shear about
+that pixel: the aperture-mass integral of Schneider (1996) with map pixels as
+the unit of area. Empty pixels add nothing, and the centre pixel, which has no
+tangential direction, is left out. On the example catalogue, with 0.4 arcminute
+pixels, the cluster has its highest SNR at a ``filter_scale`` of about 10
+pixels; choose it to match the angular size of the structures you look for.
+With orientation shuffles, the SNR map is the usual aperture-mass
+signal-to-noise ratio.
 
 KS+ Settings
 ^^^^^^^^^^^^
@@ -286,7 +296,8 @@ Under ``methods.ks_plus``:
 
 KS+ follows Algorithm 1 of Pires et al. (2020). Its DCT threshold falls from
 the largest coefficient towards zero over ``inpainting_iterations`` as
-``1 - erf(2.8 i / inpainting_iterations)`` (Pires et al. 2009).
+``1 - erf(2.8 i / inpainting_iterations)`` (Pires et al. 2009). ``smoothing``
+is applied to the final maps only; 0 keeps the reconstruction unsmoothed.
 
 Plotting Settings
 ~~~~~~~~~~~~~~~~~

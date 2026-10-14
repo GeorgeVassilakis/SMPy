@@ -40,6 +40,10 @@ class ApertureMassMapper(MassMapper):
     Map_E = conv(-g1, Q*cos(2φ)) + conv(-g2, Q*sin(2φ))
     Map_B = conv(g1, Q*sin(2φ)) + conv(-g2, Q*cos(2φ))
     where φ is the polar angle and Q(r) is the chosen filter function.
+    This is the aperture-mass integral of Schneider (1996) over the binned
+    shear, with map pixels as the unit of area. Q is zero beyond
+    ``truncation * filter_scale`` and at the centre pixel, which has no
+    tangential direction.
     """
 
     def __init__(self, filter_type, filter_scale, truncation, ell):
@@ -69,16 +73,10 @@ class ApertureMassMapper(MassMapper):
         """
         rs = self.filter_scale
 
-        # Create kernel grid
-        kernel_radius_in_pixels = self.truncation * rs
-        # Ensure kernel size is odd for a well-defined center pixel
-        size = int(np.ceil(2 * kernel_radius_in_pixels))
-        size = size + 1 if size % 2 == 0 else size
-
-        # Create a grid of coordinates for the kernel
-        half_extent = (size - 1) / 2.0
-        kernel_coords = np.linspace(-half_extent, half_extent, size)
-        X_k, Y_k = np.meshgrid(kernel_coords, kernel_coords)
+        # Pixel offsets out to the kernel radius
+        radius = self.truncation * rs
+        offsets = np.arange(-np.ceil(radius), np.ceil(radius) + 1)
+        X_k, Y_k = np.meshgrid(offsets, offsets)
 
         # Calculate radial distance and polar angle
         R_k = np.sqrt(X_k**2 + Y_k**2)
@@ -92,6 +90,9 @@ class ApertureMassMapper(MassMapper):
             q_vals_k = schneider_filter(scaled_radii_k, rs, self.ell)
         else:
             q_vals_k = schirmer_filter(scaled_radii_k, rs)
+
+        # Cut at the radius; the centre has no tangential direction
+        q_vals_k[(R_k > radius) | (R_k == 0)] = 0
 
         # Create the kernels
         kernel_1 = q_vals_k * np.cos(2 * Phi_k)

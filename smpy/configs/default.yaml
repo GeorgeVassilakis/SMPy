@@ -41,7 +41,7 @@ methods:
 
   aperture_mass:
     filter_type: 'schirmer'  # 'schirmer' or 'schneider'
-    filter_scale: 60  # Aperture radius in map pixels
+    filter_scale: 10  # Aperture radius in map pixels
     truncation: 1.0  # Kernel radius in units of filter_scale
     ell: 3  # Polynomial order of the Schneider filter
 
