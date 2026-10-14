@@ -26,11 +26,11 @@ def schirmer_filter(scaled_radii, scale):
 
     Notes
     -----
-    Implements the Q function filter as defined in McCleary et al. 2020:
+    Implements the Q function filter as defined in McCleary et al. 2020 [1]_:
     Q(x) = [1/(1 + e^(a-bx) + e^(dx-c))] * [tanh(x/x_c)/(pi*Rs^2*(x/x_c))]
 
     Parameters are set to:
-    a = 6, b = 150, c = 47, d = 50, x_c = 0.12 (Hetterscheidt et al. 2005)
+    a = 6, b = 150, c = 47, d = 50, x_c = 0.12 (Hetterscheidt et al. 2005 [2]_)
 
     References
     ----------
@@ -77,7 +77,7 @@ def schneider_filter(scaled_radii, scale, ell=3):
 
     Notes
     -----
-    Implements the Schneider et al. (1998) Q function:
+    Implements the Schneider et al. (1998) Q function [1]_:
     Q(ϑ) = [(1+ℓ)(2+ℓ)/(πθ²)] * (ϑ²/θ²) * (1-ϑ²/θ²)^ℓ * H(θ-ϑ)
     where H is the Heaviside function ensuring compact support.
 
