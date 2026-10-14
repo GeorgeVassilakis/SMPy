@@ -45,7 +45,7 @@ def compute(catalog, settings):
 
     shear_df = load_shear_data(catalog, grid_settings["coord1_col"], grid_settings["coord2_col"],
                                general["g1_col"], general["g2_col"], general["weight_col"],
-                               general["input_hdu"])
+                               general["input_hdu"], "deg" if general["coord_system"] == "radec" else None)
     shear_df = coord_system.transform_coordinates(shear_df)
     scaled_boundaries, true_boundaries = coord_system.calculate_boundaries(shear_df, grid_settings)
     grid = coord_system.create_grid(shear_df, scaled_boundaries)

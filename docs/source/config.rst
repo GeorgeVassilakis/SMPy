@@ -123,7 +123,8 @@ General Settings
      - Write a plot of galaxies per pixel
 
 Only ``smpy.run`` and ``smpy -c`` write outputs; `smpy.map_mass` ignores the
-output settings.
+output settings. A NaN, infinite or masked value in a coordinate, shear or
+weight column raises an error naming the column; remove those rows first.
 
 RA/Dec Coordinate Settings
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -151,9 +152,12 @@ Under ``general.radec``:
      - "dec"
      - Dec column name, in degrees
 
+RA and Dec columns without a unit are read as degrees; columns that declare
+an angle unit, such as ``rad``, are converted, and other units raise an error.
 RA/Dec catalogs are projected onto the plane tangent to the sky at the field
 centre (the gnomonic, or TAN, projection), with north up and east to the left,
-and binned into square pixels of ``pixel_scale``. ``g1`` and ``g2`` are read in
+and binned into square pixels of ``pixel_scale``. Galaxies 90 degrees or more
+from the centre raise an error. ``g1`` and ``g2`` are read in
 each galaxy's local frame, with the first axis towards the west and the second
 towards the north, and are turned into the map frame. FITS files carry the
 matching TAN WCS.
@@ -262,13 +266,14 @@ Under ``methods.ks_plus``:
    * - reduced_shear_iterations
      - integer
      - 3
-     - Number of reduced-shear correction steps
+     - Reconstructions in the reduced-shear loop; 1 reconstructs once,
+       without reduced-shear correction
    * - nscales
      - integer/null
      - null
-     - Starlet scales for the power-spectrum constraint. If set, it is
-       clipped to a safe maximum derived from the image size and the B3-spline
-       kernel support; if null, the safe maximum is used.
+     - Starlet scales for the power-spectrum constraint, at least 2. If set,
+       it is clipped to a safe maximum derived from the image size and the
+       B3-spline kernel support; if null, the safe maximum is used.
    * - extension_size
      - string/int
      - "double"
@@ -377,7 +382,7 @@ Options by type:
   - Uses linear normalization with optional ``vmin``/``vmax``.
 
 - ``type: power``
-  - ``gamma``: float (default 1.0). Example:
+  - ``gamma``: float (default 2). Example:
 
     .. code-block:: yaml
 
@@ -387,20 +392,19 @@ Options by type:
            gamma: 0.5
 
 - ``type: symlog``
-  - ``linthresh``: float (default 0.1)
-  - ``linscale``: float (default 1.0)
-  - Optional map-specific overrides under ``convergence`` and ``snr`` keys:
+  - ``linthresh`` and ``linscale`` for each kind of map, shown with their defaults:
 
     .. code-block:: yaml
 
        plotting:
          scaling:
            type: symlog
-           linthresh: 0.1
-           linscale: 1.0
-           snr:
-             linthresh: 1.0
+           convergence:
+             linthresh: 0.1
              linscale: 1.0
+           snr:
+             linthresh: 5
+             linscale: 0.5
 
 .. rubric:: X-ray contour settings
 

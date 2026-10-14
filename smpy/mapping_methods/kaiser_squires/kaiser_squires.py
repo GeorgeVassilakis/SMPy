@@ -97,7 +97,7 @@ class KaiserSquiresMapper(MassMapper):
     Raises
     ------
     ValueError
-        Raised if ``smoothing`` is negative.
+        Raised if ``smoothing`` is not a number of at least 0.
 
     Notes
     -----
@@ -107,8 +107,8 @@ class KaiserSquiresMapper(MassMapper):
     """
 
     def __init__(self, smoothing):
-        if smoothing < 0:
-            raise ValueError(f"smoothing must be at least 0, got {smoothing}")
+        if not isinstance(smoothing, (int, float)) or smoothing < 0:
+            raise ValueError(f"smoothing must be a number of at least 0, got {smoothing!r}")
         self.smoothing = smoothing
 
     def create_maps(self, grid):

@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 from astropy.io import fits
-from astropy.table import Table
+from astropy.table import MaskedColumn, Table
 
 import smpy
 from smpy import Config
@@ -79,11 +79,19 @@ INVALID = {
                                "Unknown setting 'inpainting_iterations'"),
     "unknown method": ({"method": "kaiser_squirez", **RADEC}, "general.method must be one of"),
     "missing pixel_scale": (COLUMNS, "general.radec.pixel_scale is required"),
-    "negative smoothing": ({"smoothing": -1.0, **RADEC}, "smoothing must be at least 0"),
+    "negative smoothing": ({"smoothing": -1.0, **RADEC}, "smoothing must be a number of at least 0"),
     "unknown filter": ({"method": "aperture_mass", "filter_type": "gauss", **RADEC}, "filter_type must be"),
     "misspelled YAML key": ("plotting:\n  cmapp: magma\n", "Unknown setting 'plotting.cmapp'"),
     "invalid YAML value": ("general:\n  radec: {pixel_scale: 0.4}\n  mode: [E, C]\n",
                            "general.mode may contain only"),
+    "misspelled keyword set to None": ({"smoothng": None, **RADEC}, "Unknown setting 'smoothng'"),
+    "no reduced-shear step": ({"method": "ks_plus", "reduced_shear_iterations": 0, **RADEC},
+                              "reduced_shear_iterations must be an integer of at least 1"),
+    "no inpainting": ({"method": "ks_plus", "inpainting_iterations": 0, **RADEC},
+                      "inpainting_iterations must be an integer of at least 1"),
+    "one starlet scale": ({"method": "ks_plus", "nscales": 1, **RADEC}, "nscales must be null or an integer"),
+    "unknown scaling": ("general:\n  radec: {pixel_scale: 0.4}\nplotting:\n  scaling: {type: logg}\n",
+                        "plotting.scaling.type must be one of"),
 }
 
 @pytest.mark.parametrize("settings, name", INVALID.values(), ids=INVALID.keys())
@@ -95,6 +103,44 @@ def test_invalid_settings_name_the_setting(settings, name, tmp_path):
             smpy.run(tmp_path / "run.yaml")
         else:
             smpy.map_mass(CATALOG, **settings)
+
+def nan_shear(table):
+    """Set one shear to NaN."""
+    table["g1_Rinv"][0] = np.nan
+
+def masked_shear(table):
+    """Mask one shear."""
+    table["g2_Rinv"] = MaskedColumn(table["g2_Rinv"], mask=np.arange(len(table)) == 0)
+
+def galaxy_at_antipode(table):
+    """Move the last galaxy to the point of the sky opposite the first."""
+    table["ra"][-1], table["dec"][-1] = (table["ra"][0] + 180) % 360, -table["dec"][0]
+
+def pixel_unit_on_ra(table):
+    """Declare the RA column in pixels."""
+    table["ra"].unit = "pix"
+
+@pytest.mark.parametrize("spoil, error", [
+    (nan_shear, "Column 'g1_Rinv' has 1 NaN, infinite or masked values"),
+    (masked_shear, "Column 'g2_Rinv' has 1 NaN, infinite or masked values"),
+    (galaxy_at_antipode, "90 degrees or more from the field centre"),
+    (pixel_unit_on_ra, "Column 'ra' has unit 'pix', which is not convertible to deg"),
+], ids=["NaN shear", "masked shear", "galaxy at the antipode", "RA in pixels"])
+def test_unusable_catalogs_raise(table, spoil, error):
+    """Catalogs that cannot be mapped raise errors saying why."""
+    spoil(table)
+    with pytest.raises(ValueError, match=error):
+        smpy.map_mass(table, **RADEC)
+
+def test_coordinates_in_radians_give_the_same_maps(table):
+    """RA and Dec declared in radians give the maps of the same catalog in
+    degrees."""
+    in_degrees = smpy.map_mass(table, **RADEC)
+    for name in ("ra", "dec"):
+        table[name] = table[name].quantity.to("rad")
+    in_radians = smpy.map_mass(table, **RADEC)
+    for mode in "EB":
+        np.testing.assert_allclose(in_radians.maps[mode], in_degrees.maps[mode], rtol=0, atol=1e-12)
 
 def test_ks_plus_clips_too_many_scales():
     """KS+ reduces an nscales too large for the map to the largest that fits,

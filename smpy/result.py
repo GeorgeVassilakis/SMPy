@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from astropy.io import fits
 from astropy.wcs import WCS
 
-from smpy.config import _merge
+from smpy.config import _check_plotting, _merge
 from smpy.coordinates import ShearGrid
 from smpy.plotting.plot import plot_mass_map
 
@@ -154,6 +154,7 @@ class MassMap:
         config = copy.deepcopy(self.settings["plotting"])
         _merge(config, style, "plotting.")
         config["coordinate_system"] = self.settings["general"]["coord_system"]
+        _check_plotting(config, config["coordinate_system"])
         return config
 
     def _wcs_cards(self):

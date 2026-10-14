@@ -121,7 +121,7 @@ class Config:
         num_shuffles = self._settings["snr"]["num_shuffles"]
         if not isinstance(num_shuffles, int) or num_shuffles < 2:
             raise ValueError(f"snr.num_shuffles must be an integer of at least 2; got {num_shuffles!r}")
-        _check_xray_contours(self._settings["plotting"]["xray_contours"])
+        _check_plotting(self._settings["plotting"], general["coord_system"])
         METHODS[general["method"]](**self._settings["methods"][general["method"]])
 
     def resolved(self):
@@ -198,16 +198,18 @@ def _apply_keywords(settings, keywords):
 
     targets = (general[general["coord_system"]], general, settings["methods"][general["method"]])
     for key, value in keywords.items():
-        if value is None:
-            continue
         if key in ("plotting", "snr"):
-            _merge(settings[key], value, f"{key}.")
+            if value is not None:
+                _merge(settings[key], value, f"{key}.")
             continue
         target = next((section for section in targets if key in section), None)
-        if target is None:
+        # map_mass passes the other coordinate system's settings as None
+        other_system = any(key in general[name] for name in ("radec", "pixel"))
+        if target is None and not (value is None and other_system):
             raise ValueError(f"Unknown setting '{key}' for method '{general['method']}' "
                              f"with coord_system '{general['coord_system']}'")
-        target[key] = value
+        if value is not None:
+            target[key] = value
 
 def _path_settings(settings):
     """Yield ``(section, key)`` for each path setting in ``settings``."""
@@ -222,6 +224,20 @@ def _check_choice(name, value, choices):
     """Raise `ValueError` unless ``value`` is one of ``choices``."""
     if value not in choices:
         raise ValueError(f"{name} must be one of {', '.join(choices)}; got {value!r}")
+
+def _check_plotting(plotting, coord_system):
+    """Raise `ValueError` for invalid ``plotting`` values."""
+    scaling = plotting["scaling"]
+    _check_choice("plotting.scaling.type", scaling["type"], ("linear", "power", "symlog"))
+    percentile = scaling["percentile"]
+    if percentile is not None and not (isinstance(percentile, (list, tuple)) and len(percentile) == 2):
+        raise ValueError(f"plotting.scaling.percentile must be null or [min, max]; got {percentile!r}")
+    center = plotting["cluster_center"]
+    keys = ("ra_center", "dec_center") if coord_system == "radec" else ("x_center", "y_center")
+    if center not in (None, "auto") and not (isinstance(center, dict) and set(center) == set(keys)):
+        raise ValueError(f"plotting.cluster_center must be null, 'auto' or a mapping with {keys[0]} and "
+                         f"{keys[1]}; got {center!r}")
+    _check_xray_contours(plotting["xray_contours"])
 
 def _check_xray_contours(contours):
     """Raise `ValueError` for invalid ``plotting.xray_contours`` values."""

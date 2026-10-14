@@ -42,10 +42,11 @@ class KSPlusMapper(MassMapper):
     inpainting_iterations : `int`
         DCT thresholding iterations per reduced-shear step.
     reduced_shear_iterations : `int`
-        Number of reduced-shear correction steps.
+        Reconstructions in the reduced-shear loop; 1 reconstructs once,
+        without reduced-shear correction.
     nscales : `int` or `None`
-        Starlet scales for the power-spectrum constraint, or `None` for the
-        largest safe number. Larger values are clipped to it.
+        Starlet scales for the power-spectrum constraint, at least 2, or
+        `None` for the largest safe number. Larger values are clipped to it.
     extension_size : `str` or `int`
         'double' to pad each side by half the field, or pixels per side.
     use_wavelet_constraints : `bool`
@@ -55,7 +56,7 @@ class KSPlusMapper(MassMapper):
     Raises
     ------
     ValueError
-        Raised if ``smoothing`` or ``extension_size`` is invalid.
+        Raised if a setting is invalid.
 
     Notes
     -----
@@ -72,8 +73,14 @@ class KSPlusMapper(MassMapper):
 
     def __init__(self, smoothing, inpainting_iterations, reduced_shear_iterations, nscales,
                  extension_size, use_wavelet_constraints):
-        if smoothing < 0:
-            raise ValueError(f"smoothing must be at least 0, got {smoothing}")
+        if not isinstance(smoothing, (int, float)) or smoothing < 0:
+            raise ValueError(f"smoothing must be a number of at least 0, got {smoothing!r}")
+        for name, value in (("inpainting_iterations", inpainting_iterations),
+                            ("reduced_shear_iterations", reduced_shear_iterations)):
+            if not isinstance(value, int) or value < 1:
+                raise ValueError(f"{name} must be an integer of at least 1, got {value!r}")
+        if nscales is not None and not (isinstance(nscales, int) and nscales >= 2):
+            raise ValueError(f"nscales must be null or an integer of at least 2, got {nscales!r}")
         if extension_size != 'double' and not (isinstance(extension_size, int) and extension_size >= 0):
             raise ValueError(f"extension_size must be 'double' or a pixel count, got {extension_size!r}")
         self.smoothing = smoothing

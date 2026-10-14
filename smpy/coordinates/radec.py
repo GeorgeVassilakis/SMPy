@@ -24,10 +24,19 @@ def project(ra, dec, ra_center, dec_center):
     x, y : `float` or `numpy.ndarray`
         Gnomonic plane coordinates in degrees, x towards the west and y
         towards the north.
+
+    Raises
+    ------
+    ValueError
+        Raised if a position is 90 degrees or more from the tangent point,
+        where the projection is undefined.
     """
     ra, dec = np.deg2rad(ra), np.deg2rad(dec)
     ra0, dec0 = np.deg2rad(ra_center), np.deg2rad(dec_center)
     cos_distance = np.sin(dec0) * np.sin(dec) + np.cos(dec0) * np.cos(dec) * np.cos(ra - ra0)
+    if np.any(cos_distance <= 0):
+        raise ValueError("Positions 90 degrees or more from the field centre cannot be projected onto its "
+                         "tangent plane")
     x = -np.cos(dec) * np.sin(ra - ra0) / cos_distance
     y = (np.cos(dec0) * np.sin(dec) - np.sin(dec0) * np.cos(dec) * np.cos(ra - ra0)) / cos_distance
     return np.rad2deg(x), np.rad2deg(y)

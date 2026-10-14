@@ -8,8 +8,6 @@ axes/inputs for predictable behavior.
 # Standard Library
 from __future__ import annotations
 
-import warnings
-
 # Third Party
 import numpy as np
 from matplotlib import colors
@@ -52,14 +50,8 @@ def create_normalization(scaling, data, vmin=None, vmax=None, map_type="converge
     # Handle percentile-based range calculation
     percentile = scaling.get("percentile")
     if percentile is not None:
-        if isinstance(percentile, (list, tuple)) and len(percentile) == 2:
-            vmin = float(np.percentile(data, percentile[0]))
-            vmax = float(np.percentile(data, percentile[1]))
-        else:
-            warnings.warn(
-                "'percentile' should be a two-element list/tuple [min, max]; ignoring.",
-                RuntimeWarning,
-            )
+        vmin = float(np.percentile(data, percentile[0]))
+        vmax = float(np.percentile(data, percentile[1]))
 
     # Create appropriate normalization based on type
     if scale_type == "linear":
@@ -77,8 +69,7 @@ def create_normalization(scaling, data, vmin=None, vmax=None, map_type="converge
         linscale = float(map_specific_params.get("linscale", scaling.get("linscale", 1.0)))
         return colors.SymLogNorm(linthresh=linthresh, linscale=linscale, vmin=vmin, vmax=vmax)
 
-    warnings.warn(f"Unknown scaling type '{scale_type}', falling back to linear.")
-    return colors.Normalize(vmin=vmin, vmax=vmax)
+    raise ValueError(f"plotting.scaling.type must be one of linear, power, symlog; got {scale_type!r}")
 
 
 def apply_axes_style(ax, fontsize=15):
@@ -236,22 +227,12 @@ def convert_center_to_scaled(cluster_center, scaled_boundaries, true_boundaries,
         cy = (scaled_boundaries["coord2_max"] + scaled_boundaries["coord2_min"]) / 2
         return cx, cy
 
-    if isinstance(cluster_center, dict):
-        # Select appropriate keys based on coordinate system
-        k1, k2 = ("ra_center", "dec_center") if coord_system_type == "radec" else ("x_center", "y_center")
-        if k1 not in cluster_center or k2 not in cluster_center:
-            warnings.warn(f"Expected '{k1}' and '{k2}' in cluster_center; ignoring center.")
-            return None, None
-
-        # Pixel plots use catalog coordinates; RA/Dec plots the tangent plane
-        if coord_system_type != "radec":
-            return float(cluster_center[k1]), float(cluster_center[k2])
-        cx, cy = project(cluster_center[k1], cluster_center[k2], true_boundaries["coord1_center"],
-                         true_boundaries["coord2_center"])
-        return float(cx), float(cy)
-
-    warnings.warn("Unrecognized cluster_center format; ignoring center.")
-    return None, None
+    # Pixel plots use catalog coordinates; RA/Dec plots the tangent plane
+    if coord_system_type != "radec":
+        return float(cluster_center["x_center"]), float(cluster_center["y_center"])
+    cx, cy = project(cluster_center["ra_center"], cluster_center["dec_center"],
+                     true_boundaries["coord1_center"], true_boundaries["coord2_center"])
+    return float(cx), float(cy)
 
 
 def peaks_to_plot_coords(X, Y, data, scaled_boundaries, axis_reference):
@@ -420,14 +401,7 @@ def overlay_xray_contours(
     if not ctr_file:
         return
 
-    try:
-        contours, coord_type = read_ds9_ctr(ctr_file)
-    except OSError as exc:
-        warnings.warn(
-            f"Unable to read x-ray contour file '{ctr_file}': {exc}",
-            RuntimeWarning,
-        )
-        return
+    contours, coord_type = read_ds9_ctr(ctr_file)
 
     transformed = _transform_contours_for_plot(
         contours=contours,
@@ -443,31 +417,8 @@ def overlay_xray_contours(
         return
 
     color = str(xray_cfg.get("color", "cyan"))
-
-    try:
-        linewidth = float(xray_cfg.get("linewidth", 0.8))
-    except (TypeError, ValueError):
-        warnings.warn(
-            "Invalid plotting.xray_contours.linewidth; using 0.8.",
-            RuntimeWarning,
-        )
-        linewidth = 0.8
-    if linewidth <= 0:
-        warnings.warn(
-            "Non-positive plotting.xray_contours.linewidth; using 0.8.",
-            RuntimeWarning,
-        )
-        linewidth = 0.8
-
-    try:
-        alpha = float(xray_cfg.get("alpha", 0.7))
-    except (TypeError, ValueError):
-        warnings.warn(
-            "Invalid plotting.xray_contours.alpha; using 0.7.",
-            RuntimeWarning,
-        )
-        alpha = 0.7
-    alpha = float(np.clip(alpha, 0.0, 1.0))
+    linewidth = float(xray_cfg.get("linewidth", 0.8))
+    alpha = float(xray_cfg.get("alpha", 0.7))
 
     for contour in transformed:
         if contour.shape[0] < 2:
@@ -497,11 +448,8 @@ def _transform_contours_for_plot(
     coord_type = str(coord_type or "").lower()
     if coord_type in {"fk5", "wcs"}:
         if str(coord_system_type).lower() != "radec":
-            warnings.warn(
-                "Skipping FK5/WCS contours because coordinate_system is 'pixel'.",
-                RuntimeWarning,
-            )
-            return []
+            raise ValueError(f"Contours in {coord_type} coordinates need an RA/Dec map; this map is in "
+                             "pixel coordinates")
         return _convert_world_contours_to_scaled(contours, true_boundaries)
 
     if coord_type in {"image", "physical"}:
@@ -513,11 +461,8 @@ def _transform_contours_for_plot(
             axis_reference=axis_reference,
         )
 
-    warnings.warn(
-        f"Unsupported DS9 contour coordinate type '{coord_type}'.",
-        RuntimeWarning,
-    )
-    return []
+    raise ValueError(f"Unsupported DS9 contour coordinate type {coord_type!r}; use fk5, wcs, image or "
+                     "physical")
 
 
 def _convert_world_contours_to_scaled(contours, true_boundaries):

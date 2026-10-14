@@ -4,13 +4,15 @@ This module provides catalogue loading, peak detection and tangential shear
 utilities used throughout the SMPy package.
 """
 
+import astropy.units as u
 import numpy as np
 import pandas as pd
 from astropy.table import Table
 
 from smpy.coordinates.radec import unproject
 
-def load_shear_data(catalog, coord1_col, coord2_col, g1_col, g2_col, weight_col=None, hdu=0):
+def load_shear_data(catalog, coord1_col, coord2_col, g1_col, g2_col, weight_col=None, hdu=0,
+                    coord_unit=None):
     """Load a shear catalog with standardized column names.
 
     Return the catalog as a pandas DataFrame with standardized column names
@@ -32,6 +34,10 @@ def load_shear_data(catalog, coord1_col, coord2_col, g1_col, g2_col, weight_col=
         Name of weight column. If None, unit weights are assigned.
     hdu : `int`, optional
         HDU number to read when ``catalog`` is a FITS file path.
+    coord_unit : `str`, optional
+        Unit of the coordinates, such as 'deg'. Coordinate columns that
+        declare a unit are converted to it, and columns without one are taken
+        to be in it. If None, coordinates are used as they are.
 
     Returns
     -------
@@ -45,6 +51,9 @@ def load_shear_data(catalog, coord1_col, coord2_col, g1_col, g2_col, weight_col=
         If specified HDU is not found in the FITS file.
     KeyError
         If required columns are not found in the catalog.
+    ValueError
+        If a coordinate column declares a unit that cannot be converted to
+        ``coord_unit``, or a used column has NaN, infinite or masked values.
     """
     if isinstance(catalog, Table):
         shear_catalog = catalog
@@ -70,6 +79,22 @@ def load_shear_data(catalog, coord1_col, coord2_col, g1_col, g2_col, weight_col=
         shear_df['weight'] = np.ones(len(shear_df))
     else:
         shear_df['weight'] = shear_catalog[weight_col]
+
+    names = dict(coord1=coord1_col, coord2=coord2_col, g1=g1_col, g2=g2_col, weight=weight_col)
+    for key, name in names.items():
+        bad = np.count_nonzero(~np.isfinite(shear_df[key]))
+        if bad:
+            raise ValueError(f"Column '{name}' has {bad} NaN, infinite or masked values")
+
+    if coord_unit is not None:
+        for key in ('coord1', 'coord2'):
+            unit = shear_catalog[names[key]].unit
+            if unit is None:
+                continue
+            if not unit.is_equivalent(coord_unit):
+                raise ValueError(f"Column '{names[key]}' has unit '{unit}', which is not convertible to "
+                                 f"{coord_unit}; give it a standard unit, or none for {coord_unit}")
+            shear_df[key] = u.Quantity(shear_df[key].to_numpy(), unit).to_value(coord_unit)
 
     return shear_df
 
