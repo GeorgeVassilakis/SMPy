@@ -148,8 +148,9 @@ def generate_multiple_shear_dfs(og_shear_df, num_shuffles=100, shuffle_type='ori
 
     Returns
     -------
-    shuffled_catalogs : `list` of `pandas.DataFrame`
-        List of shuffled DataFrame copies.
+    shuffled_catalogs : `collections.abc.Iterator` [`pandas.DataFrame`]
+        Shuffled copies of the catalog, each made only when it is reached,
+        so one copy is held in memory at a time.
 
     Raises
     ------
@@ -168,8 +169,8 @@ def generate_multiple_shear_dfs(og_shear_df, num_shuffles=100, shuffle_type='ori
     global `random` and `numpy.random` states are neither used nor changed.
     """
     if shuffle_type == 'spatial':
-        return [_shuffle_coordinates(og_shear_df, random.Random(seed + i)) for i in range(num_shuffles)]
+        return (_shuffle_coordinates(og_shear_df, random.Random(seed + i)) for i in range(num_shuffles))
     if shuffle_type == 'orientation':
         rng = np.random.default_rng(seed)
-        return [_shuffle_galaxy_rotation(og_shear_df, rng) for _ in range(num_shuffles)]
+        return (_shuffle_galaxy_rotation(og_shear_df, rng) for _ in range(num_shuffles))
     raise ValueError(f"Invalid shuffle type: {shuffle_type}")
