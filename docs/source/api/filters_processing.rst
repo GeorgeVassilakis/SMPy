@@ -22,7 +22,6 @@ Starlet Wavelet Processing
    :toctree: ../_autosummary
    :nosignatures:
 
-   smpy.filters.starlet.b3spline_filter
    smpy.filters.starlet.apply_filter
    smpy.filters.starlet.starlet_transform_2d
    smpy.filters.starlet.inverse_starlet_transform_2d
