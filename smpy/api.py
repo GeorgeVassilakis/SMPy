@@ -51,13 +51,15 @@ def map_mass(catalog, method=None, *, coord_system=None, pixel_scale=None, downs
     ------
     ValueError
         Raised if a setting does not exist, is invalid, or is required but
-        missing.
+        missing, or if ``snr`` is given without ``create_snr=True``.
 
     Examples
     --------
     >>> result = map_mass("catalog.fits", pixel_scale=0.4)
     >>> fig, ax, im = result.plot("E")
     """
+    if snr is not None and not create_snr:
+        raise ValueError("snr settings were given without create_snr=True")
     config = Config.from_defaults(
         method, coord_system=coord_system, pixel_scale=pixel_scale, downsample_factor=downsample_factor,
         coord1_col=coord1_col, coord2_col=coord2_col, g1_col=g1_col, g2_col=g2_col, weight_col=weight_col,

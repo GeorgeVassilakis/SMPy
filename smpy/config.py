@@ -118,6 +118,9 @@ class Config:
         if not set(general["mode"]) <= {"E", "B"}:
             raise ValueError(f"general.mode may contain only 'E' and 'B', got {general['mode']}")
         _check_choice("snr.shuffle_type", self._settings["snr"]["shuffle_type"], ("spatial", "orientation"))
+        num_shuffles = self._settings["snr"]["num_shuffles"]
+        if not isinstance(num_shuffles, int) or num_shuffles < 2:
+            raise ValueError(f"snr.num_shuffles must be an integer of at least 2; got {num_shuffles!r}")
         _check_xray_contours(self._settings["plotting"]["xray_contours"])
         METHODS[general["method"]](**self._settings["methods"][general["method"]])
 

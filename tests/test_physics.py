@@ -13,7 +13,7 @@ import pytest
 from astropy.coordinates import SkyCoord
 from astropy.table import Table
 from scipy import fft
-from scipy.ndimage import gaussian_filter
+from scipy.ndimage import convolve, gaussian_filter
 
 import smpy
 from smpy.coordinates import ShearGrid
@@ -244,3 +244,42 @@ def test_pixel_wcs_places_every_galaxy_in_its_pixel(truth):
     counts = counts_from_wcs(result, *result.wcs.world_to_pixel_values(truth["x_image"], truth["y_image"]))
     assert counts.sum() == len(truth)
     np.testing.assert_array_equal(counts, result.grid.counts)
+
+def test_ks_plus_snr_is_kaiser_squires_snr_where_their_maps_agree(truth):
+    """Where KS+ makes the Kaiser-Squires map, it makes the same SNR map.
+
+    Without empty pixels, field extension or reduced-shear correction, KS+
+    inpaints nothing and returns the Kaiser-Squires map, also for every
+    shuffled catalogue, as shuffles keep the galaxy positions.
+    """
+    settings = dict(**SHEAR, **COORDINATES["radec"], smoothing=3.0, create_snr=True, snr={"num_shuffles": 3})
+    ks = smpy.map_mass(truth, "kaiser_squires", **settings)
+    ks_plus = smpy.map_mass(truth, "ks_plus", extension_size=0, reduced_shear_iterations=1,
+                            inpainting_iterations=5, **settings)
+    np.testing.assert_array_equal(ks_plus.maps["E"], ks.maps["E"])
+    for mode in "EB":
+        np.testing.assert_allclose(ks_plus.snr[mode], ks.snr[mode], rtol=1e-12)
+
+def test_aperture_mass_snr_noise_is_the_shape_noise_of_each_pixel():
+    """The noise behind an aperture-mass SNR map is the exact shape noise of
+    each pixel, in a field where it differs between the two halves.
+
+    Turning each shear g_j by a random angle gives the aperture mass of
+    filter Q a variance sum_j Q_j^2 |g_j|^2 / 2, with Q the Schneider et al.
+    (1998) filter of order 3.
+    """
+    y, x = np.mgrid[:81, :81]
+    amplitude = np.where(x < 40, 0.06, 0.3)
+    shear = amplitude * np.exp(2j * np.random.default_rng(4).uniform(0, np.pi, x.shape))
+    table = Table({"x": x.ravel(), "y": y.ravel(), "g1": shear.real.ravel(), "g2": shear.imag.ravel()})
+    result = smpy.map_mass(table, "aperture_mass", coord_system="pixel", downsample_factor=1, coord1_col="x",
+                           coord2_col="y", filter_type="schneider", filter_scale=4, create_snr=True,
+                           snr={"num_shuffles": 200})
+    noise = result.maps["E"] / result.snr["E"]
+
+    radius = np.hypot(*np.mgrid[-4:5, -4:5]) / 4
+    q = np.where(radius < 1, 20 / (16 * np.pi) * radius**2 * (1 - radius**2) ** 3, 0)
+    variance = convolve(amplitude**2, q**2, mode="constant") / 2
+    ratio = noise / np.sqrt(variance)
+    for half in (x < 40, x >= 40):
+        assert abs(ratio[half].mean() - 1) < 0.03

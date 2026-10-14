@@ -89,8 +89,7 @@ plotting:
 
 #------SNR settings------#
 snr:
-  shuffle_type: 'spatial'  # 'spatial' or 'orientation'
-  num_shuffles: 100  # Number of shuffled catalogues
-  seed: 0  # Integer, or 'random' for a seed from the secrets module
-  smoothing: 2.0  # Gaussian sigma in map pixels for signal and noise maps; 0 for none
+  shuffle_type: 'orientation'  # 'orientation' (turn each shear by a random angle) or 'spatial' (permute positions)
+  num_shuffles: 100  # Number of shuffled catalogues; at least 2
+  seed: 0  # Integer, or 'random' for a seed from the secrets module; the seed used is recorded
   plot_title: 'Signal-to-Noise Map'  # The mode is appended

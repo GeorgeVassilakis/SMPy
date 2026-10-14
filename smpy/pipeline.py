@@ -5,6 +5,7 @@ configuration asks for and writes its plots, FITS files and settings record.
 """
 
 import logging
+import secrets
 import time
 from pathlib import Path
 
@@ -34,7 +35,8 @@ def compute(catalog, settings):
     Returns
     -------
     result : `smpy.MassMap`
-        The maps, their grid and the settings used.
+        The maps, their grid and the settings used, with an SNR ``seed`` of
+        'random' replaced by the seed drawn.
     """
     general = settings["general"]
     method = general["method"]
@@ -56,7 +58,9 @@ def compute(catalog, settings):
 
     snr = None
     if general["create_snr"]:
-        snr = compute_snr(shear_df, coord_system, scaled_boundaries, maps, settings)
+        if settings["snr"]["seed"] == "random":
+            settings = {**settings, "snr": {**settings["snr"], "seed": secrets.randbits(128)}}
+        snr = compute_snr(shear_df, coord_system, scaled_boundaries, mapper, maps, settings["snr"])
     return MassMap(maps, snr, grid, scaled_boundaries, true_boundaries, settings)
 
 def run(config):
@@ -110,7 +114,7 @@ def run(config):
 
     with open(f"{prefix}_settings.yaml", "w", encoding="utf-8") as stream:
         stream.write(f"# Settings used by SMPy {__version__}\n")
-        yaml.safe_dump(settings, stream, sort_keys=False)
+        yaml.safe_dump(result.settings, stream, sort_keys=False)
     return result
 
 def _save_figure(fig, path):

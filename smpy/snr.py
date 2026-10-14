@@ -1,22 +1,19 @@
 """Signal-to-noise maps from shuffled catalogs.
 
-Shuffling galaxy positions or orientations removes the lensing signal but keeps
-the shape noise, so maps of shuffled catalogs sample the noise of a mass map.
+Turning each galaxy's shear by a random angle, or moving the shears between
+galaxy positions, removes the lensing signal but keeps the shape noise, so
+maps of shuffled catalogs sample the noise of a mass map.
 """
 
 import logging
 import random
-import secrets
 import time
 
 import numpy as np
-from scipy.ndimage import gaussian_filter
-
-from smpy.mapping_methods import METHODS
 
 logger = logging.getLogger(__name__)
 
-def compute_snr(shear_df, coord_system, boundaries, maps, settings):
+def compute_snr(shear_df, coord_system, boundaries, mapper, maps, snr_settings):
     """Compute E- and B-mode signal-to-noise maps.
 
     Parameters
@@ -27,27 +24,28 @@ def compute_snr(shear_df, coord_system, boundaries, maps, settings):
         Coordinate system that gridded the catalog.
     boundaries : `dict`
         Scaled boundaries of the map grid.
+    mapper : `smpy.mapping_methods.MassMapper`
+        Mapper that made ``maps``.
     maps : `dict` [`str`, `numpy.ndarray`]
         E- and B-mode maps of the unshuffled catalog.
-    settings : `dict`
-        Full SMPy settings. The ``snr`` section controls the shuffles.
+    snr_settings : `dict`
+        The ``snr`` settings, with an integer ``seed``.
 
     Returns
     -------
     snr : `dict` [`str`, `numpy.ndarray`]
-        E- and B-mode signal-to-noise maps.
+        E- and B-mode signal-to-noise maps, NaN where the maps of the
+        shuffled catalogs do not vary.
 
     Notes
     -----
-    The signal-to-noise ratio is the smoothed map divided by the standard
-    deviation of the smoothed maps of the shuffled catalogs. For KS+, the
-    shuffled catalogs are mapped with plain Kaiser-Squires.
+    The signal-to-noise ratio is the map divided by the standard deviation
+    of the maps of the shuffled catalogs, each gridded and mapped exactly as
+    the catalog was. It is a detection statistic: it measures how unusual a
+    pixel is next to maps without lensing signal. Shuffled catalogs keep each
+    galaxy's shear amplitude, lensing included, and for KS+ the spread of maps
+    without signal need not equal the uncertainty of a map with signal.
     """
-    general, snr_settings = settings["general"], settings["snr"]
-    method = "kaiser_squires" if general["method"] == "ks_plus" else general["method"]
-    mapper = METHODS[method](**settings["methods"][method])
-    sigma = snr_settings["smoothing"]
-
     start = time.perf_counter()
     noise = {"E": [], "B": []}
     shuffled_dfs = generate_multiple_shear_dfs(shear_df, snr_settings["num_shuffles"],
@@ -55,10 +53,12 @@ def compute_snr(shear_df, coord_system, boundaries, maps, settings):
     for shuffled_df in shuffled_dfs:
         grid = coord_system.create_grid(shuffled_df, boundaries)
         for mode, noise_map in zip("EB", mapper.create_maps(grid)):
-            noise[mode].append(gaussian_filter(noise_map, sigma))
-    snr = {mode: gaussian_filter(maps[mode], sigma) / np.sqrt(np.var(np.stack(noise[mode], axis=0), axis=0))
-           for mode in "EB"}
-    logger.info("Created %s SNR maps in %.2f s", general["method"], time.perf_counter() - start)
+            noise[mode].append(noise_map)
+    snr = {}
+    for mode in "EB":
+        sigma = np.std(noise[mode], axis=0, ddof=1)
+        snr[mode] = np.divide(maps[mode], sigma, out=np.full_like(sigma, np.nan), where=sigma > 0)
+    logger.info("Created SNR maps in %.2f s", time.perf_counter() - start)
     return snr
 
 def _shuffle_coordinates(shear_df, rng):
@@ -128,7 +128,7 @@ def _shuffle_galaxy_rotation(shear_df, rng):
 
     return shuffled_df
 
-def generate_multiple_shear_dfs(og_shear_df, num_shuffles=100, shuffle_type='spatial', seed=0):
+def generate_multiple_shear_dfs(og_shear_df, num_shuffles=100, shuffle_type='orientation', seed=0):
     """Generate shuffled versions of shear catalog.
 
     Create multiple randomized versions of the input shear catalog for
@@ -141,11 +141,10 @@ def generate_multiple_shear_dfs(og_shear_df, num_shuffles=100, shuffle_type='spa
     num_shuffles : `int`, optional
         Number of shuffled versions to generate.
     shuffle_type : `str`, optional
-        Type of shuffling: 'spatial' (randomize positions) or 'orientation'
-        (randomize galaxy orientations).
-    seed : `int` or `str`, optional
-        Random seed for reproducibility. If 'random', the seed is drawn from
-        the `secrets` module.
+        Type of shuffling: 'orientation' (turn each shear by a random angle)
+        or 'spatial' (permute the galaxy positions).
+    seed : `int`, optional
+        Random seed for reproducibility.
 
     Returns
     -------
@@ -159,12 +158,15 @@ def generate_multiple_shear_dfs(og_shear_df, num_shuffles=100, shuffle_type='spa
 
     Notes
     -----
+    Orientation shuffles keep every galaxy's position, weight and shear
+    amplitude, so each pixel keeps its own noise. Spatial shuffles move shears
+    and weights between positions, so they keep each pixel's noise only if
+    the noise is the same across the field; where depth, weights or shape
+    noise vary, they mix the noise of different regions.
+
     Each shuffle type draws from its own generator seeded by ``seed``, so the
     global `random` and `numpy.random` states are neither used nor changed.
     """
-    if seed == 'random':
-        seed = secrets.randbits(128)
-
     if shuffle_type == 'spatial':
         return [_shuffle_coordinates(og_shear_df, random.Random(seed + i)) for i in range(num_shuffles)]
     if shuffle_type == 'orientation':

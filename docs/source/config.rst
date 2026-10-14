@@ -453,25 +453,36 @@ SNR Settings
      - Description
    * - shuffle_type
      - string
-     - "spatial"
-     - Randomization type: 'spatial' or 'orientation'
+     - "orientation"
+     - 'orientation' turns each shear by a random angle; 'spatial' permutes
+       the galaxy positions
    * - num_shuffles
      - integer
      - 100
-     - Number of shuffled catalogs
+     - Number of shuffled catalogs; at least 2
    * - seed
      - int/string
      - 0
-     - Random seed (integer, or 'random' for a seed from the secrets module)
-   * - smoothing
-     - float
-     - 2.0
-     - Gaussian sigma in map pixels applied to signal and noise maps; 0 for
-       none
+     - Random seed (integer, or 'random' for a seed from the secrets module;
+       the seed used is recorded in the settings)
    * - plot_title
      - string
      - "Signal-to-Noise Map"
      - Title for SNR plots; the mode is appended
+
+The SNR map is the map divided by the standard deviation of the maps of
+``num_shuffles`` shuffled catalogs, each made with the same method and settings
+as the map. It is a detection statistic: it measures how unusual each pixel is
+next to maps without lensing signal. Pixels where the shuffled maps do not vary
+are NaN.
+
+Orientation shuffles keep every galaxy's position, weight and shear amplitude,
+so each pixel keeps its own noise. Spatial shuffles move shears and weights
+between positions, so they give the right noise only where it is the same
+across the field; where depth, weights or shape noise vary, they mix the noise
+of different regions. Both keep each galaxy's shear amplitude, lensing
+included, and for KS+ the spread of maps without signal need not equal the
+uncertainty of a map with signal.
 
 Example Configuration Files
 ---------------------------
