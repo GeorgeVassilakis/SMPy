@@ -92,8 +92,8 @@ def schneider_filter(scaled_radii, scale, ell=3):
     mask = scaled_radii <= 1.0
 
     # Q function filter
-    filter_vals[mask] = ((1 + ell) * (2 + ell) / (np.pi * scale**2)) * \
-                        (scaled_radii[mask]**2) * \
-                        (1 - scaled_radii[mask]**2)**ell
+    filter_vals[mask] = ((1 + ell) * (2 + ell) / (np.pi * scale**2)
+                         * scaled_radii[mask]**2
+                         * (1 - scaled_radii[mask]**2)**ell)
 
     return filter_vals

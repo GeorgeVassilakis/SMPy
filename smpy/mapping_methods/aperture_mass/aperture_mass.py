@@ -125,11 +125,11 @@ class ApertureMassMapper(MassMapper):
         K1, K2 = self._create_aperture_mass_kernels()
 
         # E-mode: Map_E = conv(-g1, K1) + conv(-g2, K2)
-        map_e = convolve(-grid.g1, K1, mode='constant', cval=0.0) + \
-                convolve(-grid.g2, K2, mode='constant', cval=0.0)
+        map_e = (convolve(-grid.g1, K1, mode='constant', cval=0.0)
+                 + convolve(-grid.g2, K2, mode='constant', cval=0.0))
 
         # B-mode: Map_B = conv(g1, K2) + conv(-g2, K1)
-        map_b = convolve(grid.g1, K2, mode='constant', cval=0.0) + \
-                convolve(-grid.g2, K1, mode='constant', cval=0.0)
+        map_b = (convolve(grid.g1, K2, mode='constant', cval=0.0)
+                 + convolve(-grid.g2, K1, mode='constant', cval=0.0))
 
         return map_e, map_b
