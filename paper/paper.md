@@ -79,7 +79,8 @@ On an Apple M4 Pro, a $1024 \times 1024$ map from 10.5 million galaxies takes 0.
 
 Generative AI was used in this work. First, Claude Sonnet 4 (with Extended Thinking enabled via the Claude.ai web interface) was used to assist in implementing the `KS+` algorithm in `SMPy`. The author reviewed all AI-assisted code line-by-line against the Algorithm 1 description in Appendix A of [@Pires2020] and validated the implementation by injecting fiducial star masks into data and confirming that the reconstruction behaved as expected. Second, OpenAI's ChatGPT (5.0-Thinking and 5.2-Thinking) models have been used for generating unit tests for the codebase via the Codex CLI. Lastly, both OpenAI's ChatGPT models and Anthropic's Claude models have been used in the GitHub App harness to review pull requests and catch bugs.
 
-During the JOSS peer-review revision, Anthropic's Claude Opus 5.5, via Claude Desktop, assisted with code review and revision, documentation, and validation/testing scripts. The author made the design decisions, reviewed and approved each change, and checked all results. The authors take full responsibility for this work
+During the JOSS peer-review revision, Anthropic's Claude Opus 5.5, via Claude Desktop, assisted with code review and revision, documentation, and validation/testing scripts. The author made the design decisions, reviewed and approved each change, and checked all results. The authors take full responsibility for this work.
+
 ## Software references
 
 `SMPy` is written in Python 3.10+ and uses the following packages:
