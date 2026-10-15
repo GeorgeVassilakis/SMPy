@@ -1,7 +1,7 @@
 """RA/Dec celestial coordinate system implementation.
 
 Catalogs in RA/Dec are projected onto the plane tangent to the sky at the
-field centre (the gnomonic, or TAN, projection) and gridded there. The map x
+field center (the gnomonic, or TAN, projection) and gridded there. The map x
 axis points west and y north, so east is to the left as the sky is seen.
 """
 
@@ -10,7 +10,7 @@ import numpy as np
 from .base import CoordinateSystem
 
 def project(ra, dec, ra_center, dec_center):
-    """Project sky positions onto the plane tangent at the field centre.
+    """Project sky positions onto the plane tangent at the field center.
 
     Parameters
     ----------
@@ -35,7 +35,7 @@ def project(ra, dec, ra_center, dec_center):
     ra0, dec0 = np.deg2rad(ra_center), np.deg2rad(dec_center)
     cos_distance = np.sin(dec0) * np.sin(dec) + np.cos(dec0) * np.cos(dec) * np.cos(ra - ra0)
     if np.any(cos_distance <= 0):
-        raise ValueError("Positions 90 degrees or more from the field centre cannot be projected onto its "
+        raise ValueError("Positions 90 degrees or more from the field center cannot be projected onto its "
                          "tangent plane")
     x = -np.cos(dec) * np.sin(ra - ra0) / cos_distance
     y = (np.cos(dec0) * np.sin(dec) - np.sin(dec0) * np.cos(dec) * np.cos(ra - ra0)) / cos_distance
@@ -43,7 +43,7 @@ def project(ra, dec, ra_center, dec_center):
 
 def unproject(x, y, ra_center, dec_center):
     """Return the sky positions of points on the plane tangent at the field
-    centre; the inverse of `project`.
+    center; the inverse of `project`.
 
     Parameters
     ----------
@@ -66,16 +66,16 @@ def unproject(x, y, ra_center, dec_center):
     return np.rad2deg(ra) % 360, np.rad2deg(dec)
 
 def _sky_coordinates(data_df):
-    """Return RA without the jump at 0/360, Dec, and the field centre.
+    """Return RA without the jump at 0/360, Dec, and the field center.
 
-    The field centre is the middle of the RA and Dec ranges.
+    The field center is the middle of the RA and Dec ranges.
     """
     ra, dec = data_df['coord1'].to_numpy(dtype=float), data_df['coord2'].to_numpy(dtype=float)
     ra = ra[0] + (ra - ra[0] + 180) % 360 - 180
     return ra, dec, (ra.min() + ra.max()) / 2, (dec.min() + dec.max()) / 2
 
 class RADecSystem(CoordinateSystem):
-    """RA/Dec coordinates, gridded on the plane tangent at the field centre.
+    """RA/Dec coordinates, gridded on the plane tangent at the field center.
 
     The catalog's g1 and g2 are taken in each galaxy's local frame, with x
     towards the west and y towards the north. They are turned into the map
@@ -98,7 +98,7 @@ class RADecSystem(CoordinateSystem):
         scaled_boundaries : `dict`
             Map edges on the tangent plane, in degrees, and ``pixel_size``.
         true_boundaries : `dict`
-            RA and Dec ranges of the catalog and the field centre
+            RA and Dec ranges of the catalog and the field center
             (``coord1_center``, ``coord2_center``), in degrees. RA may run
             past 360 or below 0 for fields that cross RA = 0.
         """

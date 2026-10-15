@@ -155,9 +155,9 @@ Under ``general.radec``:
 RA and Dec columns without a unit are read as degrees; columns that declare
 an angle unit, such as ``rad``, are converted, and other units raise an error.
 RA/Dec catalogs are projected onto the plane tangent to the sky at the field
-centre (the gnomonic, or TAN, projection), with north up and east to the left,
+center (the gnomonic, or TAN, projection), with north up and east to the left,
 and binned into square pixels of ``pixel_scale``. Galaxies 90 degrees or more
-from the centre raise an error. ``g1`` and ``g2`` are read in
+from the center raise an error. ``g1`` and ``g2`` are read in
 each galaxy's local frame, with the first axis towards the west and the second
 towards the north, and are turned into the map frame. FITS files carry the
 matching TAN WCS.
@@ -245,8 +245,8 @@ Under ``methods.aperture_mass``:
 The aperture mass at each pixel is the sum, over the pixels within
 ``truncation * filter_scale``, of the filter Q times the tangential shear about
 that pixel: the aperture-mass integral of Schneider (1996) with map pixels as
-the unit of area. Empty pixels add nothing, and the centre pixel, which has no
-tangential direction, is left out. On the example catalogue, with 0.4 arcminute
+the unit of area. Empty pixels add nothing, and the center pixel, which has no
+tangential direction, is left out. On the example catalog, with 0.4 arcminute
 pixels, the cluster has its highest SNR at a ``filter_scale`` of about 10
 pixels; choose it to match the angular size of the structures you look for.
 With orientation shuffles, the SNR map is the usual aperture-mass

@@ -1,4 +1,4 @@
-"""Behaviour tests for configuration files."""
+"""Behavior tests for configuration files."""
 
 from pathlib import Path
 

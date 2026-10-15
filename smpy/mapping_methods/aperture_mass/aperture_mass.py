@@ -42,7 +42,7 @@ class ApertureMassMapper(MassMapper):
     where φ is the polar angle and Q(r) is the chosen filter function.
     This is the aperture-mass integral of Schneider (1996) over the binned
     shear, with map pixels as the unit of area. Q is zero beyond
-    ``truncation * filter_scale`` and at the centre pixel, which has no
+    ``truncation * filter_scale`` and at the center pixel, which has no
     tangential direction.
     """
 
@@ -91,7 +91,7 @@ class ApertureMassMapper(MassMapper):
         else:
             q_vals_k = schirmer_filter(scaled_radii_k, rs)
 
-        # Cut at the radius; the centre has no tangential direction
+        # Cut at the radius; the center has no tangential direction
         q_vals_k[(R_k > radius) | (R_k == 0)] = 0
 
         # Create the kernels

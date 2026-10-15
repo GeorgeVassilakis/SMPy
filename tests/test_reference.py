@@ -1,7 +1,7 @@
 """Regression test comparing SMPy outputs with stored reference values.
 
 The reference file holds maps, SNR maps, counts and FITS output for the
-example catalogue. Regenerate it with ``python tests/test_reference.py`` only
+example catalog. Regenerate it with ``python tests/test_reference.py`` only
 when a commit changes results on purpose, and say why in that commit.
 """
 
@@ -31,7 +31,7 @@ RTOL = 1e-9
 ATOL = 1e-12
 
 def run_case(output_dir, method, coordinates, snr=None, **settings):
-    """Run SMPy on the example catalogue and return its result."""
+    """Run SMPy on the example catalog and return its result."""
     config = Config.from_defaults(method, input_path=str(CATALOG), g1_col="g1_Rinv", g2_col="g2_Rinv",
                                   weight_col="weight", output_directory=str(output_dir), save_plots=False,
                                   mode=["E", "B"], snr=snr, **coordinates, **settings)

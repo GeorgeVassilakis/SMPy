@@ -12,7 +12,7 @@ import numpy as np
 
 @dataclass
 class ShearGrid:
-    """Shear catalogue binned onto a regular map grid.
+    """Shear catalog binned onto a regular map grid.
 
     All arrays have shape ``(ny, nx)``: rows follow the map's y axis (north
     for RA/Dec) and columns its x axis (west for RA/Dec).
@@ -113,7 +113,7 @@ class CoordinateSystem(ABC):
 
     @staticmethod
     def _grid_edges(data_df, pixel_size):
-        """Return the edges of a map of whole pixels centred on a catalog.
+        """Return the edges of a map of whole pixels centered on a catalog.
 
         Parameters
         ----------

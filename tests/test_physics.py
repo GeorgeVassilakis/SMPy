@@ -2,7 +2,7 @@
 
 Each test compares SMPy with an answer known independently of it: exact
 algebra, a change to the input with a known effect on the maps, the noiseless
-NFW cluster of the truth catalogue, or a lens whose shear is built on the
+NFW cluster of the truth catalog, or a lens whose shear is built on the
 sphere by astropy.
 """
 
@@ -30,9 +30,9 @@ COORDINATES = {
 
 @pytest.fixture
 def truth():
-    """The truth catalogue with its convergence and a column of zeros.
+    """The truth catalog with its convergence and a column of zeros.
 
-    The catalogue holds reduced shear g and magnification mu, so the
+    The catalog holds reduced shear g and magnification mu, so the
     convergence follows from mu = 1 / ((1 - kappa)^2 (1 - |g|^2)).
     """
     table = Table.read(TRUTH, hdu=1)
@@ -43,7 +43,7 @@ def truth():
 
 def wide_field_lens():
     """A 12-degree field at Dec -60 with pure tangential shear around a lens
-    4.7 degrees from its centre.
+    4.7 degrees from its center.
 
     Each galaxy's shear is tangential to the great circle towards the lens,
     in the galaxy's own west-north frame, so no map projection is involved.
@@ -178,7 +178,7 @@ def test_constant_shear_has_no_aperture_mass():
     np.testing.assert_allclose(result.maps["E"][4:-4, 4:-4], 0, rtol=0, atol=1e-14)
 
 def test_aperture_ends_at_its_radius():
-    """A shear just outside the aperture radius adds nothing at the centre of
+    """A shear just outside the aperture radius adds nothing at the center of
     the aperture, and one just inside does."""
     y, x = np.mgrid[:25, :25]
     g2 = np.where((x == 16) & (y == 16), 0.1, 0.0)
@@ -213,7 +213,7 @@ def test_ks_plus_fills_a_hole_in_a_sparse_field():
     assert np.abs(maps[:, hole] - complete[:, hole]).max() < 1e-3 * np.abs(complete).max()
 
 def test_ks_plus_beats_kaiser_squires_in_holes(truth):
-    """Inside holes in the truth catalogue, KS+ recovers the true convergence
+    """Inside holes in the truth catalog, KS+ recovers the true convergence
     better than Kaiser-Squires.
 
     Galaxies in the holes get zero weight, so the map grid is unchanged.
@@ -237,10 +237,10 @@ def test_ks_plus_beats_kaiser_squires_in_holes(truth):
     assert errors["ks_plus"] < 0.8 * errors["kaiser_squires"]
 
 def test_lens_far_from_field_centre_makes_no_b_mode():
-    """Tangential shear around a lens far from the centre of a wide field
+    """Tangential shear around a lens far from the center of a wide field
     maps to E with almost no B.
 
-    Away from the field centre the map's y axis is no longer north, so this
+    Away from the field center the map's y axis is no longer north, so this
     holds only if each galaxy's shear is turned into the map frame.
     """
     result = smpy.map_mass(wide_field_lens(), pixel_scale=6.0)
@@ -268,7 +268,7 @@ def test_ks_plus_snr_is_kaiser_squires_snr_where_their_maps_agree(truth):
 
     Without empty pixels, field extension or reduced-shear correction, KS+
     inpaints nothing and returns the Kaiser-Squires map, also for every
-    shuffled catalogue, as shuffles keep the galaxy positions.
+    shuffled catalog, as shuffles keep the galaxy positions.
     """
     settings = dict(**SHEAR, **COORDINATES["radec"], smoothing=3.0, create_snr=True, snr={"num_shuffles": 3})
     ks = smpy.map_mass(truth, "kaiser_squires", **settings)

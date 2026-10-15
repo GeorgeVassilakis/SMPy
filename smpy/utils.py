@@ -1,6 +1,6 @@
 """Utility functions for SMPy mass mapping operations.
 
-This module provides catalogue loading, peak detection and tangential shear
+This module provides catalog loading, peak detection and tangential shear
 utilities used throughout the SMPy package.
 """
 

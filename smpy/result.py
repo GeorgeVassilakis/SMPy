@@ -161,7 +161,7 @@ class MassMap:
         """Return FITS WCS header cards for the map grid."""
         edges = self.scaled_boundaries
         size = edges["pixel_size"]
-        # FITS pixel numbers start at 1 and fall on pixel centres
+        # FITS pixel numbers start at 1 and fall on pixel centers
         crpix1, crpix2 = 0.5 - edges["coord1_min"] / size, 0.5 - edges["coord2_min"] / size
         if self.settings["general"]["coord_system"] == "radec":
             sky = self.true_boundaries

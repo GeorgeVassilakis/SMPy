@@ -1,4 +1,4 @@
-"""Behaviour tests for the Python API."""
+"""Behavior tests for the Python API."""
 
 import random
 from pathlib import Path
@@ -123,7 +123,7 @@ def pixel_unit_on_ra(table):
 @pytest.mark.parametrize("spoil, error", [
     (nan_shear, "Column 'g1_Rinv' has 1 NaN, infinite or masked values"),
     (masked_shear, "Column 'g2_Rinv' has 1 NaN, infinite or masked values"),
-    (galaxy_at_antipode, "90 degrees or more from the field centre"),
+    (galaxy_at_antipode, "90 degrees or more from the field center"),
     (pixel_unit_on_ra, "Column 'ra' has unit 'pix', which is not convertible to deg"),
 ], ids=["NaN shear", "masked shear", "galaxy at the antipode", "RA in pixels"])
 def test_unusable_catalogs_raise(table, spoil, error):

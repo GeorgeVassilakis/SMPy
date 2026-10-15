@@ -1,4 +1,4 @@
-"""Behaviour tests for DS9 x-ray contour overlays on SMPy plots."""
+"""Behavior tests for DS9 x-ray contour overlays on SMPy plots."""
 
 from pathlib import Path
 
@@ -32,7 +32,7 @@ def test_contours_follow_their_switches(result, tmp_path, on_convergence, on_snr
 
 @pytest.mark.parametrize("axis_reference", ["catalog", "map"])
 def test_image_contours_land_on_their_pixels(result, tmp_path, axis_reference):
-    """A contour point at DS9 image pixel (i, j) is drawn at the centre of map
+    """A contour point at DS9 image pixel (i, j) is drawn at the center of map
     pixel (i, j)."""
     ctr_file = tmp_path / "xray.ctr"
     ctr_file.write_text("image\n1 1\n3 2\n")
@@ -47,7 +47,7 @@ def test_image_contours_land_on_their_pixels(result, tmp_path, axis_reference):
     plt.close(fig)
 
 def test_sky_contours_land_where_the_wcs_puts_them(tmp_path):
-    """A contour point given in RA/Dec is drawn at the centre of the map pixel
+    """A contour point given in RA/Dec is drawn at the center of the map pixel
     where the WCS puts it."""
     result = smpy.map_mass(CATALOG, pixel_scale=0.4, **COLUMNS)
     pixels = np.array([[10, 5], [40, 30]])

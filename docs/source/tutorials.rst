@@ -2,10 +2,10 @@ Tutorials
 =========
 
 Each tutorial is a notebook, in ``docs/source/tutorials`` of the repository,
-that runs in under a minute on the example catalogues in ``examples/data``.
+that runs in under a minute on the example catalogs in ``examples/data``.
 
 :doc:`tutorials/01_getting_started`
-   Convergence maps of a simulated cluster from its shear catalogue, their
+   Convergence maps of a simulated cluster from its shear catalog, their
    signal-to-noise maps and FITS output, and the same run from a YAML file.
 
 :doc:`tutorials/02_coordinates_and_gridding`
@@ -13,11 +13,11 @@ that runs in under a minute on the example catalogues in ``examples/data``.
    pixels, in sky and in image coordinates.
 
 :doc:`tutorials/03_mass_mapping_methods`
-   Kaiser-Squires, KS+ and aperture mass on the same catalogue, compared with
+   Kaiser-Squires, KS+ and aperture mass on the same catalog, compared with
    the true convergence of a noiseless simulation, with and without holes.
 
 :doc:`tutorials/04_signal_to_noise_maps`
-   Noise from randomised catalogues, its calibration, orientation and spatial
+   Noise from randomized catalogs, its calibration, orientation and spatial
    shuffles, the B mode as a null test, and peak finding.
 
 .. toctree::

@@ -6,16 +6,16 @@
 
 #------General settings------#
 general:
-  # Input catalogue
+  # Input catalog
   input_path: ""  # Relative paths resolve from the YAML file's directory
-  input_hdu: 1  # FITS extension holding the catalogue
+  input_hdu: 1  # FITS extension holding the catalog
   coord_system: "radec"  # 'radec' or 'pixel'
   radec:
     pixel_scale: null  # Map pixel size in arcminutes (required)
     coord1_col: "ra"  # RA column, in degrees
     coord2_col: "dec"  # Dec column, in degrees
   pixel:
-    downsample_factor: null  # Catalogue pixels per map pixel (required)
+    downsample_factor: null  # Catalog pixels per map pixel (required)
     coord1_col: "X_IMAGE"  # X column
     coord2_col: "Y_IMAGE"  # Y column
   g1_col: "g1"
@@ -90,6 +90,6 @@ plotting:
 #------SNR settings------#
 snr:
   shuffle_type: 'orientation'  # 'orientation' (turn each shear by a random angle) or 'spatial' (permute positions)
-  num_shuffles: 100  # Number of shuffled catalogues; at least 2
+  num_shuffles: 100  # Number of shuffled catalogs; at least 2
   seed: 0  # Integer, or 'random' for a seed from the secrets module; the seed used is recorded
   plot_title: 'Signal-to-Noise Map'  # The mode is appended

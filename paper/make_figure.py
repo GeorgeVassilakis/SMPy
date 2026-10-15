@@ -1,4 +1,4 @@
-"""Make the paper's figure: maps of the example catalogue by each method.
+"""Make the paper's figure: maps of the example catalog by each method.
 
 Run from anywhere with ``python paper/make_figure.py``; it writes
 ``paper/mass_maps.png`` at the width of a JOSS page.

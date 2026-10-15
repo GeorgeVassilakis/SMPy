@@ -2,7 +2,8 @@ Overview
 ========
 
 .. image:: ../../paper/mass_maps.png
-   :alt: Kaiser-Squires, KS+ and aperture-mass maps of a simulated galaxy cluster
+   :alt: Kaiser-Squires, KS+ and aperture-mass maps and a Kaiser-Squires signal-to-noise map of a simulated
+         galaxy cluster
    :align: center
    :width: 100%
 

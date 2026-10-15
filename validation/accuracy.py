@@ -23,9 +23,9 @@ NAMES = {"kaiser_squires": "Kaiser-Squires", "ks_plus": "KS+", "aperture_mass": 
 TRUTH_SETTINGS = dict(g1_col="nfw_g1", g2_col="nfw_g2", pixel_scale=0.4)
 
 def truth_catalog():
-    """Return the truth catalogue with its convergence and a column of zeros.
+    """Return the truth catalog with its convergence and a column of zeros.
 
-    The catalogue holds reduced shear g and magnification mu, so the
+    The catalog holds reduced shear g and magnification mu, so the
     convergence follows from mu = 1 / ((1 - kappa)^2 (1 - |g|^2)).
     """
     table = Table.read(TRUTH, hdu=1)
@@ -48,7 +48,7 @@ def show(ax, image, title, **style):
     return im
 
 def truth_recovery(table):
-    """Compare each method's E map of the noiseless truth catalogue with the
+    """Compare each method's E map of the noiseless truth catalog with the
     true convergence, smoothed like the maps.
 
     Every map is shown and compared after removing its mean, which shear does
@@ -79,7 +79,7 @@ def truth_recovery(table):
     plt.close(fig)
 
 def holes(table):
-    """Compare Kaiser-Squires and KS+ inside holes cut in the truth catalogue.
+    """Compare Kaiser-Squires and KS+ inside holes cut in the truth catalog.
 
     Galaxies in the holes get zero weight, so the map grid is unchanged.
     Each map is compared after removing its mean over the observed pixels,
@@ -109,12 +109,12 @@ def holes(table):
     plt.close(fig)
 
 def snr_calibration(catalogs=10):
-    """Show that the SNR of catalogues without lensing signal has unit spread.
+    """Show that the SNR of catalogs without lensing signal has unit spread.
 
-    Turning every shear of the example catalogue by a random angle removes
+    Turning every shear of the example catalog by a random angle removes
     its signal and keeps its noise. The spread of one map varies by about 10%
-    between such catalogues, as neighbouring pixels are correlated, so the
-    SNR of several catalogues is pooled.
+    between such catalogs, as neighboring pixels are correlated, so the
+    SNR of several catalogs is pooled.
     """
     table = Table.read(CATALOG, hdu=1)
     signal = table["g1_Rinv"] + 1j * table["g2_Rinv"]
@@ -133,7 +133,7 @@ def snr_calibration(catalogs=10):
         print(f"{NAMES[method]}: pooled SNR spread {np.std(snr):.3f}, mean {np.mean(snr):+.3f}; "
               f"spread of single maps {spreads.mean():.3f} +- {spreads.std():.3f}")
     ax.plot(bins, norm.pdf(bins), color="black", linestyle="--", label="Unit normal")
-    ax.set_xlabel("E-mode SNR of a catalogue without lensing signal")
+    ax.set_xlabel("E-mode SNR of a catalog without lensing signal")
     ax.set_ylabel("Fraction of pixels per unit SNR")
     ax.legend(loc="upper left")
     fig.savefig(OUTPUT / "snr_calibration.png", dpi=120)

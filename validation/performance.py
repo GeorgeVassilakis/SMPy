@@ -23,7 +23,7 @@ GALAXIES_PER_PIXEL = 10
 SETTINGS = dict(coord_system="pixel", downsample_factor=1, coord1_col="x", coord2_col="y")
 
 def catalog(side):
-    """Return a catalogue of pure shape noise filling a side x side map."""
+    """Return a catalog of pure shape noise filling a side x side map."""
     rng = np.random.default_rng(0)
     size = side * side * GALAXIES_PER_PIXEL
     return Table({"x": rng.uniform(0, side, size), "y": rng.uniform(0, side, size),
@@ -49,7 +49,7 @@ if __name__ == "__main__":
         print(f"{side}x{side}, {len(table):,} galaxies: "
               + ", ".join(f"{NAMES[method]} {times[method][-1]:.3g} s" for method in NAMES))
 
-    # An SNR map costs one map and one gridding of the catalogue per shuffle
+    # An SNR map costs one map and one gridding of the catalog per shuffle
     side, shuffles = 256, 20
     table = catalog(side)
     for method, repeats in (("kaiser_squires", 3), ("aperture_mass", 3), ("ks_plus", 1)):

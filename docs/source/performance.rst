@@ -3,8 +3,8 @@ Performance
 
 The timings below are for `smpy.map_mass` with default settings, made by
 ``validation/performance.py`` on an Apple M4 Pro with Python 3.12, NumPy 2.2
-and SciPy 1.15. Each catalogue holds ten galaxies of pure shape noise per map
-pixel, in pixel coordinates, and each time includes binning the catalogue.
+and SciPy 1.15. Each catalog holds ten galaxies of pure shape noise per map
+pixel, in pixel coordinates, and each time includes binning the catalog.
 
 .. list-table::
    :header-rows: 1
@@ -59,7 +59,7 @@ padded area.
 Signal-to-noise maps
 --------------------
 
-An SNR map costs one shuffle, one binning and one map per shuffled catalogue.
+An SNR map costs one shuffle, one binning and one map per shuffled catalog.
 On the 256 x 256 map, each shuffle takes 0.076 s for Kaiser-Squires, 0.13 s
 for aperture mass and 20 s for KS+. With the default 100 shuffles, a
 Kaiser-Squires SNR map of 1024 x 1024 pixels therefore takes about two minutes,
@@ -73,6 +73,6 @@ noise estimated from N shuffles has a relative uncertainty of about
 Memory
 ------
 
-The SNR step holds one shuffled catalogue at a time and the noise maps of
+The SNR step holds one shuffled catalog at a time and the noise maps of
 all shuffles, two maps per shuffle: 1.6 GB for 100 shuffles of a 1024 x 1024
 map. KS+ also holds the starlet bands of its padded field.
