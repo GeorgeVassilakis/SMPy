@@ -19,7 +19,7 @@ authors:
   - name: Maya Amit
     orcid: 0009-0002-2898-7022
     corresponding: false
-    affiliation: 1
+    affiliation: "1, 5"
   - name: Sayan Saha
     orcid: 0000-0002-6044-2164
     corresponding: false
@@ -33,6 +33,8 @@ affiliations:
    index: 3
  - name: Kavli Institute for Cosmology, University of Cambridge, Cambridge, UK
    index: 4
+ - name: Center for Data Science, New York University, New York, NY, USA
+   index: 5
 date: 20 April 2025
 bibliography: paper.bib
 ---
