@@ -22,8 +22,9 @@ What the tests check
        exactly, and inverting it returns the convergence, on odd and even
        grids.
    * - Rotation
-     - Turning every shear by an angle turns E + iB by twice that angle, for
-       every method.
+     - Turning every shear by an angle turns E + iB by twice that angle for
+       Kaiser-Squires and aperture mass, and for KS+ without its reduced-shear
+       correction and wavelet constraint, which treat E and B separately.
    * - Cluster recovery
      - Each method finds the NFW cluster of a noiseless simulated catalog
        where it is, with little B mode, in RA/Dec and in pixel coordinates.
