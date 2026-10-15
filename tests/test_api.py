@@ -163,6 +163,20 @@ def test_plot_draws_on_given_axes(settings):
     assert plt.fignum_exists(fig.number)
     plt.close(fig)
 
+def test_percentile_scaling_ignores_undefined_pixels(table):
+    """Percentile color limits come from the defined pixels of a map with
+    undefined ones: aperture-mass SNR inside a hole wider than the aperture."""
+    hole = np.hypot((table["ra"] - np.median(table["ra"])) * np.cos(np.deg2rad(np.median(table["dec"]))),
+                    table["dec"] - np.median(table["dec"])) < 0.05
+    table["weight"][hole] = 0.0
+    result = smpy.map_mass(table, "aperture_mass", filter_scale=3, create_snr=True, snr={"num_shuffles": 5},
+                           **RADEC)
+    snr = result.snr["E"]
+    assert np.isnan(snr).any()
+    _, _, image = result.plot("E", snr=True, scaling={"percentile": [1, 99]})
+    np.testing.assert_allclose([image.norm.vmin, image.norm.vmax], np.nanpercentile(snr, [1, 99]))
+    plt.close(image.figure)
+
 def test_pixel_maps_export_to_fits(tmp_path):
     """Pixel-coordinate maps can be written to FITS."""
     result = smpy.map_mass(CATALOG, **PIXEL)

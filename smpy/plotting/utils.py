@@ -26,7 +26,8 @@ def create_normalization(scaling, data, vmin=None, vmax=None, map_type="converge
         'gamma' (for power), 'percentile' (pair), and map-specific overrides
         under keys matching ``map_type`` for 'symlog'.
     data : `numpy.ndarray`
-        Data array used for percentile-based range computation.
+        Data array used for percentile-based range computation; NaN pixels
+        are left out.
     vmin, vmax : `float`, optional
         Explicit min/max for scaling.
     map_type : `str`, optional
@@ -50,8 +51,8 @@ def create_normalization(scaling, data, vmin=None, vmax=None, map_type="converge
     # Handle percentile-based range calculation
     percentile = scaling.get("percentile")
     if percentile is not None:
-        vmin = float(np.percentile(data, percentile[0]))
-        vmax = float(np.percentile(data, percentile[1]))
+        vmin = float(np.nanpercentile(data, percentile[0]))
+        vmax = float(np.nanpercentile(data, percentile[1]))
 
     # Create appropriate normalization based on type
     if scale_type == "linear":

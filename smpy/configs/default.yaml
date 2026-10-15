@@ -79,7 +79,7 @@ plotting:
   scaling:
     type: 'linear'  # 'linear', 'power', or 'symlog'
     gamma: 2  # For power: exponent of the power law
-    percentile: null  # null, or [n, m] to scale between the nth and mth percentiles
+    percentile: null  # null, or [n, m] to scale between the nth and mth percentiles of the defined pixels
     convergence:
       linthresh: 0.1  # For symlog: half-width of the linear region around zero
       linscale: 1.0  # For symlog: scaling factor for the linear region
