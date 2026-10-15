@@ -29,8 +29,9 @@ def schirmer_filter(scaled_radii, scale):
     Implements the Q function filter as defined in McCleary et al. 2020 [1]_:
     Q(x) = [1/(1 + e^(a-bx) + e^(dx-c))] * [tanh(x/x_c)/(pi*Rs^2*(x/x_c))]
 
-    Parameters are set to:
-    a = 6, b = 150, c = 47, d = 50, x_c = 0.12 (Hetterscheidt et al. 2005 [2]_)
+    Parameters are set to a = 6, b = 150, c = 47, d = 50 (Hetterscheidt et
+    al. 2005 [2]_) and x_c = 0.12 (McCleary et al. 2020 [1]_); Hetterscheidt
+    et al. use x_c = 0.15.
 
     References
     ----------
