@@ -102,14 +102,15 @@ def find_peaks2d(image, threshold=None, verbose=False, true_boundaries=None, sca
     """Identify peaks in a 2D array above a specified threshold.
 
     Find local maxima in a 2D image where each peak pixel has a value
-    greater than all 8 neighboring pixels. Refactored from cosmostat/lenspack.
+    greater than all 8 neighboring pixels. NaN pixels are never peaks and do
+    not hide their neighbors. Refactored from cosmostat/lenspack.
 
     Parameters
     ----------
     image : `numpy.ndarray`
         2D input map for peak detection.
     threshold : `float`, optional
-        Detection threshold. If None, uses minimum image value.
+        Detection threshold. If None, uses the minimum of the non-NaN pixels.
     verbose : `bool`, optional
         Whether to print peak information.
     true_boundaries : `dict`, optional
@@ -130,11 +131,11 @@ def find_peaks2d(image, threshold=None, verbose=False, true_boundaries=None, sca
         otherwise None.
     """
     image = np.atleast_2d(image)
-    threshold = threshold if threshold is not None else image.min()
+    threshold = threshold if threshold is not None else np.nanmin(image)
 
-    # Pad the image for border peak checks
-    padded_image = np.pad(image, pad_width=1, mode='constant',
-                         constant_values=image.min())
+    # Pad the image for border peak checks; NaN pixels count as lower than all
+    padded_image = np.pad(np.where(np.isnan(image), -np.inf, image), pad_width=1, mode='constant',
+                          constant_values=-np.inf)
 
     # Check for peaks by comparing to neighbors
     is_peak = (
