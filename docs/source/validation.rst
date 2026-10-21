@@ -52,15 +52,29 @@ any change to the numbers is deliberate.
 Recovering a simulated cluster
 ------------------------------
 
-The truth catalog in ``examples/data/forecast_lum_truth.fits`` holds the
-noiseless reduced shear and magnification of an NFW cluster at the positions
-of its galaxies, from which their convergence follows. The maps are made from
-the 29,545 galaxies behind the cluster, as a shear catalog would hold them. The
-maps use 0.4
-arcminute pixels and the default settings, and they are compared with the true
-convergence averaged over each pixel and smoothed like the maps. Shear does not
-determine the mean convergence, so every map is shown and compared with its
-mean removed.
+The truth catalog in ``examples/data/forecast_lum_truth.fits`` is the input
+catalog of one realization of the SuperBIT image simulations of
+`McCleary et al. (2023) <https://doi.org/10.3847/1538-3881/ace7ca>`_, the same
+field as the example shape catalog. The cluster is a
+`GalSim <https://doi.org/10.1016/j.ascom.2015.02.002>`_ NFW halo with
+:math:`M_{\mathrm{200c}} = 4.1 \times 10^{14}\,h^{-1} M_\odot`, concentration
+:math:`c = 4` and redshift :math:`z = 0.45`, for :math:`\Omega_\mathrm{m} = 0.3`
+and :math:`\Omega_\Lambda = 0.7`, at the center of a :math:`22.5' \times 15.0'`
+field. Galaxies are placed at random, with redshifts and fluxes drawn from a
+mock SuperBIT catalog built on COSMOS 2015, and GalSim gives each galaxy behind
+the cluster the reduced shear and magnification of the halo at its own
+redshift. The catalog holds these noiseless values for 34,298 galaxies, 30
+cluster galaxies and 376 stars. The stars, the cluster galaxies and the
+galaxies in front of the cluster have zero shear and unit magnification. The
+maps are made from the 29,545 galaxies behind the cluster, as a shear catalog
+would hold them.
+
+The catalog has no convergence column, so each galaxy's convergence
+:math:`\kappa` is recovered from its reduced shear :math:`g` and magnification
+:math:`\mu` through :math:`\mu = [(1 - \kappa)^2 (1 - |g|^2)]^{-1}`. The maps use 0.4 arcminute pixels and
+the default settings, and they are compared with this convergence averaged over
+each pixel and smoothed like the maps. Shear does not determine the mean
+convergence, so every map is shown and compared with its mean removed.
 ``validation/accuracy.py`` also makes the paper's residual figure from these
 maps and those of the next section.
 
