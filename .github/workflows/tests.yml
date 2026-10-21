@@ -10,6 +10,9 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     strategy:
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
@@ -23,6 +26,8 @@ jobs:
       - run: python -m pytest --cov=smpy --cov-branch --cov-report=xml
       - if: matrix.python-version == '3.14'
         uses: codecov/codecov-action@v7
+        with:
+          use_oidc: true
 
   docs:
     runs-on: ubuntu-latest
