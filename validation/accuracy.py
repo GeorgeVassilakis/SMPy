@@ -17,18 +17,22 @@ import smpy
 
 ROOT = Path(__file__).resolve().parents[1]
 TRUTH = ROOT / "examples" / "data" / "forecast_lum_truth.fits"
+CLUSTER_REDSHIFT = 0.45
 CATALOG = ROOT / "examples" / "data" / "forecast_lum_annular.fits"
 OUTPUT = ROOT / "docs" / "source" / "_static" / "validation"
 NAMES = {"kaiser_squires": "Kaiser-Squires", "ks_plus": "KS+", "aperture_mass": "Aperture mass"}
 TRUTH_SETTINGS = dict(g1_col="nfw_g1", g2_col="nfw_g2", pixel_scale=0.4)
 
 def truth_catalog():
-    """Return the truth catalog with its convergence and a column of zeros.
+    """Return the galaxies of the truth catalog behind the cluster, as a
+    shear catalog would hold them, with their convergence and a column of
+    zeros.
 
     The catalog holds reduced shear g and magnification mu, so the
     convergence follows from mu = 1 / ((1 - kappa)^2 (1 - |g|^2)).
     """
     table = Table.read(TRUTH, hdu=1)
+    table = table[table["redshift"] > CLUSTER_REDSHIFT]
     g_squared = table["nfw_g1"] ** 2 + table["nfw_g2"] ** 2
     table["kappa"] = 1 - 1 / np.sqrt(table["nfw_mu"] * (1 - g_squared))
     table["zero"] = 0.0

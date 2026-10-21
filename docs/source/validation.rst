@@ -54,7 +54,9 @@ Recovering a simulated cluster
 
 The truth catalog in ``examples/data/forecast_lum_truth.fits`` holds the
 noiseless reduced shear and magnification of an NFW cluster at the positions
-of 34,704 galaxies, from which its convergence follows. The maps use 0.4
+of its galaxies, from which their convergence follows. The maps are made from
+the 29,545 galaxies behind the cluster, as a shear catalog would hold them. The
+maps use 0.4
 arcminute pixels and the default settings, and they are compared with the true
 convergence averaged over each pixel and smoothed like the maps. Shear does not
 determine the mean convergence, so every map is shown and compared with its
@@ -69,24 +71,24 @@ mean removed.
 
    * - Method
      - Correlation with the truth
-     - RMS error (peak 0.107)
+     - RMS error (peak 0.145)
      - B-mode / E-mode spread
    * - Kaiser-Squires
-     - 0.965
-     - 0.0042
-     - 0.166
+     - 0.9711
+     - 0.0045
+     - 0.167
    * - KS+
-     - 0.997
-     - 0.0021
-     - 0.025
+     - 0.9996
+     - 0.0009
+     - 0.021
    * - Aperture mass
      -
      -
-     - 0.103
+     - 0.108
 
 All three maps peak within one pixel of the true peak. By correcting for
-reduced shear and the field border, KS+ halves the error of Kaiser-Squires and
-cuts its B mode by a factor of 6.6. Aperture mass is a filtered statistic, not a
+reduced shear and the field border, KS+ cuts the error of Kaiser-Squires by a
+factor of 5 and its B mode by a factor of 7.8. Aperture mass is a filtered statistic, not a
 convergence map, so it is compared only by its peak and B mode.
 
 Filling holes
@@ -101,7 +103,7 @@ holes.
    :alt: The true convergence with eight holes outlined, and the error of the
          Kaiser-Squires and KS+ maps.
 
-Inside the holes, the RMS error is 0.0103 for Kaiser-Squires and 0.0064 for
+Inside the holes, the RMS error is 0.0132 for Kaiser-Squires and 0.0059 for
 KS+. KS+ also removes the Kaiser-Squires errors along the field border.
 
 Calibration of the SNR maps
