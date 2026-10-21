@@ -20,7 +20,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - run: python -m pip install ".[test]" ruff==0.16.8
       - run: ruff check
-      - run: python -m pytest
+      - run: python -m pytest --cov=smpy --cov-branch --cov-report=xml
+      - if: matrix.python-version == '3.14'
+        uses: codecov/codecov-action@v7
 
   docs:
     runs-on: ubuntu-latest
