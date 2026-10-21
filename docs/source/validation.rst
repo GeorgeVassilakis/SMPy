@@ -61,6 +61,8 @@ arcminute pixels and the default settings, and they are compared with the true
 convergence averaged over each pixel and smoothed like the maps. Shear does not
 determine the mean convergence, so every map is shown and compared with its
 mean removed.
+``validation/accuracy.py`` also makes the paper's residual figure from these
+maps and those of the next section.
 
 .. image:: _static/validation/truth_recovery.png
    :alt: The true convergence of the simulated cluster next to the
