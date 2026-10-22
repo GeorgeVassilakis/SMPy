@@ -77,7 +77,7 @@ On an Apple M4 Pro, a $1024 \times 1024$ map from 10.5 million galaxies takes 0.
 
 # Research impact statement
 
-`SMPy` was initially developed as part of the weak lensing analysis pipeline for SuperBIT, and it was used to create the first convergence maps measured from the stratosphere, derived from SuperBIT's 2023 science flight imaging and presented in "Lensing in the Blue IV" [@Saha2026]. In addition, `SMPy` has been presented at the Jet Propulsion Laboratory, and we have received interest in exploring integration into Euclid weak-lensing analysis workflows.
+`SMPy` was initially developed as part of the weak lensing analysis pipeline for SuperBIT, and it was used to create the first convergence maps measured from the stratosphere, presented in "Lensing in the Blue IV" [@Saha2026]. These maps were made from the weak lensing shape catalogs of the 30 galaxy clusters observed on SuperBIT's 2023 science flight, presented in "Lensing in the Blue III" [@Saha2026shapes]. In addition, `SMPy` has been presented at the Jet Propulsion Laboratory, and we have received interest in exploring integration into Euclid weak-lensing analysis workflows.
 
 # AI usage disclosure
 
