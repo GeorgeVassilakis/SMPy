@@ -5,32 +5,19 @@ SMPy: Shear Mapping in Python
 
 SMPy is a mass reconstruction toolkit for weak gravitational lensing analysis.
 
-.. note::
-   This documentation is under active development. For now, it contains the 
-   auto-generated API reference and configuration guide. Tutorials and examples 
-   will be added in future updates.
-
 .. toctree::
-   :maxdepth: 2
-   :caption: Overview:
+   :maxdepth: 1
 
    overview
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Installation:
-
    installation
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Tutorials:
-
    tutorials
+   config
+   validation
+   performance
 
 .. toctree::
-   :maxdepth: 2
-   :caption: API Reference:
+   :maxdepth: 1
+   :caption: API Reference
 
    api/high_level_interface
    api/configuration
@@ -41,12 +28,6 @@ SMPy is a mass reconstruction toolkit for weak gravitational lensing analysis.
    api/plotting
    api/error_quantification
    api/utilities
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Configuration:
-
-   config
 
 Indices and tables
 ==================

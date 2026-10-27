@@ -15,7 +15,7 @@ os.environ.setdefault("MPLCONFIGDIR", str(_mplconfigdir))
 project = 'SMPy'
 copyright = '2025, Georgios N. Vassilakis'
 author = 'Georgios N. Vassilakis'
-release = '0.5.0'
+release = '1.0.0'
 
 # -- General configuration ---------------------------------------------------
 
@@ -47,7 +47,6 @@ napoleon_type_aliases = None
 autodoc_default_options = {
     'members': True,
     'member-order': 'bysource',
-    'special-members': '__init__',
     'undoc-members': True,
     'exclude-members': '__weakref__'
 }

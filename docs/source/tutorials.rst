@@ -1,48 +1,29 @@
 Tutorials
 =========
 
-00 – One‑liner CLI
-------------------
+Each tutorial is a notebook, in ``docs/source/tutorials`` of the repository,
+that runs in under a minute on the example catalogs in ``examples/data``.
 
-Create a convergence map with a single command.
+:doc:`tutorials/01_getting_started`
+   Convergence maps of a simulated cluster from its shear catalog, their
+   signal-to-noise maps and FITS output, and the same run from a YAML file.
 
-Prerequisites
-^^^^^^^^^^^^^
+:doc:`tutorials/02_coordinates_and_gridding`
+   How SMPy projects sky positions, orients the shear and bins galaxies into
+   pixels, in sky and in image coordinates.
 
-- SMPy installed and this repository cloned.
-- Example data available at ``examples/data/forecast_lum_annular.fits``.
-- Ensure the configuration file path is valid for your local system: ``smpy/configs/example_config.yaml``.
+:doc:`tutorials/03_mass_mapping_methods`
+   Kaiser-Squires, KS+ and aperture mass on the same catalog, compared with
+   the true convergence of a noiseless simulation, with and without holes.
 
-Command
-^^^^^^^
-
-.. code-block:: bash
-
-   python runner.py -c smpy/configs/example_config.yaml
-
-What happens
-^^^^^^^^^^^^
-
-- Loads the example configuration and runs a Kaiser–Squires map by default.
-- Uses the input shear catalog defined in the config (update ``general.input_path`` if needed).
-- Writes outputs according to the config. If ``save_fits: true`` is set, FITS files are saved under
-  ``<output_directory>/<method>/``. Plots are controlled by the ``plotting`` section.
-
-Next steps
-^^^^^^^^^^
-
-- Prefer Python over CLI? See the Quickstart notebook for the same run via the high‑level API.
-
-Subpages
---------
+:doc:`tutorials/04_signal_to_noise_maps`
+   Noise from randomized catalogs, its calibration, orientation and spatial
+   shuffles, the B mode as a null test, and peak finding.
 
 .. toctree::
-   :maxdepth: 1
-   :caption: Tutorials index
+   :hidden:
 
-   tutorials/01_quickstart
-   tutorials/02_configuration
-   tutorials/03_kaiser_squires
-   tutorials/04_aperture_mass
-   tutorials/05_ks_plus
-   tutorials/06_snr_and_validation
+   tutorials/01_getting_started
+   tutorials/02_coordinates_and_gridding
+   tutorials/03_mass_mapping_methods
+   tutorials/04_signal_to_noise_maps

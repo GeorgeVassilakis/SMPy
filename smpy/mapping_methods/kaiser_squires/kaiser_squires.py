@@ -7,8 +7,79 @@ with optional Gaussian smoothing.
 """
 
 import numpy as np
+from scipy.ndimage import gaussian_filter
+
 from ..base import MassMapper
-from smpy.filters import apply_filter
+
+def _shear_kernel(shape):
+    """Return the Fourier-space operator D taking convergence to shear.
+
+    D = (k1^2 - k2^2 + 2i k1 k2) / k^2. It is zero for the uniform mode,
+    which produces no shear, and for modes at the highest frequency of an
+    even side that also vary along the other axis. That frequency stands for
+    both +1/2 and -1/2 cycles per pixel, so the sign of the 2 k1 k2 term is
+    undefined there.
+    """
+    npix_dec, npix_ra = shape
+    k1, k2 = np.meshgrid(np.fft.fftfreq(npix_ra), np.fft.fftfreq(npix_dec))
+    k_squared = k1**2 + k2**2
+    k_squared[0, 0] = 1.0
+    kernel = (k1**2 - k2**2 + 2j * k1 * k2) / k_squared
+    kernel[((k1 == -0.5) & (k2 != 0)) | ((k2 == -0.5) & (k1 != 0))] = 0
+    return kernel
+
+def shear_from_convergence(kappa_e, kappa_b):
+    """Compute the shear produced by E- and B-mode convergence maps.
+
+    Parameters
+    ----------
+    kappa_e : `numpy.ndarray`
+        E-mode convergence map.
+    kappa_b : `numpy.ndarray`
+        B-mode convergence map, with the same shape.
+
+    Returns
+    -------
+    gamma1 : `numpy.ndarray`
+        First shear component.
+    gamma2 : `numpy.ndarray`
+        Second shear component.
+
+    Notes
+    -----
+    In Fourier space gamma1 + i gamma2 = D (kappa_E + i kappa_B), with
+    D = (k1^2 - k2^2 + 2i k1 k2) / k^2. A uniform convergence produces no
+    shear, and modes at the highest frequency of an even side that also vary
+    along the other axis are dropped.
+    """
+    gamma = np.fft.ifft2(_shear_kernel(kappa_e.shape) * np.fft.fft2(kappa_e + 1j * kappa_b))
+    return gamma.real, gamma.imag
+
+def convergence_from_shear(gamma1, gamma2):
+    """Invert a shear field into E- and B-mode convergence maps
+    (Kaiser & Squires 1993).
+
+    Parameters
+    ----------
+    gamma1 : `numpy.ndarray`
+        First shear component.
+    gamma2 : `numpy.ndarray`
+        Second shear component, with the same shape.
+
+    Returns
+    -------
+    kappa_e : `numpy.ndarray`
+        E-mode convergence map, with zero mean.
+    kappa_b : `numpy.ndarray`
+        B-mode convergence map, with zero mean.
+
+    Notes
+    -----
+    kappa_E + i kappa_B = D* (gamma1 + i gamma2) in Fourier space, the
+    inverse of `shear_from_convergence` for every mode it keeps.
+    """
+    kappa = np.fft.ifft2(np.conj(_shear_kernel(gamma1.shape)) * np.fft.fft2(gamma1 + 1j * gamma2))
+    return kappa.real, kappa.imag
 
 class KaiserSquiresMapper(MassMapper):
     """Implementation of Kaiser-Squires mass mapping.
@@ -18,37 +89,39 @@ class KaiserSquiresMapper(MassMapper):
     The algorithm uses Fourier transforms to perform the inversion and
     supports optional smoothing for noise reduction.
 
+    Parameters
+    ----------
+    smoothing : `float`
+        Gaussian smoothing sigma in map pixels; 0 for no smoothing.
+
+    Raises
+    ------
+    ValueError
+        Raised if ``smoothing`` is not a number of at least 0.
+
     Notes
     -----
     The Kaiser-Squires method directly inverts the shear-convergence relation:
     kappa = D^(-1) * gamma, where D is the differential operator relating
     convergence to shear in Fourier space.
     """
-    
-    @property
-    def name(self):
-        """Name identifier for the Kaiser-Squires method.
 
-        Returns
-        -------
-        method_name : `str`
-            String identifier 'kaiser_squires'.
-        """
-        return "kaiser_squires"
-    
-    def create_maps(self, g1_grid, g2_grid):
+    def __init__(self, smoothing):
+        if not isinstance(smoothing, (int, float)) or smoothing < 0:
+            raise ValueError(f"smoothing must be a number of at least 0, got {smoothing!r}")
+        self.smoothing = smoothing
+
+    def create_maps(self, grid):
         """Create convergence maps using Kaiser-Squires inversion.
 
         Perform direct inversion of shear components to reconstruct both
-        E-mode and B-mode convergence maps using Fourier transforms.
-        Applies optional smoothing if configured.
+        E-mode and B-mode convergence maps using Fourier transforms, then
+        apply the configured smoothing.
 
         Parameters
         ----------
-        g1_grid : `numpy.ndarray`
-            First shear component grid.
-        g2_grid : `numpy.ndarray`
-            Second shear component grid.
+        grid : `smpy.coordinates.ShearGrid`
+            Binned shear.
 
         Returns
         -------
@@ -63,32 +136,5 @@ class KaiserSquiresMapper(MassMapper):
         kappa_E = ((k1^2 - k2^2) * g1 + 2 * k1 * k2 * g2) / k^2
         kappa_B = ((k1^2 - k2^2) * g2 - 2 * k1 * k2 * g1) / k^2
         """
-        # Get grid dimensions
-        npix_dec, npix_ra = g1_grid.shape
-
-        # Fourier transform the shear components
-        g1_hat = np.fft.fft2(g1_grid)
-        g2_hat = np.fft.fft2(g2_grid)
-
-        # Create wavenumber grids
-        k1, k2 = np.meshgrid(np.fft.fftfreq(npix_ra), np.fft.fftfreq(npix_dec))
-        k_squared = k1**2 + k2**2
-
-        # Avoid division by zero
-        k_squared = np.where(k_squared == 0, np.finfo(float).eps, k_squared)
-
-        # Kaiser-Squires inversion in Fourier space
-        kappa_e_hat = (1 / k_squared) * ((k1**2 - k2**2) * g1_hat + 2 * k1 * k2 * g2_hat)
-        kappa_b_hat = (1 / k_squared) * ((k1**2 - k2**2) * g2_hat - 2 * k1 * k2 * g1_hat)
-
-        # Inverse Fourier transform
-        kappa_e = np.real(np.fft.ifft2(kappa_e_hat))
-        kappa_b = np.real(np.fft.ifft2(kappa_b_hat))
-
-        # Apply smoothing if configured
-        smoothing_config = self.method_config.get('smoothing')
-        if smoothing_config and smoothing_config.get('type'):
-            kappa_e = apply_filter(kappa_e, smoothing_config)
-            kappa_b = apply_filter(kappa_b, smoothing_config)
-
-        return kappa_e, kappa_b
+        kappa_e, kappa_b = convergence_from_shear(grid.g1, grid.g2)
+        return gaussian_filter(kappa_e, self.smoothing), gaussian_filter(kappa_b, self.smoothing)

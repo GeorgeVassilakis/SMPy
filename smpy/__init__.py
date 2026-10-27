@@ -8,6 +8,8 @@ This package provides mass mapping methods including Kaiser-Squires,
 aperture mass, and KS+ algorithms for weak lensing analysis.
 """
 
+__version__ = "1.0.0"
+
 # Simple API functions - main entry points for users
 from .api import (
     map_aperture_mass,
@@ -18,10 +20,8 @@ from .api import (
 
 # Config API - for power users who want more control
 from .config import Config
-from .run import run
-
-# Version info
-__version__ = "0.5.0"
+from .pipeline import run
+from .result import MassMap
 
 # Define what gets imported with "from smpy import *"
 __all__ = [
@@ -30,6 +30,7 @@ __all__ = [
     'map_aperture_mass',
     'map_ks_plus',
     'Config',
+    'MassMap',
     'run',
     '__version__'
 ]

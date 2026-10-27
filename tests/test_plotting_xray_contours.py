@@ -1,217 +1,73 @@
-"""Unit tests for DS9 x-ray contour overlays in plotting."""
+"""Behavior tests for DS9 x-ray contour overlays on SMPy plots."""
 
-import os
-import tempfile
-import unittest
 from pathlib import Path
 
-import matplotlib
-import numpy as np
-
-matplotlib.use("Agg", force=True)
 import matplotlib.pyplot as plt
+import numpy as np
+import pytest
 
-import sys
-sys.path.insert(0, str(Path(__file__).parent.parent))
+import smpy
 
-from smpy.plotting.plot import plot_mass_map, plot_snr_map
-from smpy.plotting.utils import read_ds9_ctr
+CATALOG = Path(__file__).resolve().parents[1] / "examples" / "data" / "forecast_lum_annular.fits"
+COLUMNS = dict(g1_col="g1_Rinv", g2_col="g2_Rinv", weight_col="weight")
+PIXEL = dict(coord_system="pixel", downsample_factor=170, coord1_col="X_IMAGE_se", coord2_col="Y_IMAGE_se",
+             **COLUMNS)
 
+@pytest.fixture
+def result():
+    """Pixel-coordinate maps of the example catalog, with SNR maps."""
+    return smpy.map_mass(CATALOG, create_snr=True, snr={"num_shuffles": 2}, **PIXEL)
 
-class TestXRayContourPlotting(unittest.TestCase):
-    """Test DS9 contour parsing and map-type overlay toggles."""
-
-    def setUp(self):
-        """Set up reusable test maps and boundaries."""
-        self.data = np.linspace(0.0, 1.0, 100).reshape(10, 10)
-        self.scaled_boundaries = {
-            "coord1_min": 0.0,
-            "coord1_max": 10.0,
-            "coord2_min": 0.0,
-            "coord2_max": 10.0,
-        }
-        self.true_boundaries = {
-            "coord1_min": 0.0,
-            "coord1_max": 10.0,
-            "coord2_min": 0.0,
-            "coord2_max": 10.0,
-        }
-        self._temp_files = []
-
-    def tearDown(self):
-        """Remove temporary files created by tests."""
-        for path in self._temp_files:
-            if os.path.exists(path):
-                os.unlink(path)
-
-    def test_read_ds9_ctr_parses_line_blocks(self):
-        """Parser should split contours by ``line`` directives."""
-        ctr_path = self._write_ctr_file(
-            """
-            # DS9 contour export
-            fk5
-            1 1
-            2 2
-            line
-            3 3
-            4 4
-            """
-        )
-
-        contours, coord_type = read_ds9_ctr(ctr_path)
-
-        self.assertEqual(coord_type, "fk5")
-        self.assertEqual(len(contours), 2)
-        self.assertEqual(contours[0].shape, (2, 2))
-        self.assertEqual(contours[1].shape, (2, 2))
-
-    def test_convergence_toggle_only(self):
-        """Contours should draw on convergence maps when enabled."""
-        ctr_path = self._write_ctr_file(
-            """
-            fk5
-            2 2
-            4 4
-            line
-            6 6
-            8 8
-            """
-        )
-        config = self._radec_config(
-            ctr_path=ctr_path,
-            show_on_convergence=True,
-            show_on_snr=False,
-        )
-
-        fig, ax, _ = plot_mass_map(
-            data=self.data,
-            scaled_boundaries=self.scaled_boundaries,
-            true_boundaries=self.true_boundaries,
-            config=config,
-            return_handles=True,
-        )
-        self.assertGreater(len(ax.lines), 0)
+@pytest.mark.parametrize("on_convergence, on_snr", [(True, False), (False, True)])
+def test_contours_follow_their_switches(result, tmp_path, on_convergence, on_snr):
+    """Each contour in the file is drawn on exactly the maps its switches
+    select."""
+    ctr_file = tmp_path / "xray.ctr"
+    ctr_file.write_text("# Contour file format: DS9 version 7.5\nglobal color=green width=1\nimage\n"
+                        "level=1\n(\n10 10\n20 20\n)\nlevel=2\n(\n30 30\n40 40\n)\n")
+    contours = {"ctr_file": str(ctr_file), "show_on_convergence": on_convergence, "show_on_snr": on_snr}
+    for snr, shown in ((False, on_convergence), (True, on_snr)):
+        fig, ax, _ = result.plot("E", snr=snr, xray_contours=contours)
+        assert len(ax.lines) == (2 if shown else 0)
         plt.close(fig)
 
-        fig, ax, _ = plot_snr_map(
-            data=self.data,
-            scaled_boundaries=self.scaled_boundaries,
-            true_boundaries=self.true_boundaries,
-            config=config,
-            return_handles=True,
-        )
-        self.assertEqual(len(ax.lines), 0)
-        plt.close(fig)
+@pytest.mark.parametrize("axis_reference", ["catalog", "map"])
+def test_image_contours_land_on_their_pixels(result, tmp_path, axis_reference):
+    """A contour point at DS9 image pixel (i, j) is drawn at the center of map
+    pixel (i, j)."""
+    ctr_file = tmp_path / "xray.ctr"
+    ctr_file.write_text("image\n(1 1\n3 2)\n")
+    contours = {"ctr_file": str(ctr_file), "show_on_convergence": True}
+    fig, ax, image = result.plot("E", axis_reference=axis_reference, xray_contours=contours)
+    left, right, bottom, top = image.get_extent()
+    ny, nx = result.maps["E"].shape
+    pixels = np.array([[1, 1], [3, 2]])
+    expected = np.column_stack((left + (pixels[:, 0] - 0.5) * (right - left) / nx,
+                                bottom + (pixels[:, 1] - 0.5) * (top - bottom) / ny))
+    np.testing.assert_allclose(ax.lines[0].get_xydata(), expected)
+    plt.close(fig)
 
-    def test_snr_toggle_only(self):
-        """Contours should draw on SNR maps when enabled."""
-        ctr_path = self._write_ctr_file(
-            """
-            fk5
-            1 9
-            5 5
-            9 1
-            """
-        )
-        config = self._radec_config(
-            ctr_path=ctr_path,
-            show_on_convergence=False,
-            show_on_snr=True,
-        )
+def test_sky_contours_land_where_the_wcs_puts_them(tmp_path):
+    """A contour point given in RA/Dec is drawn at the center of the map pixel
+    where the WCS puts it."""
+    result = smpy.map_mass(CATALOG, pixel_scale=0.4, **COLUMNS)
+    pixels = np.array([[10, 5], [40, 30]])
+    ra, dec = result.wcs.wcs_pix2world(pixels, 0).T
+    ctr_file = tmp_path / "xray.ctr"
+    ctr_file.write_text("fk5\n(\n" + "".join(f"{r:.10f} {d:.10f}\n" for r, d in zip(ra, dec)) + ")\n")
+    fig, ax, image = result.plot("E", xray_contours={"ctr_file": str(ctr_file), "show_on_convergence": True})
+    left, right, bottom, top = image.get_extent()
+    ny, nx = result.maps["E"].shape
+    expected = np.column_stack((left + (pixels[:, 0] + 0.5) * (right - left) / nx,
+                                bottom + (pixels[:, 1] + 0.5) * (top - bottom) / ny))
+    np.testing.assert_allclose(ax.lines[0].get_xydata(), expected, rtol=0, atol=1e-9)
+    plt.close(fig)
 
-        fig, ax, _ = plot_mass_map(
-            data=self.data,
-            scaled_boundaries=self.scaled_boundaries,
-            true_boundaries=self.true_boundaries,
-            config=config,
-            return_handles=True,
-        )
-        self.assertEqual(len(ax.lines), 0)
-        plt.close(fig)
-
-        fig, ax, _ = plot_snr_map(
-            data=self.data,
-            scaled_boundaries=self.scaled_boundaries,
-            true_boundaries=self.true_boundaries,
-            config=config,
-            return_handles=True,
-        )
-        self.assertGreater(len(ax.lines), 0)
-        plt.close(fig)
-
-    def test_pixel_image_contours_map_reference(self):
-        """Image-space contours should convert for pixel ``axis_reference=map``."""
-        ctr_path = self._write_ctr_file(
-            """
-            image
-            1 1
-            10 10
-            """
-        )
-        config = self._pixel_config(
-            ctr_path=ctr_path,
-            show_on_convergence=True,
-            show_on_snr=False,
-            axis_reference="map",
-        )
-
-        fig, ax, _ = plot_mass_map(
-            data=self.data,
-            scaled_boundaries=self.scaled_boundaries,
-            true_boundaries=self.true_boundaries,
-            config=config,
-            return_handles=True,
-        )
-
-        self.assertEqual(len(ax.lines), 1)
-        x_data = ax.lines[0].get_xdata()
-        y_data = ax.lines[0].get_ydata()
-        self.assertAlmostEqual(float(x_data[0]), 0.5)
-        self.assertAlmostEqual(float(y_data[0]), 0.5)
-        plt.close(fig)
-
-    def _write_ctr_file(self, content):
-        """Write contour text to a temporary file."""
-        handle = tempfile.NamedTemporaryFile(mode="w", suffix=".ctr", delete=False)
-        handle.write(content.strip() + "\n")
-        handle.close()
-        self._temp_files.append(handle.name)
-        return handle.name
-
-    def _radec_config(self, ctr_path, show_on_convergence, show_on_snr):
-        """Build minimal RA/Dec plotting config for contour tests."""
-        return {
-            "coordinate_system": "radec",
-            "figsize": (4, 3),
-            "fontsize": 10,
-            "cmap": "viridis",
-            "xlabel": "auto",
-            "ylabel": "auto",
-            "plot_title": "Test",
-            "gridlines": False,
-            "vmin": None,
-            "vmax": None,
-            "threshold": None,
-            "verbose": False,
-            "cluster_center": None,
-            "scaling": {"type": "linear"},
-            "xray_contours": {
-                "ctr_file": ctr_path,
-                "show_on_convergence": show_on_convergence,
-                "show_on_snr": show_on_snr,
-                "color": "cyan",
-                "linewidth": 0.8,
-                "alpha": 0.7,
-            },
-        }
-
-    def _pixel_config(self, ctr_path, show_on_convergence, show_on_snr, axis_reference):
-        """Build minimal pixel plotting config for contour tests."""
-        config = self._radec_config(ctr_path, show_on_convergence, show_on_snr)
-        config["coordinate_system"] = "pixel"
-        config["axis_reference"] = axis_reference
-        return config
-
-
-if __name__ == "__main__":
-    unittest.main()
+def test_contours_in_other_sky_frames_are_rejected(tmp_path):
+    """Contours in a sky frame other than fk5 or icrs raise an error instead
+    of being drawn as fk5."""
+    result = smpy.map_mass(CATALOG, pixel_scale=0.4, **COLUMNS)
+    ctr_file = tmp_path / "xray.ctr"
+    ctr_file.write_text("galactic\n(\n199.45 33.05\n199.5 33.1\n)\n")
+    with pytest.raises(ValueError, match="'galactic'"):
+        result.plot("E", xray_contours={"ctr_file": str(ctr_file), "show_on_convergence": True})

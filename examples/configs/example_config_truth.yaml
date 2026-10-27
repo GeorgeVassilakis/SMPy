@@ -1,0 +1,21 @@
+# Example SMPy configuration for the noiseless NFW truth catalog.
+# Settings not listed here take their values from smpy/configs/default.yaml.
+# Relative paths resolve from this file's directory.
+
+general:
+  input_path: "../data/forecast_lum_truth.fits"
+  output_directory: "../outputs"
+  output_base_name: "truth_testing"
+  radec:
+    pixel_scale: 0.4
+  pixel:
+    downsample_factor: 170
+    coord1_col: "x_image"
+    coord2_col: "y_image"
+  g1_col: "nfw_g1"
+  g2_col: "nfw_g2"
+  create_snr: true
+
+plotting:
+  figsize: [20, 10]
+  cmap: "magma"

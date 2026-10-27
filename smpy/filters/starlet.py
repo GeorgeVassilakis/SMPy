@@ -14,57 +14,23 @@ This code draws from the CosmoStat implementation:
     (MIT Licensed)
 """
 
-import numpy as np
-from scipy.ndimage import convolve1d
 from typing import Optional
 
-def b3spline_filter(step=1):
-    """Create a B3-spline filter for the starlet transform.
+import numpy as np
 
-    Generate the 1D B3-spline filter kernel used in the starlet wavelet
-    transform with appropriate dilation for the à trous algorithm.
+B3_SPLINE = np.array([1, 4, 6, 4, 1]) / 16
+"""Taps of the B3-spline filter of the starlet transform (`numpy.ndarray`)."""
 
-    Parameters
-    ----------
-    step : `int`, optional
-        The dilation step for the à trous algorithm.
-
-    Returns
-    -------
-    kernel : `numpy.ndarray`
-        The 1D B3-spline filter with appropriate spacing.
-
-    Notes
-    -----
-    The B3-spline filter coefficients are [1/16, 1/4, 3/8, 1/4, 1/16].
-    For step > 1, zeros are inserted between coefficients according to
-    the à trous algorithm.
-    """
-    # B3-spline filter coefficients
-    h = np.array([1.0/16, 1.0/4, 3.0/8, 1.0/4, 1.0/16])
-    
-    # For step=1, return the basic filter
-    if step == 1:
-        return h
-    
-    # For larger steps, add zeros between coefficients (à trous algorithm)
-    kernel = np.zeros(len(h) + (len(h)-1)*(step-1))
-    kernel[::step] = h
-    
-    return kernel
-
-def apply_filter(data, kernel):
-    """Apply separable convolution with the given kernel.
-
-    Perform 2D convolution by applying the 1D kernel separately along
-    rows and columns using mirror boundary conditions.
+def apply_filter(data, step):
+    """Smooth an image with the B3-spline filter, its taps ``step`` pixels
+    apart.
 
     Parameters
     ----------
     data : `numpy.ndarray`
         Input 2D image.
-    kernel : `numpy.ndarray`
-        1D convolution kernel.
+    step : `int`
+        Spacing of the filter taps; 2^j at scale j of the à trous algorithm.
 
     Returns
     -------
@@ -73,12 +39,17 @@ def apply_filter(data, kernel):
 
     Notes
     -----
-    Uses mirror boundary conditions to handle edges appropriately
-    for wavelet transforms.
+    The filter is applied along columns, then rows, with the image mirrored
+    at its edges without repeating the edge pixel (``mode='reflect'`` in
+    `numpy.pad`). Only the five taps are applied, so the cost does not grow
+    with ``step``.
     """
-    # Apply filter along rows, then columns
-    temp = convolve1d(data, kernel, axis=0, mode='mirror')
-    return convolve1d(temp, kernel, axis=1, mode='mirror')
+    # Filter down the columns, then transpose to filter along the rows
+    for _ in range(2):
+        n = data.shape[0]
+        padded = np.pad(data, ((2 * step, 2 * step), (0, 0)), mode="reflect")
+        data = sum(tap * padded[k * step:k * step + n] for k, tap in enumerate(B3_SPLINE)).T
+    return data
 
 def starlet_transform_2d(data, nscales):
     """Compute the isotropic undecimated wavelet transform of an image.
@@ -108,39 +79,32 @@ def starlet_transform_2d(data, nscales):
     """
     # Make sure input is float
     data = np.float64(data)
-    
+
     # Initialize arrays
     ny, nx = data.shape
     wavelet_bands = np.zeros((nscales, ny, nx))
-    
+
     # Initialize smoothed data
     smoothed_data = data.copy()
-    
+
     # Compute wavelet bands
     for j in range(nscales-1):
-        # Get filter for current scale
-        step = 2**j
-        kernel = b3spline_filter(step)
-        
-        # Smooth data using convolution with the filter
-        smoothed_j_plus_1 = apply_filter(smoothed_data, kernel)
-        
+        # Smooth with the filter taps 2^j pixels apart
+        smoothed_j_plus_1 = apply_filter(smoothed_data, 2**j)
+
         # Wavelet coefficients = detail signal between two scales
         wavelet_bands[j] = smoothed_data - smoothed_j_plus_1
-        
+
         # Update smoothed data for next scale
         smoothed_data = smoothed_j_plus_1
-    
+
     # Last scale contains the coarse approximation
     wavelet_bands[nscales-1] = smoothed_data
-    
+
     return wavelet_bands
 
 def inverse_starlet_transform_2d(wavelet_bands):
     """Reconstruct an image from its starlet transform coefficients.
-
-    Perform the inverse starlet transform using the second generation
-    reconstruction algorithm to recover the original image.
 
     Parameters
     ----------
@@ -155,30 +119,10 @@ def inverse_starlet_transform_2d(wavelet_bands):
 
     Notes
     -----
-    The reconstruction starts with the coarsest scale and progressively
-    adds detail bands from coarse to fine scales, applying appropriate
-    smoothing at each step to ensure perfect reconstruction.
+    Each detail band is the difference between two successive smoothings of
+    the image, so the detail bands and the coarse residual sum to the image.
     """
-    nscales, _, _ = wavelet_bands.shape
-    
-    # Start with the coarsest scale
-    reconstructed = np.copy(wavelet_bands[nscales-1])
-    
-    # Process each detail band from coarse to fine
-    for j in range(nscales-2, -1, -1):
-        # Calculate step size for the filter
-        step = 2**(j)
-        
-        # Get filter for current scale
-        kernel = b3spline_filter(step)
-        
-        # Apply filter to current reconstruction
-        filtered = apply_filter(reconstructed, kernel)
-        
-        # Add the wavelet coefficients
-        reconstructed = filtered + wavelet_bands[j]
-    
-    return reconstructed
+    return np.sum(wavelet_bands, axis=0)
 
 
 def compute_starlet_nscales_max(height: int, width: int) -> int:

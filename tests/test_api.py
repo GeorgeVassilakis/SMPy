@@ -1,285 +1,196 @@
-"""Unit tests for SMPy API functions.
+"""Behavior tests for the Python API."""
 
-This module contains comprehensive tests for the SMPy public API functions,
-ensuring correct configuration generation, parameter validation, and
-integration with the core mass mapping functionality.
-"""
-
-import unittest
-import tempfile
-import os
+import random
 from pathlib import Path
 
-import sys
-sys.path.insert(0, str(Path(__file__).parent.parent))
+import matplotlib.pyplot as plt
+import numpy as np
+import pytest
+from astropy.io import fits
+from astropy.table import MaskedColumn, Table
 
-from smpy.config import Config
-from smpy.api import map_mass, map_kaiser_squires, map_aperture_mass, map_ks_plus
+import smpy
+from smpy import Config
+from smpy.cli import main
+from smpy.mapping_methods import METHODS
 
+CATALOG = Path(__file__).resolve().parents[1] / "examples" / "data" / "forecast_lum_annular.fits"
+COLUMNS = dict(g1_col="g1_Rinv", g2_col="g2_Rinv", weight_col="weight")
+RADEC = dict(pixel_scale=0.4, **COLUMNS)
+PIXEL = dict(coord_system="pixel", downsample_factor=170, coord1_col="X_IMAGE_se", coord2_col="Y_IMAGE_se",
+             **COLUMNS)
 
-class TestAPIConfigGeneration(unittest.TestCase):
-    """Test suite for API function configuration generation.
-    
-    Verify that all public API functions correctly generate configuration
-    objects with appropriate parameters for the underlying mass mapping
-    methods.
-    """
-    
-    def setUp(self):
-        """Set up temporary files for testing.
-        
-        Create temporary FITS files needed for API function testing
-        without requiring actual data content.
-        """
-        # Create a temporary FITS file for testing
-        self.temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.fits', delete=False)
-        self.temp_file.close()
-        self.temp_file_path = self.temp_file.name
-    
-    def tearDown(self):
-        """Clean up temporary files.
-        
-        Remove temporary files created during test setup to maintain
-        clean test environment.
-        """
-        if os.path.exists(self.temp_file_path):
-            os.unlink(self.temp_file_path)
-    
-    def test_map_mass_generates_correct_config(self):
-        """Test map_mass generates correct configuration structure.
-        
-        Verify that the generic map_mass function properly constructs
-        configuration objects with all specified parameters and default
-        values for the Kaiser-Squires method.
-        """
-        # We'll test config generation by catching the config before it's executed
-        # This is done by mocking the run function
-        from unittest.mock import patch
-        
-        with patch('smpy.run.run') as mock_run:
-            # Call the API function
-            map_mass(
-                data=self.temp_file_path,
-                method='kaiser_squires',
-                coord_system='radec',
-                pixel_scale=0.168,
-                output_dir='/test',
-                create_snr=True,
-                smoothing=3.0
-            )
-            
-            # Check that run was called with a Config object
-            self.assertTrue(mock_run.called)
-            config_arg = mock_run.call_args[0][0]
-            self.assertIsInstance(config_arg, Config)
-            
-            # Convert to dict and check structure
-            config_dict = config_arg.to_dict()
-            
-            # Check general parameters
-            self.assertEqual(config_dict['general']['input_path'], self.temp_file_path)
-            self.assertEqual(config_dict['general']['method'], 'kaiser_squires')
-            self.assertEqual(config_dict['general']['coordinate_system'], 'radec')
-            self.assertEqual(config_dict['general']['radec']['resolution'], 0.168)
-            self.assertEqual(config_dict['general']['output_directory'], '/test')
-            self.assertEqual(config_dict['general']['create_snr'], True)
-            
-            # Check method-specific parameters
-            self.assertEqual(config_dict['methods']['kaiser_squires']['smoothing']['sigma'], 3.0)
-    
-    def test_map_kaiser_squires_sets_correct_method(self):
-        """Test map_kaiser_squires sets method and parameters correctly.
-        
-        Verify that the Kaiser-Squires specific API function generates
-        configurations with the correct method identifier and smoothing
-        parameters.
-        """
-        from unittest.mock import patch
-        
-        with patch('smpy.run.run') as mock_run:
-            map_kaiser_squires(
-                data=self.temp_file_path,
-                coord_system='radec',
-                pixel_scale=0.168,
-                smoothing=1.5
-            )
-            
-            config_arg = mock_run.call_args[0][0]
-            config_dict = config_arg.to_dict()
-            
-            # Check method is set correctly
-            self.assertEqual(config_dict['general']['method'], 'kaiser_squires')
-            self.assertEqual(config_dict['methods']['kaiser_squires']['smoothing']['sigma'], 1.5)
-    
-    def test_map_aperture_mass_sets_correct_method(self):
-        """Test map_aperture_mass sets method and filter parameters.
-        
-        Verify that the aperture mass API function correctly configures
-        filter types and scales specific to the aperture mass method.
-        """
-        from unittest.mock import patch
-        
-        with patch('smpy.run.run') as mock_run:
-            map_aperture_mass(
-                data=self.temp_file_path,
-                coord_system='radec',
-                pixel_scale=0.168,
-                filter_type='schneider',
-                filter_scale=80
-            )
-            
-            config_arg = mock_run.call_args[0][0]
-            config_dict = config_arg.to_dict()
-            
-            # Check method is set correctly
-            self.assertEqual(config_dict['general']['method'], 'aperture_mass')
-            
-            # Check aperture mass specific parameters
-            filter_config = config_dict['methods']['aperture_mass']['filter']
-            self.assertEqual(filter_config['type'], 'schneider')
-            self.assertEqual(filter_config['scale'], 80)
-    
-    def test_map_ks_plus_sets_correct_method(self):
-        """Test map_ks_plus sets method and iteration parameters.
-        
-        Verify that the KS+ API function correctly configures inpainting
-        iterations and reduced shear iterations specific to the KS+ method.
-        """
-        from unittest.mock import patch
-        
-        with patch('smpy.run.run') as mock_run:
-            map_ks_plus(
-                data=self.temp_file_path,
-                coord_system='radec',
-                pixel_scale=0.168,
-                smoothing=2.5,
-                inpainting_iterations=150,
-                reduced_shear_iterations=5
-            )
-            
-            config_arg = mock_run.call_args[0][0]
-            config_dict = config_arg.to_dict()
-            
-            # Check method is set correctly
-            self.assertEqual(config_dict['general']['method'], 'ks_plus')
-            
-            # Check KS+ specific parameters
-            ks_plus_config = config_dict['methods']['ks_plus']
-            self.assertEqual(ks_plus_config['smoothing']['sigma'], 2.5)
-            self.assertEqual(ks_plus_config['inpainting_iterations'], 150)
-            self.assertEqual(ks_plus_config['reduced_shear_iterations'], 5)
-    
-    def test_pixel_coordinate_system(self):
-        """Test API functions work correctly with pixel coordinates.
-        
-        Verify that API functions properly handle pixel coordinate system
-        configuration including downsample factors and coordinate-specific
-        parameters.
-        """
-        from unittest.mock import patch
-        
-        with patch('smpy.run.run') as mock_run:
-            map_mass(
-                data=self.temp_file_path,
-                coord_system='pixel',
-                downsample_factor=3,
-                method='kaiser_squires'
-            )
-            
-            config_arg = mock_run.call_args[0][0]
-            config_dict = config_arg.to_dict()
-            
-            # Check coordinate system settings
-            self.assertEqual(config_dict['general']['coordinate_system'], 'pixel')
-            self.assertEqual(config_dict['general']['pixel']['downsample_factor'], 3)
-    
-    def test_additional_parameters(self):
-        """Test additional parameter handling in API functions.
-        
-        Verify that optional parameters like custom column names, modes,
-        and output options are correctly passed through to the configuration.
-        """
-        from unittest.mock import patch
-        
-        with patch('smpy.run.run') as mock_run:
-            map_mass(
-                data=self.temp_file_path,
-                coord_system='radec',
-                pixel_scale=0.168,
-                g1_col='custom_g1',
-                g2_col='custom_g2',
-                weight_col='weight_custom',
-                mode=['E', 'B'],
-                save_fits=True,
-                print_timing=True
-            )
-            
-            config_arg = mock_run.call_args[0][0]
-            config_dict = config_arg.to_dict()
-            
-            # Check additional parameters
-            self.assertEqual(config_dict['general']['g1_col'], 'custom_g1')
-            self.assertEqual(config_dict['general']['g2_col'], 'custom_g2')
-            self.assertEqual(config_dict['general']['weight_col'], 'weight_custom')
-            self.assertEqual(config_dict['general']['mode'], ['E', 'B'])
-            self.assertEqual(config_dict['general']['save_fits'], True)
-            self.assertEqual(config_dict['general']['print_timing'], True)
-    
-    def test_config_validation_works_correctly(self):
-        """Test configuration validation in API functions.
-        
-        Verify that the API functions properly validate required parameters
-        and raise appropriate errors for missing or invalid configurations.
-        """
-        from unittest.mock import patch
-        
-        # Test that valid config passes validation (should not raise)
-        with patch('smpy.run.run'):
-            try:
-                map_mass(
-                    data=self.temp_file_path,
-                    coord_system='radec',
-                    pixel_scale=0.168
-                )
-                # If we get here, validation passed (which is expected)
-            except ValueError:
-                self.fail("Valid configuration should not raise ValueError during validation")
-        
-        # Test that invalid config fails validation with specific error
-        with patch('smpy.run.run'):
-            with self.assertRaises(ValueError) as context:
-                map_mass(
-                    data=self.temp_file_path,
-                    coord_system='radec'
-                    # Missing required pixel_scale for radec system
-                )
-            
-            # Verify the error message mentions the missing parameter
-            self.assertIn('pixel_scale', str(context.exception))
-    
-    def test_invalid_parameters_raise_error(self):
-        """Test invalid parameter error handling.
-        
-        Verify that API functions raise ValueError for missing required
-        parameters like pixel_scale for RA/Dec systems and downsample_factor
-        for pixel systems.
-        """
-        # Test missing required parameter
-        with self.assertRaises(ValueError):
-            map_mass(
-                data=self.temp_file_path,
-                coord_system='radec'
-                # Missing pixel_scale
-            )
-        
-        # Test missing downsample_factor for pixel system
-        with self.assertRaises(ValueError):
-            map_mass(
-                data=self.temp_file_path,
-                coord_system='pixel'
-                # Missing downsample_factor
-            )
+@pytest.fixture
+def table():
+    """The example catalog as an astropy Table."""
+    return Table.read(CATALOG, hdu=1)
 
+def test_file_and_table_inputs_agree(table):
+    """A file path and the same catalog as a Table give identical maps."""
+    from_file = smpy.map_mass(CATALOG, **RADEC)
+    from_table = smpy.map_mass(table, **RADEC)
+    for mode in "EB":
+        np.testing.assert_array_equal(from_file.maps[mode], from_table.maps[mode])
 
-if __name__ == '__main__':
-    unittest.main()
+def test_grid_reproduces_maps():
+    """The grid on a result is the one its maps were made from."""
+    result = smpy.map_mass(CATALOG, **RADEC)
+    mapper = METHODS["kaiser_squires"](**result.settings["methods"]["kaiser_squires"])
+    for mode, grid_map in zip("EB", mapper.create_maps(result.grid)):
+        np.testing.assert_array_equal(grid_map, result.maps[mode])
+
+@pytest.mark.parametrize("shuffle_type", ["spatial", "orientation"])
+def test_map_mass_has_no_side_effects(table, tmp_path, monkeypatch, shuffle_type):
+    """map_mass writes no files and leaves its input and global RNGs alone."""
+    monkeypatch.chdir(tmp_path)
+    before = table.copy()
+    python_state, numpy_state = random.getstate(), np.random.get_state()
+    smpy.map_mass(table, create_snr=True, snr={"shuffle_type": shuffle_type, "num_shuffles": 2}, **RADEC)
+
+    assert list(tmp_path.iterdir()) == []
+    for name in table.colnames:
+        np.testing.assert_array_equal(table[name], before[name])
+    after = np.random.get_state()
+    assert random.getstate() == python_state
+    assert np.array_equal(after[1], numpy_state[1]) and after[2:] == numpy_state[2:]
+
+def test_smpy_command_matches_map_mass(tmp_path):
+    """The smpy command and map_mass give the same maps from settings of the
+    same names, and the settings record the command writes repeats its run."""
+    config_path = tmp_path / "run.yaml"
+    config_path.write_text(
+        f"general:\n  input_path: {CATALOG}\n  output_directory: out\n  mode: [E, B]\n"
+        "  save_plots: false\n  save_fits: true\n  radec: {pixel_scale: 0.4}\n"
+        "  g1_col: g1_Rinv\n  g2_col: g2_Rinv\n  weight_col: weight\n"
+        "methods:\n  kaiser_squires: {smoothing: 1.5}\n")
+    main(["-c", str(config_path)])
+    from_python = smpy.map_mass(CATALOG, smoothing=1.5, **RADEC)
+
+    output = tmp_path / "out" / "kaiser_squires"
+    for mode in "EB":
+        written = fits.getdata(output / f"smpy_output_kaiser_squires_{mode.lower()}_mode.fits")
+        np.testing.assert_array_equal(written, from_python.maps[mode])
+    record = Config.from_file(output / "smpy_output_kaiser_squires_settings.yaml").resolved()
+    assert record == Config.from_file(config_path).resolved()
+    assert record["methods"] == from_python.settings["methods"]
+
+def test_numpy_numbers_and_paths_in_settings_save(tmp_path):
+    """Settings given from Python as numpy numbers and paths save to YAML
+    over an existing file and reload unchanged."""
+    config = Config.from_defaults("kaiser_squires", input_path=CATALOG, pixel_scale=np.float64(0.4),
+                                  **COLUMNS)
+    path = tmp_path / "run.yaml"
+    path.write_text("general: {}\n")
+    config.save(path)
+    assert Config.from_file(path).resolved() == config.resolved()
+
+INVALID = {
+    "other method's setting": ({"inpainting_iterations": 5, **RADEC},
+                               "Unknown setting 'inpainting_iterations'"),
+    "unknown method": ({"method": "kaiser_squirez", **RADEC}, "general.method must be one of"),
+    "missing pixel_scale": (COLUMNS, "general.radec.pixel_scale is required"),
+    "negative smoothing": ({"smoothing": -1.0, **RADEC}, "smoothing must be a number of at least 0"),
+    "unknown filter": ({"method": "aperture_mass", "filter_type": "gauss", **RADEC}, "filter_type must be"),
+    "misspelled YAML key": ("plotting:\n  cmapp: magma\n", "Unknown setting 'plotting.cmapp'"),
+    "invalid YAML value": ("general:\n  radec: {pixel_scale: 0.4}\n  mode: [E, C]\n",
+                           "general.mode may contain only"),
+    "misspelled keyword set to None": ({"smoothng": None, **RADEC}, "Unknown setting 'smoothng'"),
+    "no reduced-shear step": ({"method": "ks_plus", "reduced_shear_iterations": 0, **RADEC},
+                              "reduced_shear_iterations must be an integer of at least 1"),
+    "no inpainting": ({"method": "ks_plus", "inpainting_iterations": 0, **RADEC},
+                      "inpainting_iterations must be an integer of at least 1"),
+    "one starlet scale": ({"method": "ks_plus", "nscales": 1, **RADEC}, "nscales must be null or an integer"),
+    "unknown scaling": ("general:\n  radec: {pixel_scale: 0.4}\nplotting:\n  scaling: {type: logg}\n",
+                        "plotting.scaling.type must be one of"),
+    "scaling as a string": ("general:\n  radec: {pixel_scale: 0.4}\nplotting:\n  scaling: symlog\n",
+                            "plotting.scaling must be a mapping"),
+}
+
+@pytest.mark.parametrize("settings, name", INVALID.values(), ids=INVALID.keys())
+def test_invalid_settings_name_the_setting(settings, name, tmp_path):
+    """Invalid keywords and YAML settings raise errors that name them."""
+    with pytest.raises(ValueError, match=name):
+        if isinstance(settings, str):
+            (tmp_path / "run.yaml").write_text(settings)
+            smpy.run(tmp_path / "run.yaml")
+        else:
+            smpy.map_mass(CATALOG, **settings)
+
+def nan_shear(table):
+    """Set one shear to NaN."""
+    table["g1_Rinv"][0] = np.nan
+
+def masked_shear(table):
+    """Mask one shear."""
+    table["g2_Rinv"] = MaskedColumn(table["g2_Rinv"], mask=np.arange(len(table)) == 0)
+
+def galaxy_at_antipode(table):
+    """Move the last galaxy to the point of the sky opposite the first."""
+    table["ra"][-1], table["dec"][-1] = (table["ra"][0] + 180) % 360, -table["dec"][0]
+
+def pixel_unit_on_ra(table):
+    """Declare the RA column in pixels."""
+    table["ra"].unit = "pix"
+
+@pytest.mark.parametrize("spoil, error", [
+    (nan_shear, "Column 'g1_Rinv' has 1 NaN, infinite or masked values"),
+    (masked_shear, "Column 'g2_Rinv' has 1 NaN, infinite or masked values"),
+    (galaxy_at_antipode, "90 degrees or more from the field center"),
+    (pixel_unit_on_ra, "Column 'ra' has unit 'pix', which is not convertible to deg"),
+], ids=["NaN shear", "masked shear", "galaxy at the antipode", "RA in pixels"])
+def test_unusable_catalogs_raise(table, spoil, error):
+    """Catalogs that cannot be mapped raise errors saying why."""
+    spoil(table)
+    with pytest.raises(ValueError, match=error):
+        smpy.map_mass(table, **RADEC)
+
+def test_coordinates_in_radians_give_the_same_maps(table):
+    """RA and Dec declared in radians give the maps of the same catalog in
+    degrees."""
+    in_degrees = smpy.map_mass(table, **RADEC)
+    for name in ("ra", "dec"):
+        table[name] = table[name].quantity.to("rad")
+    in_radians = smpy.map_mass(table, **RADEC)
+    for mode in "EB":
+        np.testing.assert_allclose(in_radians.maps[mode], in_degrees.maps[mode], rtol=0, atol=1e-12)
+
+def test_ks_plus_clips_too_many_scales():
+    """KS+ reduces an nscales too large for the map to the largest that fits,
+    and warns."""
+    # 8 is just above the limit for this map, so an unclipped run stays fast
+    settings = dict(inpainting_iterations=2, reduced_shear_iterations=1, **RADEC)
+    with pytest.warns(UserWarning, match="nscales=8 was clipped"):
+        clipped = smpy.map_mass(CATALOG, "ks_plus", nscales=8, **settings)
+    largest = smpy.map_mass(CATALOG, "ks_plus", **settings)
+    for mode in "EB":
+        np.testing.assert_array_equal(clipped.maps[mode], largest.maps[mode])
+
+@pytest.mark.parametrize("settings", [RADEC, PIXEL], ids=["radec", "pixel"])
+def test_plot_draws_on_given_axes(settings):
+    """plot draws on the axes it is given and leaves the figure open."""
+    result = smpy.map_mass(CATALOG, **settings)
+    fig, ax = plt.subplots()
+    returned_fig, returned_ax, image = result.plot("E", ax=ax)
+    assert returned_fig is fig and returned_ax is ax and image in ax.images
+    assert plt.fignum_exists(fig.number)
+    plt.close(fig)
+
+def test_percentile_scaling_ignores_undefined_pixels(table):
+    """Percentile color limits come from the defined pixels of a map with
+    undefined ones: aperture-mass SNR inside a hole wider than the aperture."""
+    hole = np.hypot((table["ra"] - np.median(table["ra"])) * np.cos(np.deg2rad(np.median(table["dec"]))),
+                    table["dec"] - np.median(table["dec"])) < 0.05
+    table["weight"][hole] = 0.0
+    result = smpy.map_mass(table, "aperture_mass", filter_scale=3, create_snr=True, snr={"num_shuffles": 5},
+                           **RADEC)
+    snr = result.snr["E"]
+    assert np.isnan(snr).any()
+    _, _, image = result.plot("E", snr=True, scaling={"percentile": [1, 99]})
+    np.testing.assert_allclose([image.norm.vmin, image.norm.vmax], np.nanpercentile(snr, [1, 99]))
+    plt.close(image.figure)
+
+def test_pixel_maps_export_to_fits(tmp_path):
+    """Pixel-coordinate maps can be written to FITS."""
+    result = smpy.map_mass(CATALOG, **PIXEL)
+    result.to_fits(tmp_path / "map.fits")
+    np.testing.assert_array_equal(fits.getdata(tmp_path / "map.fits"), result.maps["E"])

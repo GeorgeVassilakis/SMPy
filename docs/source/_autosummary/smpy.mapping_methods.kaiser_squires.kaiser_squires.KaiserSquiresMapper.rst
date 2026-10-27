@@ -15,16 +15,9 @@
    
       ~KaiserSquiresMapper.__init__
       ~KaiserSquiresMapper.create_maps
-      ~KaiserSquiresMapper.run
    
    
 
    
-   
-   .. rubric:: Attributes
-
-   .. autosummary::
-   
-      ~KaiserSquiresMapper.name
    
    

@@ -10,4 +10,5 @@ measures of reconstruction quality.
    :toctree: ../_autosummary
    :nosignatures:
 
-   smpy.error_quantification.snr.run.run
+   smpy.snr.compute_snr
+   smpy.snr.generate_multiple_shear_dfs

@@ -3,21 +3,24 @@ Plotting
 
 Visualization tools for mass mapping results.
 
-Functions for creating publication-quality plots of mass and SNR maps.
+Functions for creating publication-quality plots of mass and SNR maps. Most
+users call `smpy.MassMap.plot`, which passes the ``plotting`` settings to
+these functions.
 
 .. autosummary::
    :toctree: ../_autosummary
    :nosignatures:
 
    smpy.plotting.plot.plot_mass_map
-   smpy.plotting.plot.plot_snr_map
 
 Counts Map
 ----------
 
-When ``general.create_counts_map: true`` is set, SMPy will generate a per-pixel
-object counts map using the same plotting extent as the mass maps and save it as
-``<output_base_name>_<method>_counts.png`` in the method's output directory.
+`smpy.MassMap.plot_counts` plots the number of galaxies per pixel using the
+same extent as the mass maps. With ``general.create_counts_map: true``,
+`smpy.run` saves it as ``<output_base_name>_<method>_counts.png`` in the
+method's output directory. ``plotting.overlay_counts: true`` writes the counts
+on the map plots.
 
 X-ray Contour Overlay
 ---------------------

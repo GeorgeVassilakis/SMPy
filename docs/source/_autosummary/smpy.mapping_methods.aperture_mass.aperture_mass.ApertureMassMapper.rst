@@ -15,16 +15,9 @@
    
       ~ApertureMassMapper.__init__
       ~ApertureMassMapper.create_maps
-      ~ApertureMassMapper.run
    
    
 
    
-   
-   .. rubric:: Attributes
-
-   .. autosummary::
-   
-      ~ApertureMassMapper.name
    
    

@@ -6,9 +6,10 @@ mass reconstruction from weak lensing shear measurements.
 """
 
 import numpy as np
-from smpy.mapping_methods.base import MassMapper
-from smpy.filters.processing import schirmer_filter, schneider_filter
 from scipy.ndimage import convolve
+
+from smpy.filters.processing import schirmer_filter, schneider_filter
+from smpy.mapping_methods.base import MassMapper
 
 class ApertureMassMapper(MassMapper):
     """Implementation of aperture mass mapping using configurable filters.
@@ -17,41 +18,46 @@ class ApertureMassMapper(MassMapper):
     optimal filter functions. The method applies convolution with compact
     support filters to create localized mass reconstructions from shear data.
 
+    Parameters
+    ----------
+    filter_type : `str`
+        Aperture filter: 'schirmer' or 'schneider'.
+    filter_scale : `float`
+        Aperture radius in map pixels.
+    truncation : `float`
+        Kernel radius in units of ``filter_scale``.
+    ell : `int`
+        Polynomial order of the Schneider filter; unused for Schirmer.
+
+    Raises
+    ------
+    ValueError
+        Raised if ``filter_type`` is unknown or a scale is not positive.
+
     Notes
     -----
     The aperture mass method uses filter functions Q(r) to compute:
     Map_E = conv(-g1, Q*cos(2φ)) + conv(-g2, Q*sin(2φ))
     Map_B = conv(g1, Q*sin(2φ)) + conv(-g2, Q*cos(2φ))
     where φ is the polar angle and Q(r) is the chosen filter function.
+    This is the aperture-mass integral of Schneider (1996) over the binned
+    shear, with map pixels as the unit of area. Q is zero beyond
+    ``truncation * filter_scale`` and at the center pixel, which has no
+    tangential direction.
     """
-    
-    @property
-    def name(self):
-        """Name identifier for the aperture mass method.
 
-        Returns
-        -------
-        method_name : `str`
-            String identifier 'aperture_mass'.
-        """
-        return "aperture_mass"
-    
-    def _create_aperture_mass_kernels(self, rs, filter_type, l_param, truncation):
+    def __init__(self, filter_type, filter_scale, truncation, ell):
+        if filter_type not in ("schirmer", "schneider"):
+            raise ValueError(f"filter_type must be 'schirmer' or 'schneider', got {filter_type!r}")
+        if filter_scale <= 0 or truncation <= 0:
+            raise ValueError("filter_scale and truncation must be positive")
+        self.filter_type = filter_type
+        self.filter_scale = filter_scale
+        self.truncation = truncation
+        self.ell = ell
+
+    def _create_aperture_mass_kernels(self):
         """Create the aperture mass convolution kernels.
-
-        Generate 2D convolution kernels for aperture mass mapping using
-        the specified filter function and geometric factors.
-
-        Parameters
-        ----------
-        rs : `float`
-            Aperture filter radius in pixels.
-        filter_type : `str`
-            Type of filter to use ('schirmer' or 'schneider').
-        l_param : `int` or None
-            Parameter for Schneider filter (ignored for Schirmer).
-        truncation : `float`
-            Truncation radius in units of scale radius.
 
         Returns
         -------
@@ -65,50 +71,42 @@ class ApertureMassMapper(MassMapper):
         The kernels implement the angular dependence needed for E/B mode
         decomposition in the aperture mass formalism.
         """
-        # Create kernel grid
-        kernel_radius_in_pixels = truncation * rs
-        # Ensure kernel size is odd for a well-defined center pixel
-        size = int(np.ceil(2 * kernel_radius_in_pixels))
-        size = size + 1 if size % 2 == 0 else size
-        
-        # Create a grid of coordinates for the kernel
-        half_extent = (size - 1) / 2.0
-        kernel_coords = np.linspace(-half_extent, half_extent, size)
-        X_k, Y_k = np.meshgrid(kernel_coords, kernel_coords)
-        
+        rs = self.filter_scale
+
+        # Pixel offsets out to the kernel radius
+        radius = self.truncation * rs
+        offsets = np.arange(-np.ceil(radius), np.ceil(radius) + 1)
+        X_k, Y_k = np.meshgrid(offsets, offsets)
+
         # Calculate radial distance and polar angle
         R_k = np.sqrt(X_k**2 + Y_k**2)
         Phi_k = np.arctan2(Y_k, X_k)
-        
+
         # Get scaled radii for filter calculation
         scaled_radii_k = R_k / rs
-        
+
         # Get Q filter values based on filter type
-        if filter_type == 'schneider':
-            q_vals_k = schneider_filter(scaled_radii_k, rs, l_param)
-        else:  # Default to Schirmer
+        if self.filter_type == 'schneider':
+            q_vals_k = schneider_filter(scaled_radii_k, rs, self.ell)
+        else:
             q_vals_k = schirmer_filter(scaled_radii_k, rs)
-            
+
+        # Cut at the radius; the center has no tangential direction
+        q_vals_k[(R_k > radius) | (R_k == 0)] = 0
+
         # Create the kernels
         kernel_1 = q_vals_k * np.cos(2 * Phi_k)
         kernel_2 = q_vals_k * np.sin(2 * Phi_k)
-        
+
         return kernel_1, kernel_2
 
-    def _compute_aperture_mass(self, g1_grid, g2_grid, rs):
-        """Compute aperture mass maps using the selected filter via convolution.
-
-        Apply aperture mass convolution to shear grids using the configured
-        filter function to produce localized mass maps.
+    def create_maps(self, grid):
+        """Create aperture mass maps by convolving with the selected filter.
 
         Parameters
         ----------
-        g1_grid : `numpy.ndarray`
-            First shear component grid.
-        g2_grid : `numpy.ndarray`
-            Second shear component grid.
-        rs : `float`
-            Aperture filter radius in pixels.
+        grid : `smpy.coordinates.ShearGrid`
+            Binned shear.
 
         Returns
         -------
@@ -124,91 +122,14 @@ class ApertureMassMapper(MassMapper):
         Map_B = conv(g1, K2) + conv(-g2, K1)
         where K1, K2 are the filter kernels.
         """
-        # Get filter configuration
-        try:
-            filter_config = self.method_config['filter']
-        except KeyError:
-            raise KeyError(
-                f"Missing required 'filter' configuration for {self.name} method. "
-                f"Please add a 'filter' section under methods.{self.name} in your config. "
-                f"Required parameters: type, scale. Optional: truncation, l"
-            )
-        
-        # Required parameters - user must specify these explicitly
-        try:
-            filter_type = filter_config['type'].lower()
-        except KeyError:
-            raise KeyError(
-                f"Missing required parameter 'filter.type' for {self.name} method. "
-                f"Please add 'type: schirmer' (or 'schneider') under methods.{self.name}.filter in your config."
-            )
-        
-        # Optional parameters with reasonable defaults
-        l_param = filter_config.get('l', 3) if filter_type == 'schneider' else None
-        truncation = filter_config.get('truncation', 1.0)
+        K1, K2 = self._create_aperture_mass_kernels()
 
-        # Create the aperture mass specific convolution kernels
-        K1, K2 = self._create_aperture_mass_kernels(rs, filter_type, l_param, truncation)
-        
         # E-mode: Map_E = conv(-g1, K1) + conv(-g2, K2)
-        map_e = convolve(-g1_grid, K1, mode='constant', cval=0.0) + \
-                convolve(-g2_grid, K2, mode='constant', cval=0.0)
-        
+        map_e = (convolve(-grid.g1, K1, mode='constant', cval=0.0)
+                 + convolve(-grid.g2, K2, mode='constant', cval=0.0))
+
         # B-mode: Map_B = conv(g1, K2) + conv(-g2, K1)
-        map_b = convolve(g1_grid, K2, mode='constant', cval=0.0) + \
-                convolve(-g2_grid, K1, mode='constant', cval=0.0)
-                
+        map_b = (convolve(grid.g1, K2, mode='constant', cval=0.0)
+                 + convolve(-grid.g2, K1, mode='constant', cval=0.0))
+
         return map_e, map_b
-    
-    def create_maps(self, g1_grid, g2_grid):
-        """Create aperture mass maps.
-
-        Generate aperture mass maps from shear grids using the configured
-        filter function and scale parameters.
-
-        Parameters
-        ----------
-        g1_grid : `numpy.ndarray`
-            First shear component grid.
-        g2_grid : `numpy.ndarray`
-            Second shear component grid.
-
-        Returns
-        -------
-        map_e : `numpy.ndarray`
-            E-mode aperture mass map.
-        map_b : `numpy.ndarray`
-            B-mode aperture mass map.
-
-        Raises
-        ------
-        KeyError
-            If required filter configuration parameters are missing.
-
-        Notes
-        -----
-        This method validates the configuration and delegates to
-        _compute_aperture_mass for the actual convolution computation.
-        """
-        # Get filter configuration
-        try:
-            filter_config = self.method_config['filter']
-        except KeyError:
-            raise KeyError(
-                f"Missing required 'filter' configuration for {self.name} method. "
-                f"Please add a 'filter' section under methods.{self.name} in your config. "
-                f"Required parameters: type, scale. Optional: truncation, l"
-            )
-        
-        # Required parameter - user must specify scale explicitly
-        try:
-            rs = filter_config['scale']
-        except KeyError:
-            raise KeyError(
-                f"Missing required parameter 'filter.scale' for {self.name} method. "
-                f"Please add 'scale: <value>' under methods.{self.name}.filter in your config. "
-                f"This should be the aperture radius in pixels or physical units."
-            )
-        
-        # Compute and return raw aperture mass maps
-        return self._compute_aperture_mass(g1_grid, g2_grid, rs)

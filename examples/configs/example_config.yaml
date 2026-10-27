@@ -1,0 +1,24 @@
+# Example SMPy configuration for the simulated SuperBIT cluster catalog.
+# Settings not listed here take their values from smpy/configs/default.yaml.
+# Relative paths resolve from this file's directory.
+
+general:
+  input_path: "../data/forecast_lum_annular.fits"
+  output_directory: "../outputs"
+  output_base_name: "simulation_testing"
+  radec:
+    pixel_scale: 0.4
+  pixel:
+    downsample_factor: 170
+    coord1_col: "X_IMAGE_se"
+    coord2_col: "Y_IMAGE_se"
+  g1_col: "g1_Rinv"
+  g2_col: "g2_Rinv"
+  weight_col: "weight"
+  create_snr: true
+
+plotting:
+  figsize: [20, 10]
+  cmap: "magma"
+  threshold: 3
+  verbose: true

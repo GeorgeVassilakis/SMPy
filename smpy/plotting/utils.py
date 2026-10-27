@@ -7,26 +7,30 @@ axes/inputs for predictable behavior.
 
 # Standard Library
 from __future__ import annotations
-import warnings
+
+import re
+from pathlib import Path
 
 # Third Party
 import numpy as np
 from matplotlib import colors
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+from smpy.coordinates.radec import project
 
 def create_normalization(scaling, data, vmin=None, vmax=None, map_type="convergence"):
     """Create a matplotlib normalization object from config.
 
     Parameters
     ----------
-    scaling : `dict` or `str` or None
-        Scaling configuration. If a string, treated as ``{"type": <str>}``.
+    scaling : `dict` or None
+        Scaling configuration with a 'type' key.
         Supported types: 'linear', 'power', 'symlog'. Optional keys include
         'gamma' (for power), 'percentile' (pair), and map-specific overrides
         under keys matching ``map_type`` for 'symlog'.
     data : `numpy.ndarray`
-        Data array used for percentile-based range computation.
+        Data array used for percentile-based range computation; NaN pixels
+        are left out.
     vmin, vmax : `float`, optional
         Explicit min/max for scaling.
     map_type : `str`, optional
@@ -41,23 +45,13 @@ def create_normalization(scaling, data, vmin=None, vmax=None, map_type="converge
     if scaling is None:
         return colors.Normalize(vmin=vmin, vmax=vmax)
 
-    # Convert string shorthand to dict format
-    if isinstance(scaling, str):
-        scaling = {"type": scaling}
-
     scale_type = scaling.get("type", "linear").lower()
 
     # Handle percentile-based range calculation
     percentile = scaling.get("percentile")
     if percentile is not None:
-        if isinstance(percentile, (list, tuple)) and len(percentile) == 2:
-            vmin = float(np.percentile(data, percentile[0]))
-            vmax = float(np.percentile(data, percentile[1]))
-        else:
-            warnings.warn(
-                "'percentile' should be a two-element list/tuple [min, max]; ignoring.",
-                RuntimeWarning,
-            )
+        vmin = float(np.nanpercentile(data, percentile[0]))
+        vmax = float(np.nanpercentile(data, percentile[1]))
 
     # Create appropriate normalization based on type
     if scale_type == "linear":
@@ -68,14 +62,14 @@ def create_normalization(scaling, data, vmin=None, vmax=None, map_type="converge
         return colors.PowerNorm(gamma=gamma, vmin=vmin, vmax=vmax)
 
     if scale_type == "symlog":
-        # Allow map-specific parameter overrides (e.g., different thresholds for SNR vs convergence)
+        # Allow map-specific parameter overrides (e.g., different thresholds
+        # for SNR vs convergence)
         map_specific_params = scaling.get(map_type, {}) or {}
         linthresh = float(map_specific_params.get("linthresh", scaling.get("linthresh", 0.1)))
         linscale = float(map_specific_params.get("linscale", scaling.get("linscale", 1.0)))
         return colors.SymLogNorm(linthresh=linthresh, linscale=linscale, vmin=vmin, vmax=vmax)
 
-    warnings.warn(f"Unknown scaling type '{scale_type}', falling back to linear.")
-    return colors.Normalize(vmin=vmin, vmax=vmax)
+    raise ValueError(f"plotting.scaling.type must be one of linear, power, symlog; got {scale_type!r}")
 
 
 def apply_axes_style(ax, fontsize=15):
@@ -123,7 +117,8 @@ def configure_labels(ax, cfg, axis_reference=None, coord_system_type=None, fonts
         if coord_system_type == "radec":
             ax.set_xlabel("Right Ascension (deg)", fontsize=fontsize)
         else:
-            # Pixel coordinates can reference map indices or catalog coordinates
+            # Pixel coordinates can reference map indices or catalog
+            # coordinates
             label = "X (map pixels)" if axis_reference == "map" else "X (pixels)"
             ax.set_xlabel(label, fontsize=fontsize)
     elif xlabel:
@@ -141,16 +136,6 @@ def configure_labels(ax, cfg, axis_reference=None, coord_system_type=None, fonts
     # Set plot title
     title = cfg.get("plot_title") or ""
     ax.set_title(title, fontsize=fontsize)
-
-
-def apply_ra_orientation(ax):
-    """Orient RA to increase leftward by inverting x-axis.
-
-    Notes
-    -----
-    Prefer axis inversion to data reversal; keeps overlays straightforward.
-    """
-    ax.invert_xaxis()
 
 
 def propose_ticks(range_min, range_max, target_count=5):
@@ -242,28 +227,12 @@ def convert_center_to_scaled(cluster_center, scaled_boundaries, true_boundaries,
         cy = (scaled_boundaries["coord2_max"] + scaled_boundaries["coord2_min"]) / 2
         return cx, cy
 
-    if isinstance(cluster_center, dict):
-        # Select appropriate keys based on coordinate system
-        k1, k2 = ("ra_center", "dec_center") if coord_system_type == "radec" else ("x_center", "y_center")
-        if k1 not in cluster_center or k2 not in cluster_center:
-            warnings.warn(f"Expected '{k1}' and '{k2}' in cluster_center; ignoring center.")
-            return None, None
-
-        # Transform from true coordinates to scaled plot coordinates
-        cx = np.interp(
-            cluster_center[k1],
-            [true_boundaries["coord1_min"], true_boundaries["coord1_max"]],
-            [scaled_boundaries["coord1_min"], scaled_boundaries["coord1_max"]],
-        )
-        cy = np.interp(
-            cluster_center[k2],
-            [true_boundaries["coord2_min"], true_boundaries["coord2_max"]],
-            [scaled_boundaries["coord2_min"], scaled_boundaries["coord2_max"]],
-        )
-        return float(cx), float(cy)
-
-    warnings.warn("Unrecognized cluster_center format; ignoring center.")
-    return None, None
+    # Pixel plots use catalog coordinates; RA/Dec plots the tangent plane
+    if coord_system_type != "radec":
+        return float(cluster_center["x_center"]), float(cluster_center["y_center"])
+    cx, cy = project(cluster_center["ra_center"], cluster_center["dec_center"],
+                     true_boundaries["coord1_center"], true_boundaries["coord2_center"])
+    return float(cx), float(cy)
 
 
 def peaks_to_plot_coords(X, Y, data, scaled_boundaries, axis_reference):
@@ -329,6 +298,10 @@ def add_colorbar(ax, im, size="5%", pad=0.07, tick_fontsize=None):
 def read_ds9_ctr(ctr_path):
     """Read DS9 contour coordinates from a ``.ctr`` text file.
 
+    DS9 writes the coordinate system on a line of its own and each contour
+    as a list of points between parentheses, after ``global`` and
+    ``level=`` lines.
+
     Parameters
     ----------
     ctr_path : `str`
@@ -340,46 +313,14 @@ def read_ds9_ctr(ctr_path):
         List of contours. Each contour is an ``(N, 2)`` array with columns
         ``x`` and ``y``.
     coord_type : `str`
-        Coordinate type declared in the file. Supported values are
-        ``'fk5'``, ``'wcs'``, ``'image'``, and ``'physical'``. Defaults to
-        ``'fk5'`` if not specified in the file.
+        Coordinate system declared in the file, in lower case, or ``'fk5'``
+        if the file declares none.
     """
-    contours = []
-    current_points = []
-    coord_type = None
-
-    with open(ctr_path, "r", encoding="utf-8") as handle:
-        for raw_line in handle:
-            line = raw_line.strip()
-            if (not line) or line.startswith("#"):
-                continue
-
-            line_lower = line.lower()
-            if line_lower in {"fk5", "wcs", "image", "physical"}:
-                coord_type = line_lower
-                continue
-
-            if line_lower == "line":
-                if current_points:
-                    contours.append(np.asarray(current_points, dtype=float))
-                    current_points = []
-                continue
-
-            try:
-                values = [float(value) for value in line.replace(",", " ").split()]
-            except ValueError:
-                continue
-
-            if len(values) >= 2:
-                current_points.append((values[0], values[1]))
-
-    if current_points:
-        contours.append(np.asarray(current_points, dtype=float))
-
-    if coord_type is None:
-        coord_type = "fk5"
-
-    return contours, coord_type
+    text = re.sub(r"#.*", "", Path(ctr_path).read_text(encoding="utf-8"))
+    systems = re.findall(r"^\s*([A-Za-z]\w*)\s*$", re.sub(r"\([^()]*\)", "", text), flags=re.MULTILINE)
+    contours = [np.array(points.replace(",", " ").split(), dtype=float).reshape(-1, 2)
+                for points in re.findall(r"\(([^()]*)\)", text)]
+    return contours, systems[-1].lower() if systems else "fk5"
 
 
 def overlay_xray_contours(
@@ -432,14 +373,7 @@ def overlay_xray_contours(
     if not ctr_file:
         return
 
-    try:
-        contours, coord_type = read_ds9_ctr(ctr_file)
-    except OSError as exc:
-        warnings.warn(
-            f"Unable to read x-ray contour file '{ctr_file}': {exc}",
-            RuntimeWarning,
-        )
-        return
+    contours, coord_type = read_ds9_ctr(ctr_file)
 
     transformed = _transform_contours_for_plot(
         contours=contours,
@@ -455,31 +389,8 @@ def overlay_xray_contours(
         return
 
     color = str(xray_cfg.get("color", "cyan"))
-
-    try:
-        linewidth = float(xray_cfg.get("linewidth", 0.8))
-    except (TypeError, ValueError):
-        warnings.warn(
-            "Invalid plotting.xray_contours.linewidth; using 0.8.",
-            RuntimeWarning,
-        )
-        linewidth = 0.8
-    if linewidth <= 0:
-        warnings.warn(
-            "Non-positive plotting.xray_contours.linewidth; using 0.8.",
-            RuntimeWarning,
-        )
-        linewidth = 0.8
-
-    try:
-        alpha = float(xray_cfg.get("alpha", 0.7))
-    except (TypeError, ValueError):
-        warnings.warn(
-            "Invalid plotting.xray_contours.alpha; using 0.7.",
-            RuntimeWarning,
-        )
-        alpha = 0.7
-    alpha = float(np.clip(alpha, 0.0, 1.0))
+    linewidth = float(xray_cfg.get("linewidth", 0.8))
+    alpha = float(xray_cfg.get("alpha", 0.7))
 
     for contour in transformed:
         if contour.shape[0] < 2:
@@ -507,18 +418,11 @@ def _transform_contours_for_plot(
         return []
 
     coord_type = str(coord_type or "").lower()
-    if coord_type in {"fk5", "wcs"}:
+    if coord_type in {"fk5", "icrs"}:
         if str(coord_system_type).lower() != "radec":
-            warnings.warn(
-                "Skipping FK5/WCS contours because coordinate_system is 'pixel'.",
-                RuntimeWarning,
-            )
-            return []
-        return _convert_world_contours_to_scaled(
-            contours=contours,
-            scaled_boundaries=scaled_boundaries,
-            true_boundaries=true_boundaries,
-        )
+            raise ValueError(f"Contours in {coord_type} coordinates need an RA/Dec map; this map is in "
+                             "pixel coordinates")
+        return _convert_world_contours_to_scaled(contours, true_boundaries)
 
     if coord_type in {"image", "physical"}:
         return _convert_image_contours_to_plot_coords(
@@ -529,40 +433,14 @@ def _transform_contours_for_plot(
             axis_reference=axis_reference,
         )
 
-    warnings.warn(
-        f"Unsupported DS9 contour coordinate type '{coord_type}'.",
-        RuntimeWarning,
-    )
-    return []
+    raise ValueError(f"Unsupported DS9 contour coordinate system {coord_type!r}; use fk5, icrs, image or "
+                     "physical")
 
 
-def _convert_world_contours_to_scaled(contours, scaled_boundaries, true_boundaries):
-    """Convert RA/Dec contours to scaled plot coordinates."""
-    x_true_min = true_boundaries["coord1_min"]
-    x_true_max = true_boundaries["coord1_max"]
-    y_true_min = true_boundaries["coord2_min"]
-    y_true_max = true_boundaries["coord2_max"]
-
-    x_scaled_min = scaled_boundaries["coord1_min"]
-    x_scaled_max = scaled_boundaries["coord1_max"]
-    y_scaled_min = scaled_boundaries["coord2_min"]
-    y_scaled_max = scaled_boundaries["coord2_max"]
-
-    transformed = []
-    for contour in contours:
-        x_coords = np.interp(
-            contour[:, 0],
-            [x_true_min, x_true_max],
-            [x_scaled_min, x_scaled_max],
-        )
-        y_coords = np.interp(
-            contour[:, 1],
-            [y_true_min, y_true_max],
-            [y_scaled_min, y_scaled_max],
-        )
-        transformed.append(np.column_stack((x_coords, y_coords)))
-
-    return transformed
+def _convert_world_contours_to_scaled(contours, true_boundaries):
+    """Project RA/Dec contours onto the map's tangent plane."""
+    center = (true_boundaries["coord1_center"], true_boundaries["coord2_center"])
+    return [np.column_stack(project(contour[:, 0], contour[:, 1], *center)) for contour in contours]
 
 
 def _convert_image_contours_to_plot_coords(

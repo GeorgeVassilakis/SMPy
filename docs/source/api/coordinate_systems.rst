@@ -15,14 +15,15 @@ Factory Function
 
    smpy.coordinates.get_coordinate_system
 
-Base Class
-----------
+Base Class and Grid
+-------------------
 
 .. autosummary::
    :toctree: ../_autosummary
    :nosignatures:
 
    smpy.coordinates.base.CoordinateSystem
+   smpy.coordinates.base.ShearGrid
 
 Implementations
 ---------------
@@ -33,3 +34,13 @@ Implementations
 
    smpy.coordinates.radec.RADecSystem
    smpy.coordinates.pixel.PixelSystem
+
+Tangent-Plane Projection
+------------------------
+
+.. autosummary::
+   :toctree: ../_autosummary
+   :nosignatures:
+
+   smpy.coordinates.radec.project
+   smpy.coordinates.radec.unproject

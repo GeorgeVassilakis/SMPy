@@ -1,325 +1,122 @@
-"""High-level API for SMPy mass mapping.
+"""High-level Python interface for SMPy."""
 
-This module provides user-friendly functions for performing mass mapping
-operations without requiring detailed YAML configuration knowledge.
-"""
+from smpy.config import Config
+from smpy.pipeline import compute
 
-from .config import Config
+def map_mass(catalog, method=None, *, coord_system=None, pixel_scale=None, downsample_factor=None,
+             coord1_col=None, coord2_col=None, g1_col=None, g2_col=None, weight_col=None,
+             input_hdu=None, create_snr=None, snr=None, **method_settings):
+    """Make E- and B-mode mass maps from a shear catalog.
 
-
-def map_mass(
-    data,
-    method='kaiser_squires',
-    coord_system='radec',
-    pixel_scale=None,
-    downsample_factor=None,
-    output_dir='.',
-    output_base_name='smpy_output',
-    g1_col='g1',
-    g2_col='g2',
-    weight_col=None,
-    mode='E',
-    create_snr=False,
-    create_counts_map=False,
-    overlay_counts_map=False,
-    save_fits=False,
-    save_plots=True,
-    print_timing=False,
-    smoothing=None,
-    **kwargs
-):
-    """Perform mass mapping using the specified method.
-
-    This is the main entry point for SMPy mass mapping operations.
-    It provides a simple interface while maintaining access to all
-    underlying functionality.
+    Settings left as `None` take their values from ``default.yaml``; defaults
+    are given in brackets below. Nothing is written to disk. Use the returned
+    `MassMap` to plot or save the maps.
 
     Parameters
     ----------
-    data : `str` or `pathlib.Path`
-        Path to input FITS file containing shear catalog.
+    catalog : `str`, `pathlib.Path`, or `astropy.table.Table`
+        Shear catalog, or the path to a FITS file.
     method : `str`, optional
-        Mass mapping method to use. Options: 'kaiser_squires',
-        'aperture_mass', 'ks_plus'.
+        'kaiser_squires' [default], 'aperture_mass', or 'ks_plus'.
     coord_system : `str`, optional
-        Coordinate system of input data. Options: 'radec', 'pixel'.
+        'radec' [default] or 'pixel'.
     pixel_scale : `float`, optional
-        Pixel scale in arcminutes. Required for 'radec' coordinate system.
+        Map pixel size in arcminutes. Required for 'radec'.
     downsample_factor : `int`, optional
-        Downsampling factor for pixel coordinates. Required for 'pixel'
-        coordinate system.
-    output_dir : `str`, optional
-        Directory to save output files.
-    output_base_name : `str`, optional
-        Base name for output files.
-    g1_col : `str`, optional
-        Column name for first shear component.
-    g2_col : `str`, optional
-        Column name for second shear component.
+        Catalog pixels per map pixel. Required for 'pixel'.
+    coord1_col, coord2_col : `str`, optional
+        Coordinate columns ['ra' and 'dec', in degrees, for 'radec';
+        'X_IMAGE' and 'Y_IMAGE' for 'pixel'].
+    g1_col, g2_col : `str`, optional
+        Shear columns ['g1' and 'g2'].
     weight_col : `str`, optional
-        Column name for weights. If None, no weights are used.
-    mode : `str` or `list`, optional
-        Shear mode(s) to compute. Options: 'E', 'B', or ['E', 'B'].
+        Weight column [none, for unit weights].
+    input_hdu : `int`, optional
+        FITS extension holding the catalog [1].
     create_snr : `bool`, optional
-        Whether to create signal-to-noise ratio map.
-    create_counts_map : `bool`, optional
-        Whether to create and save a per-pixel counts map PNG.
-    overlay_counts_map : `bool`, optional
-        Whether to overlay per-pixel counts as text on the convergence map plots.
-    save_fits : `bool`, optional
-        Whether to save maps as FITS files.
-    save_plots : `bool`, optional
-        Whether to save mass and SNR plots as PNG files.
-    print_timing : `bool`, optional
-        Whether to print timing information.
-    smoothing : `float`, optional
-        Smoothing scale in pixels. If None, uses method default.
-    **kwargs
-        Additional method-specific parameters.
+        Also compute signal-to-noise maps [False].
+    snr : `dict`, optional
+        Overrides for the ``snr`` settings, such as ``{"num_shuffles": 200}``.
+    **method_settings
+        Settings of the chosen method from the ``methods`` section of
+        ``default.yaml``, such as ``smoothing=1.5`` or
+        ``inpainting_iterations=50``.
 
     Returns
     -------
-    result : `dict`
-        Dictionary containing the computed mass maps.
+    result : `smpy.MassMap`
+        The maps, their grid and the settings used.
 
     Raises
     ------
     ValueError
-        If required parameters are missing or invalid.
-    FileNotFoundError
-        If input file does not exist.
+        Raised if a setting does not exist, is invalid, or is required but
+        missing, or if ``snr`` is given without ``create_snr=True``.
 
     Examples
     --------
-    Basic usage with minimal parameters:
-
-    >>> result = map_mass(
-    ...     data='catalog.fits',
-    ...     coord_system='radec',
-    ...     pixel_scale=0.168
-    ... )
-
-    More advanced usage with custom parameters:
-
-    >>> result = map_mass(
-    ...     data='catalog.fits',
-    ...     method='ks_plus',
-    ...     coord_system='radec',
-    ...     pixel_scale=0.168,
-    ...     smoothing=1.5,
-    ...     create_snr=True,
-    ...     mode=['E', 'B']
-    ... )
+    >>> result = map_mass("catalog.fits", pixel_scale=0.4)
+    >>> fig, ax, im = result.plot("E")
     """
-    # Load default configuration for the method
-    config = Config.from_defaults(method)
-    
-    # Update config with user parameters
-    config.update_from_kwargs(
-        data=data,
-        coord_system=coord_system,
-        pixel_scale=pixel_scale,
-        downsample_factor=downsample_factor,
-        method=method,
-        output_dir=output_dir,
-        output_base_name=output_base_name,
-        g1_col=g1_col,
-        g2_col=g2_col,
-        weight_col=weight_col,
-        mode=mode,
-        create_snr=create_snr,
-        create_counts_map=create_counts_map,
-        overlay_counts_map=overlay_counts_map,
-        save_fits=save_fits,
-        save_plots=save_plots,
-        print_timing=print_timing,
-        smoothing=smoothing,
-        **kwargs
-    )
-    
-    # Validate configuration structure
+    if snr is not None and not create_snr:
+        raise ValueError("snr settings were given without create_snr=True")
+    config = Config.from_defaults(
+        method, coord_system=coord_system, pixel_scale=pixel_scale, downsample_factor=downsample_factor,
+        coord1_col=coord1_col, coord2_col=coord2_col, g1_col=g1_col, g2_col=g2_col, weight_col=weight_col,
+        input_hdu=input_hdu, create_snr=create_snr, snr=snr, **method_settings)
     config.validate()
-    
-    # Execute the mapping
-    from .run import run
-    return run(config)
+    return compute(catalog, config.resolved())
 
-
-def map_kaiser_squires(
-    data,
-    coord_system='radec',
-    pixel_scale=None,
-    downsample_factor=None,
-    smoothing=2.0,
-    **kwargs
-):
-    """Perform Kaiser-Squires mass mapping.
-
-    This function provides direct access to the Kaiser-Squires method
-    with sensible defaults for quick analysis.
+def map_kaiser_squires(catalog, **settings):
+    """Make mass maps with the Kaiser-Squires inversion.
 
     Parameters
     ----------
-    data : `str` or `pathlib.Path`
-        Path to input FITS file containing shear catalog.
-    coord_system : `str`, optional
-        Coordinate system of input data. Options: 'radec', 'pixel'.
-    pixel_scale : `float`, optional
-        Pixel scale in arcminutes. Required for 'radec' coordinate system.
-    downsample_factor : `int`, optional
-        Downsampling factor for pixel coordinates. Required for 'pixel'
-        coordinate system.
-    smoothing : `float`, optional
-        Gaussian smoothing scale in pixels.
-    **kwargs
-        Additional parameters passed to map_mass().
+    catalog : `str`, `pathlib.Path`, or `astropy.table.Table`
+        Shear catalog, or the path to a FITS file.
+    **settings
+        Arguments of `map_mass`. The method setting is ``smoothing``.
 
     Returns
     -------
-    result : `dict`
-        Dictionary containing the computed mass maps.
-
-    Examples
-    --------
-    >>> result = map_kaiser_squires(
-    ...     data='catalog.fits',
-    ...     coord_system='radec',
-    ...     pixel_scale=0.168
-    ... )
+    result : `smpy.MassMap`
+        The maps, their grid and the settings used.
     """
-    return map_mass(
-        data=data,
-        method='kaiser_squires',
-        coord_system=coord_system,
-        pixel_scale=pixel_scale,
-        downsample_factor=downsample_factor,
-        smoothing=smoothing,
-        **kwargs
-    )
+    return map_mass(catalog, "kaiser_squires", **settings)
 
-
-def map_aperture_mass(
-    data,
-    coord_system='radec',
-    pixel_scale=None,
-    downsample_factor=None,
-    filter_type='schirmer',
-    filter_scale=60,
-    **kwargs
-):
-    """Perform aperture mass mapping.
-
-    This function provides direct access to the aperture mass method
-    with sensible defaults for quick analysis.
+def map_aperture_mass(catalog, **settings):
+    """Make aperture mass maps.
 
     Parameters
     ----------
-    data : `str` or `pathlib.Path`
-        Path to input FITS file containing shear catalog.
-    coord_system : `str`, optional
-        Coordinate system of input data. Options: 'radec', 'pixel'.
-    pixel_scale : `float`, optional
-        Pixel scale in arcminutes. Required for 'radec' coordinate system.
-    downsample_factor : `int`, optional
-        Downsampling factor for pixel coordinates. Required for 'pixel'
-        coordinate system.
-    filter_type : `str`, optional
-        Type of aperture filter. Options: 'schirmer', 'schneider'.
-    filter_scale : `int`, optional
-        Filter scale in pixels.
-    **kwargs
-        Additional parameters passed to map_mass().
+    catalog : `str`, `pathlib.Path`, or `astropy.table.Table`
+        Shear catalog, or the path to a FITS file.
+    **settings
+        Arguments of `map_mass`. The method settings are ``filter_type``,
+        ``filter_scale``, ``truncation`` and ``ell``.
 
     Returns
     -------
-    result : `dict`
-        Dictionary containing the computed mass maps.
-
-    Examples
-    --------
-    >>> result = map_aperture_mass(
-    ...     data='catalog.fits',
-    ...     coord_system='radec',
-    ...     pixel_scale=0.168,
-    ...     filter_scale=80
-    ... )
+    result : `smpy.MassMap`
+        The maps, their grid and the settings used.
     """
-    # Handle aperture mass specific parameters
-    if 'filter' not in kwargs:
-        kwargs['filter'] = {}
-    if isinstance(kwargs['filter'], dict):
-        kwargs['filter']['type'] = filter_type
-        kwargs['filter']['scale'] = filter_scale
-    
-    return map_mass(
-        data=data,
-        method='aperture_mass',
-        coord_system=coord_system,
-        pixel_scale=pixel_scale,
-        downsample_factor=downsample_factor,
-        **kwargs
-    )
+    return map_mass(catalog, "aperture_mass", **settings)
 
-
-def map_ks_plus(
-    data,
-    coord_system='radec',
-    pixel_scale=None,
-    downsample_factor=None,
-    smoothing=2.0,
-    inpainting_iterations=100,
-    reduced_shear_iterations=3,
-    **kwargs
-):
-    """Perform KS+ mass mapping.
-
-    This function provides direct access to the KS+ method
-    with sensible defaults for quick analysis.
+def map_ks_plus(catalog, **settings):
+    """Make mass maps with the KS+ inversion.
 
     Parameters
     ----------
-    data : `str` or `pathlib.Path`
-        Path to input FITS file containing shear catalog.
-    coord_system : `str`, optional
-        Coordinate system of input data. Options: 'radec', 'pixel'.
-    pixel_scale : `float`, optional
-        Pixel scale in arcminutes. Required for 'radec' coordinate system.
-    downsample_factor : `int`, optional
-        Downsampling factor for pixel coordinates. Required for 'pixel'
-        coordinate system.
-    smoothing : `float`, optional
-        Gaussian smoothing scale in pixels.
-    inpainting_iterations : `int`, optional
-        Number of iterations for inpainting algorithm.
-    reduced_shear_iterations : `int`, optional
-        Number of iterations for reduced shear correction.
-    **kwargs
-        Additional parameters passed to map_mass().
+    catalog : `str`, `pathlib.Path`, or `astropy.table.Table`
+        Shear catalog, or the path to a FITS file.
+    **settings
+        Arguments of `map_mass`. The method settings are ``smoothing``,
+        ``inpainting_iterations``, ``reduced_shear_iterations``, ``nscales``,
+        ``extension_size`` and ``use_wavelet_constraints``.
 
     Returns
     -------
-    result : `dict`
-        Dictionary containing the computed mass maps.
-
-    Examples
-    --------
-    >>> result = map_ks_plus(
-    ...     data='catalog.fits',
-    ...     coord_system='radec',
-    ...     pixel_scale=0.168,
-    ...     inpainting_iterations=200
-    ... )
+    result : `smpy.MassMap`
+        The maps, their grid and the settings used.
     """
-    # Handle KS+ specific parameters
-    kwargs['inpainting_iterations'] = inpainting_iterations
-    kwargs['reduced_shear_iterations'] = reduced_shear_iterations
-    
-    return map_mass(
-        data=data,
-        method='ks_plus',
-        coord_system=coord_system,
-        pixel_scale=pixel_scale,
-        downsample_factor=downsample_factor,
-        smoothing=smoothing,
-        **kwargs
-    )
+    return map_mass(catalog, "ks_plus", **settings)

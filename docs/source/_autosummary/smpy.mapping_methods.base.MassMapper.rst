@@ -15,16 +15,9 @@
    
       ~MassMapper.__init__
       ~MassMapper.create_maps
-      ~MassMapper.run
    
    
 
    
-   
-   .. rubric:: Attributes
-
-   .. autosummary::
-   
-      ~MassMapper.name
    
    
