@@ -8,6 +8,9 @@ axes/inputs for predictable behavior.
 # Standard Library
 from __future__ import annotations
 
+import re
+from pathlib import Path
+
 # Third Party
 import numpy as np
 from matplotlib import colors
@@ -295,6 +298,10 @@ def add_colorbar(ax, im, size="5%", pad=0.07, tick_fontsize=None):
 def read_ds9_ctr(ctr_path):
     """Read DS9 contour coordinates from a ``.ctr`` text file.
 
+    DS9 writes the coordinate system on a line of its own and each contour
+    as a list of points between parentheses, after ``global`` and
+    ``level=`` lines.
+
     Parameters
     ----------
     ctr_path : `str`
@@ -306,46 +313,14 @@ def read_ds9_ctr(ctr_path):
         List of contours. Each contour is an ``(N, 2)`` array with columns
         ``x`` and ``y``.
     coord_type : `str`
-        Coordinate type declared in the file. Supported values are
-        ``'fk5'``, ``'wcs'``, ``'image'``, and ``'physical'``. Defaults to
-        ``'fk5'`` if not specified in the file.
+        Coordinate system declared in the file, in lower case, or ``'fk5'``
+        if the file declares none.
     """
-    contours = []
-    current_points = []
-    coord_type = None
-
-    with open(ctr_path, "r", encoding="utf-8") as handle:
-        for raw_line in handle:
-            line = raw_line.strip()
-            if (not line) or line.startswith("#"):
-                continue
-
-            line_lower = line.lower()
-            if line_lower in {"fk5", "wcs", "image", "physical"}:
-                coord_type = line_lower
-                continue
-
-            if line_lower == "line":
-                if current_points:
-                    contours.append(np.asarray(current_points, dtype=float))
-                    current_points = []
-                continue
-
-            try:
-                values = [float(value) for value in line.replace(",", " ").split()]
-            except ValueError:
-                continue
-
-            if len(values) >= 2:
-                current_points.append((values[0], values[1]))
-
-    if current_points:
-        contours.append(np.asarray(current_points, dtype=float))
-
-    if coord_type is None:
-        coord_type = "fk5"
-
-    return contours, coord_type
+    text = re.sub(r"#.*", "", Path(ctr_path).read_text(encoding="utf-8"))
+    systems = re.findall(r"^\s*([A-Za-z]\w*)\s*$", re.sub(r"\([^()]*\)", "", text), flags=re.MULTILINE)
+    contours = [np.array(points.replace(",", " ").split(), dtype=float).reshape(-1, 2)
+                for points in re.findall(r"\(([^()]*)\)", text)]
+    return contours, systems[-1].lower() if systems else "fk5"
 
 
 def overlay_xray_contours(
@@ -443,7 +418,7 @@ def _transform_contours_for_plot(
         return []
 
     coord_type = str(coord_type or "").lower()
-    if coord_type in {"fk5", "wcs"}:
+    if coord_type in {"fk5", "icrs"}:
         if str(coord_system_type).lower() != "radec":
             raise ValueError(f"Contours in {coord_type} coordinates need an RA/Dec map; this map is in "
                              "pixel coordinates")
@@ -458,7 +433,7 @@ def _transform_contours_for_plot(
             axis_reference=axis_reference,
         )
 
-    raise ValueError(f"Unsupported DS9 contour coordinate type {coord_type!r}; use fk5, wcs, image or "
+    raise ValueError(f"Unsupported DS9 contour coordinate system {coord_type!r}; use fk5, icrs, image or "
                      "physical")
 
 

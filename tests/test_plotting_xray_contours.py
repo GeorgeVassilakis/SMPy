@@ -23,7 +23,8 @@ def test_contours_follow_their_switches(result, tmp_path, on_convergence, on_snr
     """Each contour in the file is drawn on exactly the maps its switches
     select."""
     ctr_file = tmp_path / "xray.ctr"
-    ctr_file.write_text("# DS9 contour export\nimage\n10 10\n20 20\nline\n30 30\n40 40\n")
+    ctr_file.write_text("# Contour file format: DS9 version 7.5\nglobal color=green width=1\nimage\n"
+                        "level=1\n(\n10 10\n20 20\n)\nlevel=2\n(\n30 30\n40 40\n)\n")
     contours = {"ctr_file": str(ctr_file), "show_on_convergence": on_convergence, "show_on_snr": on_snr}
     for snr, shown in ((False, on_convergence), (True, on_snr)):
         fig, ax, _ = result.plot("E", snr=snr, xray_contours=contours)
@@ -35,7 +36,7 @@ def test_image_contours_land_on_their_pixels(result, tmp_path, axis_reference):
     """A contour point at DS9 image pixel (i, j) is drawn at the center of map
     pixel (i, j)."""
     ctr_file = tmp_path / "xray.ctr"
-    ctr_file.write_text("image\n1 1\n3 2\n")
+    ctr_file.write_text("image\n(1 1\n3 2)\n")
     contours = {"ctr_file": str(ctr_file), "show_on_convergence": True}
     fig, ax, image = result.plot("E", axis_reference=axis_reference, xray_contours=contours)
     left, right, bottom, top = image.get_extent()
@@ -53,7 +54,7 @@ def test_sky_contours_land_where_the_wcs_puts_them(tmp_path):
     pixels = np.array([[10, 5], [40, 30]])
     ra, dec = result.wcs.wcs_pix2world(pixels, 0).T
     ctr_file = tmp_path / "xray.ctr"
-    ctr_file.write_text("fk5\n" + "".join(f"{r:.10f} {d:.10f}\n" for r, d in zip(ra, dec)))
+    ctr_file.write_text("fk5\n(\n" + "".join(f"{r:.10f} {d:.10f}\n" for r, d in zip(ra, dec)) + ")\n")
     fig, ax, image = result.plot("E", xray_contours={"ctr_file": str(ctr_file), "show_on_convergence": True})
     left, right, bottom, top = image.get_extent()
     ny, nx = result.maps["E"].shape
@@ -61,3 +62,12 @@ def test_sky_contours_land_where_the_wcs_puts_them(tmp_path):
                                 bottom + (pixels[:, 1] + 0.5) * (top - bottom) / ny))
     np.testing.assert_allclose(ax.lines[0].get_xydata(), expected, rtol=0, atol=1e-9)
     plt.close(fig)
+
+def test_contours_in_other_sky_frames_are_rejected(tmp_path):
+    """Contours in a sky frame other than fk5 or icrs raise an error instead
+    of being drawn as fk5."""
+    result = smpy.map_mass(CATALOG, pixel_scale=0.4, **COLUMNS)
+    ctr_file = tmp_path / "xray.ctr"
+    ctr_file.write_text("galactic\n(\n199.45 33.05\n199.5 33.1\n)\n")
+    with pytest.raises(ValueError, match="'galactic'"):
+        result.plot("E", xray_contours={"ctr_file": str(ctr_file), "show_on_convergence": True})
