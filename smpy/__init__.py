@@ -8,7 +8,7 @@ This package provides mass mapping methods including Kaiser-Squires,
 aperture mass, and KS+ algorithms for weak lensing analysis.
 """
 
-__version__ = "0.5.0"
+__version__ = "1.0.0"
 
 # Simple API functions - main entry points for users
 from .api import (

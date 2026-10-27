@@ -1,7 +1,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](https://opensource.org/licenses/MIT)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/bb1d59e8b4a143f8a261bc7320861495)](https://app.codacy.com/gh/GeorgeVassilakis/SMPy/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![codecov](https://codecov.io/gh/GeorgeVassilakis/SMPy/branch/joss-review/graph/badge.svg)](https://app.codecov.io/gh/GeorgeVassilakis/SMPy/tree/joss-review)
+[![codecov](https://codecov.io/gh/GeorgeVassilakis/SMPy/branch/main/graph/badge.svg)](https://app.codecov.io/gh/GeorgeVassilakis/SMPy)
 [![GitHub stars](https://img.shields.io/github/stars/GeorgeVassilakis/SMPy.svg?style=social&label=Star&maxAge=2592000)](https://GitHub.com/GeorgeVassilakis/SMPy/stargazers/)
 
 # SMPy (Shear Mapping in Python)

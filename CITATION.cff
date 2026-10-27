@@ -1,0 +1,36 @@
+cff-version: 1.2.0
+message: "If you use SMPy, please cite it using the metadata below."
+title: "Shear Mapping in Python (SMPy): Modular, Extensible, and Accessible Dark Matter Mapping"
+type: software
+version: 1.0.0
+license: MIT
+abstract: >-
+  SMPy makes convergence maps from weak lensing galaxy shear catalogs with
+  Kaiser-Squires inversion, KS+ and aperture mass, together with
+  signal-to-noise maps, celestial and pixel coordinates, and plotting.
+authors:
+  - given-names: Georgios N.
+    family-names: Vassilakis
+    orcid: "https://orcid.org/0009-0006-2684-2961"
+    affiliation: "Northeastern University; University of Cambridge"
+  - given-names: Jacqueline E.
+    family-names: McCleary
+    orcid: "https://orcid.org/0000-0002-9883-7460"
+    affiliation: "Northeastern University"
+  - given-names: Maya
+    family-names: Amit
+    orcid: "https://orcid.org/0009-0002-2898-7022"
+    affiliation: "Northeastern University; New York University"
+  - given-names: Sayan
+    family-names: Saha
+    orcid: "https://orcid.org/0000-0002-6044-2164"
+    affiliation: "Northeastern University"
+keywords:
+  - Python
+  - astrophysics
+  - gravitational lensing
+  - dark matter
+  - galaxy shear
+  - convergence mapping
+repository-code: "https://github.com/GeorgeVassilakis/SMPy"
+url: "https://smpy-docs.readthedocs.io"
