@@ -8,6 +8,7 @@ import copy
 import os
 from pathlib import Path
 
+import numpy as np
 import yaml
 
 from smpy.mapping_methods import METHODS
@@ -157,8 +158,7 @@ class Config:
         for section, key in _path_settings(settings):
             if section[key] and not os.path.isabs(section[key]):
                 section[key] = os.path.relpath(old_base / section[key], new_base)
-        with open(path, "w", encoding="utf-8") as stream:
-            yaml.safe_dump(settings, stream, sort_keys=False)
+        path.write_text(yaml.safe_dump(settings, sort_keys=False), encoding="utf-8")
 
     def to_dict(self):
         """Return a copy of the settings.
@@ -188,7 +188,16 @@ def _merge(base, overrides, prefix=""):
         if isinstance(base[key], dict):
             _merge(base[key], value, f"{name}.")
         else:
-            base[key] = value
+            base[key] = _plain(value)
+
+def _plain(value):
+    """Return ``value`` with a numpy number or a path as a plain Python
+    value, so the settings can be written to YAML."""
+    if isinstance(value, np.generic):
+        return value.item()
+    if isinstance(value, os.PathLike):
+        return os.fspath(value)
+    return value
 
 def _apply_keywords(settings, keywords):
     """Set settings by name; coordinate settings go to the chosen system."""
@@ -212,7 +221,7 @@ def _apply_keywords(settings, keywords):
             raise ValueError(f"Unknown setting '{key}' for method '{general['method']}' "
                              f"with coord_system '{general['coord_system']}'")
         if value is not None:
-            target[key] = value
+            target[key] = _plain(value)
 
 def _path_settings(settings):
     """Yield ``(section, key)`` for each path setting in ``settings``."""

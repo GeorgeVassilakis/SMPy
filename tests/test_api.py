@@ -74,6 +74,16 @@ def test_smpy_command_matches_map_mass(tmp_path):
     assert record == Config.from_file(config_path).resolved()
     assert record["methods"] == from_python.settings["methods"]
 
+def test_numpy_numbers_and_paths_in_settings_save(tmp_path):
+    """Settings given from Python as numpy numbers and paths save to YAML
+    over an existing file and reload unchanged."""
+    config = Config.from_defaults("kaiser_squires", input_path=CATALOG, pixel_scale=np.float64(0.4),
+                                  **COLUMNS)
+    path = tmp_path / "run.yaml"
+    path.write_text("general: {}\n")
+    config.save(path)
+    assert Config.from_file(path).resolved() == config.resolved()
+
 INVALID = {
     "other method's setting": ({"inpainting_iterations": 5, **RADEC},
                                "Unknown setting 'inpainting_iterations'"),

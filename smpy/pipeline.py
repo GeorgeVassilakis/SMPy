@@ -112,9 +112,8 @@ def run(config):
     if general["create_counts_map"] and general["save_plots"]:
         _save_figure(result.plot_counts()[0], f"{prefix}_counts.png")
 
-    with open(f"{prefix}_settings.yaml", "w", encoding="utf-8") as stream:
-        stream.write(f"# Settings used by SMPy {__version__}\n")
-        yaml.safe_dump(result.settings, stream, sort_keys=False)
+    record = f"# Settings used by SMPy {__version__}\n" + yaml.safe_dump(result.settings, sort_keys=False)
+    Path(f"{prefix}_settings.yaml").write_text(record, encoding="utf-8")
     return result
 
 def _save_figure(fig, path):
