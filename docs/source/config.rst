@@ -368,9 +368,9 @@ Plotting Settings
      - false
      - Write the number of galaxies in each pixel on map plots
    * - scaling
-     - dict/string
+     - dict
      - {type: linear}
-     - Color scaling configuration. If a string, treated as {type: <string>}.
+     - Color scaling configuration
    * - xray_contours
      - dict/null
      - null

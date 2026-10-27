@@ -175,14 +175,17 @@ class Config:
         return yaml.safe_dump(self._settings, sort_keys=False)
 
 def _merge(base, overrides, prefix=""):
-    """Update ``base`` from ``overrides``, rejecting unknown keys."""
+    """Update ``base`` from ``overrides``, rejecting unknown keys and
+    values that are not mappings where the settings are."""
+    if not isinstance(overrides, dict):
+        raise ValueError(f"{prefix.rstrip('.') or 'The configuration'} must be a mapping; got {overrides!r}")
     for key, value in overrides.items():
         name = f"{prefix}{key}"
         if key not in base:
             raise ValueError(f"Unknown setting '{name}'. Valid settings here: {', '.join(base)}")
         if isinstance(base[key], dict) and value is None:
             continue  # An empty YAML section keeps its defaults
-        if isinstance(base[key], dict) and isinstance(value, dict):
+        if isinstance(base[key], dict):
             _merge(base[key], value, f"{name}.")
         else:
             base[key] = value

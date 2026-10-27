@@ -103,7 +103,7 @@ class MassMap:
         """
         config = self._plot_config(style)
         config["plot_title"] = "Counts Map"
-        scaling = dict(config["scaling"]) if isinstance(config["scaling"], dict) else {}
+        scaling = dict(config["scaling"])
         scaling["type"] = "linear"
         scaling.pop("percentile", None)
         config["scaling"] = scaling

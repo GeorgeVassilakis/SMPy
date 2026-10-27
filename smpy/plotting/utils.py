@@ -20,8 +20,8 @@ def create_normalization(scaling, data, vmin=None, vmax=None, map_type="converge
 
     Parameters
     ----------
-    scaling : `dict` or `str` or None
-        Scaling configuration. If a string, treated as ``{"type": <str>}``.
+    scaling : `dict` or None
+        Scaling configuration with a 'type' key.
         Supported types: 'linear', 'power', 'symlog'. Optional keys include
         'gamma' (for power), 'percentile' (pair), and map-specific overrides
         under keys matching ``map_type`` for 'symlog'.
@@ -41,10 +41,6 @@ def create_normalization(scaling, data, vmin=None, vmax=None, map_type="converge
     # Default to linear scaling if no configuration provided
     if scaling is None:
         return colors.Normalize(vmin=vmin, vmax=vmax)
-
-    # Convert string shorthand to dict format
-    if isinstance(scaling, str):
-        scaling = {"type": scaling}
 
     scale_type = scaling.get("type", "linear").lower()
 

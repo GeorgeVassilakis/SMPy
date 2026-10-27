@@ -92,6 +92,8 @@ INVALID = {
     "one starlet scale": ({"method": "ks_plus", "nscales": 1, **RADEC}, "nscales must be null or an integer"),
     "unknown scaling": ("general:\n  radec: {pixel_scale: 0.4}\nplotting:\n  scaling: {type: logg}\n",
                         "plotting.scaling.type must be one of"),
+    "scaling as a string": ("general:\n  radec: {pixel_scale: 0.4}\nplotting:\n  scaling: symlog\n",
+                            "plotting.scaling must be a mapping"),
 }
 
 @pytest.mark.parametrize("settings, name", INVALID.values(), ids=INVALID.keys())
