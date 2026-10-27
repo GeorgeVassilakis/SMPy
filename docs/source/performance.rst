@@ -40,6 +40,10 @@ pixel, in pixel coordinates, and each time includes binning the catalog.
      - 1.8 s
      - 506 s
 
+On the cluster field of the example catalog, a 57 x 38 map of 8,767 galaxies in
+RA/Dec with weights, as in Figure 1 of the paper, a map takes 0.0042 s with
+Kaiser-Squires, 0.0077 s with aperture mass and 0.70 s with KS+.
+
 .. image:: _static/performance/scaling.png
    :alt: Time per map against the number of map pixels for the three
          methods, on logarithmic axes.

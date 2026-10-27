@@ -71,7 +71,7 @@ The weak lensing community is served by publicly available mapping tools like `l
 
 These design decisions are reflected in `SMPy`'s overall workflow: users provide a shear catalog and a single YAML configuration file, and `SMPy` produces convergence maps, signal-to-noise maps, and publication-quality plots with minimal boilerplate. The mapping framework is implemented through standardized abstract base classes, allowing different reconstruction methods to be interchanged while preserving a consistent interface and coordinate-system handling.
 
-On an Apple M4 Pro, a $1024 \times 1024$ map from 10.5 million galaxies takes 0.9 s with Kaiser–Squires, 1.8 s with aperture mass, and 506 s with `KS+`, using default settings. The higher cost of `KS+` reflects its 300 iterations on an extended field. Further timing measurements and scaling details are provided in the documentation's performance page.
+On an Apple M4 Pro, a $1024 \times 1024$ map from 10.5 million galaxies takes 0.9 s with Kaiser–Squires, 1.8 s with aperture mass, and 506 s with `KS+`, using default settings. For a cluster-sized field like that of Figure \ref{fig:mass_maps}, a $57 \times 38$ map from 8,767 galaxies, Kaiser–Squires takes 4 ms, aperture mass 8 ms, and `KS+` 0.7 s. The higher cost of `KS+` reflects its 300 iterations on an extended field. Further timing measurements and scaling details are provided in the documentation's performance page.
 
 ![E-mode maps of a simulated SuperBIT observation of a galaxy cluster [@McCleary2023] made with the three methods in `SMPy`: Kaiser–Squires and `KS+` convergence, aperture mass, and the Kaiser–Squires signal-to-noise map.](mass_maps.png){#fig:mass_maps}
 
