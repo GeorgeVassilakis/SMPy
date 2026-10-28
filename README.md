@@ -75,15 +75,18 @@ The package provides a robust implementation supporting both weighted and unweig
 
 1. **Prerequisites**: Ensure you have Python 3.10+ installed on your system. SMPy also requires `numpy`, `scipy`, `pandas`, `astropy`, `matplotlib`, and `pyyaml` for numerical computations and visualizations.
 
-2. **Clone the Repository**: Clone the SMPy repository to your local machine using git:
+2. **Install the Package:** Install SMPy from PyPI, then import and run it as `smpy`:
+
+   ```bash
+   pip install smpy-lensing
+   ```
+
+3. **Install from Source (optional):** To run the tutorials, which use the example catalogs in the repository, or to
+   work on the code, clone the repository and install SMPy from its root:
 
    ```bash
    git clone https://github.com/GeorgeVassilakis/SMPy.git
-   ```
-
-3. **Install the Package:** Install SMPy from the repository root:
-
-   ```bash
+   cd SMPy
    pip install .
    ```
 

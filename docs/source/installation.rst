@@ -1,7 +1,18 @@
 Installation
 ============
 
-SMPy needs Python 3.10 or newer. Install it from a clone of the repository:
+SMPy needs Python 3.10 or newer. Install it from PyPI, where it is named
+``smpy-lensing``; it is imported and run as ``smpy``:
+
+.. code-block:: bash
+
+   pip install smpy-lensing
+
+pip also installs SMPy's dependencies: NumPy, SciPy, Astropy, pandas,
+Matplotlib and PyYAML.
+
+The tutorials use the example catalogs in the repository. To run them, or to
+work on the code, install SMPy from a clone of the repository instead:
 
 .. code-block:: bash
 
@@ -9,9 +20,7 @@ SMPy needs Python 3.10 or newer. Install it from a clone of the repository:
    cd SMPy
    pip install .
 
-pip also installs SMPy's dependencies: NumPy, SciPy, Astropy, pandas,
-Matplotlib and PyYAML. To edit the code in place, use ``pip install -e .``
-instead.
+To edit the code in place, use ``pip install -e .``.
 
 To check the installation, print the version and the command-line help:
 
