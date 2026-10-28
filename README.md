@@ -23,54 +23,6 @@ Key attributes include:
 
 The package provides a robust implementation supporting both weighted and unweighted shear catalogs, projection of RA/Dec catalogs onto the tangent plane at the field center with each shear rotated into the map frame, and binning of irregular galaxy distributions onto regular grids. This project aims to provide a robust, intuitive, and accessible way to create convergence maps from weak lensing data for astrophysicists of all levels.
 
-## Features
-### Convergence Mapping
-- **Kaiser-Squires Inversion**: Implementation of the classic [Kaiser & Squires (1993)](https://ui.adsabs.harvard.edu/abs/1993ApJ...404..441K/abstract) method for reconstructing convergence maps from weak lensing shear data
-- **KS+**: Enhanced Kaiser-Squires implementation from [Pires et al. (2020)](https://www.aanda.org/articles/aa/abs/2020/06/aa36865-19/aa36865-19.html) that:
-  - Corrects for missing data using DCT-domain sparsity priors
-  - Reduces field border effects through automatic field extension
-  - Iteratively corrects for the reduced shear approximation
-  - Preserves statistical properties using wavelet-based power spectrum constraints
-- **Aperture Mass Mapping**: A filtered measure of the projected mass around each pixel from the tangential shear (Schneider 1996)
-- **Support for Both E-mode and B-mode**: Generate maps for both E-mode (physical) and B-mode (systematic check) signals
-- **Flexible Coordinate Systems**: 
-  - RA/Dec celestial coordinates, projected onto the tangent plane (gnomonic projection)
-  - Pixel-based coordinates for direct image analysis
-  - Automatic coordinate transformations and scaling
-
-### Signal Processing & Error Analysis
-- **Filtering**: Gaussian smoothing of the maps, with a configurable width
-- **Signal-to-Noise Maps**: Generate SNR maps using two different randomization techniques:
-  - Orientation shuffling (default): Randomizes galaxy orientations while preserving positions
-  - Spatial shuffling: Randomizes galaxy positions while preserving shear values. Assumes the noise is uniform across the field
-- **Peak Detection**: Automated identification of significant peaks in convergence maps with customizable detection thresholds
-
-### Data Handling
-- **FITS File Support**: Direct reading of astronomical FITS catalogs
-- **Flexible Data Input**: Reads FITS catalogs or astropy Tables, with configurable column names
-- **Optional Weighting**: Handle weighted and unweighted shear measurements
-- **Automatic Grid Generation**: Smart binning of irregular galaxy distributions onto regular grids
-
-### Visualization
-- **Customizable Plotting**: 
-  - Adjustable color schemes and scaling
-  - Optional grid lines and coordinate labels
-  - Automatic or manual axis labeling
-  - Customizable figure sizes and titles
-- **Peak Detection Overlay**: Optional automatic detection and marker overlay of peaks above a configurable threshold
-- **Coordinate-aware plotting**: Coordinate-aware plotting for RA/Dec and pixel maps (axis orientation, extents, and tick labeling). WCS headers are included in FITS outputs when saving FITS.
-
-### Configuration & Usability
-- **YAML Configuration**: Easy-to-use YAML configuration files for full control over:
-  - Input/output paths and formats
-  - Mapping parameters and methods
-  - Visualization settings
-  - SNR calculation parameters
-- **Multiple Interfaces**: 
-  - Command-line interface (`smpy -c config.yaml`)
-  - Python API for notebook integration
-- **Modular Design**: Extensible architecture supporting multiple mapping methods including Kaiser-Squires inversion, KS+, and aperture mass
-
 ## Installation
 
 1. **Prerequisites**: Ensure you have Python 3.10+ installed on your system. SMPy also requires `numpy`, `scipy`, `pandas`, `astropy`, `matplotlib`, and `pyyaml` for numerical computations and visualizations.
@@ -139,6 +91,54 @@ columns = dict(g1_col="g1_Rinv", g2_col="g2_Rinv", weight_col="weight")
    config.save("my_run.yaml")      # rerun later with: smpy -c my_run.yaml
    result_cfg = run(config)
    ```
+
+## Features
+### Convergence Mapping
+- **Kaiser-Squires Inversion**: Implementation of the classic [Kaiser & Squires (1993)](https://ui.adsabs.harvard.edu/abs/1993ApJ...404..441K/abstract) method for reconstructing convergence maps from weak lensing shear data
+- **KS+**: Enhanced Kaiser-Squires implementation from [Pires et al. (2020)](https://www.aanda.org/articles/aa/abs/2020/06/aa36865-19/aa36865-19.html) that:
+  - Corrects for missing data using DCT-domain sparsity priors
+  - Reduces field border effects through automatic field extension
+  - Iteratively corrects for the reduced shear approximation
+  - Preserves statistical properties using wavelet-based power spectrum constraints
+- **Aperture Mass Mapping**: A filtered measure of the projected mass around each pixel from the tangential shear (Schneider 1996)
+- **Support for Both E-mode and B-mode**: Generate maps for both E-mode (physical) and B-mode (systematic check) signals
+- **Flexible Coordinate Systems**: 
+  - RA/Dec celestial coordinates, projected onto the tangent plane (gnomonic projection)
+  - Pixel-based coordinates for direct image analysis
+  - Automatic coordinate transformations and scaling
+
+### Signal Processing & Error Analysis
+- **Filtering**: Gaussian smoothing of the maps, with a configurable width
+- **Signal-to-Noise Maps**: Generate SNR maps using two different randomization techniques:
+  - Orientation shuffling (default): Randomizes galaxy orientations while preserving positions
+  - Spatial shuffling: Randomizes galaxy positions while preserving shear values. Assumes the noise is uniform across the field
+- **Peak Detection**: Automated identification of significant peaks in convergence maps with customizable detection thresholds
+
+### Data Handling
+- **FITS File Support**: Direct reading of astronomical FITS catalogs
+- **Flexible Data Input**: Reads FITS catalogs or astropy Tables, with configurable column names
+- **Optional Weighting**: Handle weighted and unweighted shear measurements
+- **Automatic Grid Generation**: Smart binning of irregular galaxy distributions onto regular grids
+
+### Visualization
+- **Customizable Plotting**: 
+  - Adjustable color schemes and scaling
+  - Optional grid lines and coordinate labels
+  - Automatic or manual axis labeling
+  - Customizable figure sizes and titles
+- **Peak Detection Overlay**: Optional automatic detection and marker overlay of peaks above a configurable threshold
+- **Coordinate-aware plotting**: Coordinate-aware plotting for RA/Dec and pixel maps (axis orientation, extents, and tick labeling). WCS headers are included in FITS outputs when saving FITS.
+
+### Configuration & Usability
+- **YAML Configuration**: Easy-to-use YAML configuration files for full control over:
+  - Input/output paths and formats
+  - Mapping parameters and methods
+  - Visualization settings
+  - SNR calculation parameters
+- **Multiple Interfaces**: 
+  - Command-line interface (`smpy -c config.yaml`)
+  - Python API for notebook integration
+- **Modular Design**: Extensible architecture supporting multiple mapping methods including Kaiser-Squires inversion, KS+, and aperture mass
 
 ## Contributions
 - Open an issue for bugs, unclear documentation, or feature requests.
