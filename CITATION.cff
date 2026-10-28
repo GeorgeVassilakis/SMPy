@@ -1,8 +1,9 @@
 cff-version: 1.2.0
-message: "If you use SMPy, please cite it using the metadata below."
+message: "If you use SMPy, please cite our article in the Journal of Open Source Software."
 title: "Shear Mapping in Python (SMPy): Modular, Extensible, and Accessible Dark Matter Mapping"
 type: software
 version: 1.0.0
+doi: 10.5281/zenodo.23710091
 license: MIT
 abstract: >-
   SMPy makes convergence maps from weak lensing galaxy shear catalogs with
@@ -34,3 +35,29 @@ keywords:
   - convergence mapping
 repository-code: "https://github.com/GeorgeVassilakis/SMPy"
 url: "https://smpy-docs.readthedocs.io"
+preferred-citation:
+  type: article
+  title: "Shear Mapping in Python (SMPy): Modular, Extensible, and Accessible Dark Matter Mapping"
+  authors:
+    - given-names: Georgios N.
+      family-names: Vassilakis
+      orcid: "https://orcid.org/0009-0006-2684-2961"
+    - given-names: Jacqueline E.
+      family-names: McCleary
+      orcid: "https://orcid.org/0000-0002-9883-7460"
+    - given-names: Maya
+      family-names: Amit
+      orcid: "https://orcid.org/0009-0002-2898-7022"
+    - given-names: Sayan
+      family-names: Saha
+      orcid: "https://orcid.org/0000-0002-6044-2164"
+  journal: "Journal of Open Source Software"
+  publisher:
+    name: Open Journals
+  issn: 2475-9066
+  volume: 11
+  issue: 126
+  start: 10928
+  date-published: 2026-10-28
+  doi: 10.21105/joss.10928
+  url: "https://joss.theoj.org/papers/10.21105/joss.10928"

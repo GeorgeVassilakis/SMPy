@@ -140,6 +140,25 @@ columns = dict(g1_col="g1_Rinv", g2_col="g2_Rinv", weight_col="weight")
   - Python API for notebook integration
 - **Modular Design**: Extensible architecture supporting multiple mapping methods including Kaiser-Squires inversion, KS+, and aperture mass
 
+## Citation
+If you use SMPy in your research, please cite the [JOSS paper](https://doi.org/10.21105/joss.10928):
+
+```bibtex
+@article{Vassilakis2026,
+  author = {Vassilakis, Georgios N. and McCleary, Jacqueline E. and Amit, Maya and Saha, Sayan},
+  title = {Shear Mapping in Python ({SMPy}): Modular, Extensible, and Accessible Dark Matter Mapping},
+  journal = {Journal of Open Source Software},
+  year = {2026},
+  volume = {11},
+  number = {126},
+  pages = {10928},
+  doi = {10.21105/joss.10928},
+  url = {https://doi.org/10.21105/joss.10928}
+}
+```
+
+Every release is archived on Zenodo ([10.5281/zenodo.23710091](https://doi.org/10.5281/zenodo.23710091)), where each version has its own DOI.
+
 ## Contributions
 - Open an issue for bugs, unclear documentation, or feature requests.
 - Open a discussion or issue before starting large changes.
