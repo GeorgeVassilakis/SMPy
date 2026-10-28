@@ -1,9 +1,8 @@
-"""Make the figures and numbers of the validation page of the documentation
-and the residual figure of the paper.
+"""Make the figures and numbers of the validation page of the documentation.
 
-Run from anywhere with ``python validation/accuracy.py``. The figures of the
-page are written to ``docs/source/_static/validation/``, the paper's to
-``paper/residuals.png``, and the numbers quoted on the page are printed.
+Run from anywhere with ``python validation/accuracy.py``. The figures are
+written to ``docs/source/_static/validation/`` and the numbers quoted on the
+page are printed.
 """
 
 from pathlib import Path
@@ -54,8 +53,7 @@ def show(ax, image, title, **style):
 
 def truth_recovery(table):
     """Compare each method's E map of the noiseless truth catalog with the
-    true convergence, smoothed like the maps, and return that convergence
-    and the error of each convergence map.
+    true convergence, smoothed like the maps.
 
     Every map is shown and compared after removing its mean, which shear does
     not determine.
@@ -66,7 +64,6 @@ def truth_recovery(table):
     fig, axes = plt.subplots(1, 4, figsize=(16, 3.2), layout="constrained")
     style = dict(cmap="magma", vmin=kappa.min(), vmax=kappa.max())
     show(axes[0], kappa, "True convergence", **style)
-    errors = {}
     for ax, method in zip(axes[1:], NAMES):
         result = smpy.map_mass(table, method, **TRUTH_SETTINGS)
         map_e, map_b = result.maps["E"] - result.maps["E"].mean(), result.maps["B"]
@@ -77,19 +74,16 @@ def truth_recovery(table):
             fig.colorbar(show(ax, map_e, NAMES[method], cmap="magma"), ax=ax, label="Aperture mass")
         else:
             im = show(ax, map_e, NAMES[method], **style)
-            errors[method] = map_e - kappa
             line += (f", correlation with truth {np.corrcoef(map_e.ravel(), kappa.ravel())[0, 1]:.4f}, "
-                     f"RMS error {np.sqrt(np.mean(errors[method] ** 2)):.4f} "
+                     f"RMS error {np.sqrt(np.mean((map_e - kappa) ** 2)):.4f} "
                      f"(true peak {kappa.max():.3f})")
         print(line)
     fig.colorbar(im, ax=axes[:3], label="Convergence")
     fig.savefig(OUTPUT / "truth_recovery.png", dpi=120)
     plt.close(fig)
-    return kappa, errors
 
 def holes(table):
-    """Compare Kaiser-Squires and KS+ inside holes cut in the truth catalog,
-    and return the true convergence, the holes and the error of each map.
+    """Compare Kaiser-Squires and KS+ inside holes cut in the truth catalog.
 
     Galaxies in the holes get zero weight, so the map grid is unchanged.
     Each map is compared after removing its mean over the observed pixels,
@@ -107,40 +101,15 @@ def holes(table):
     kappa -= kappa[observed].mean()
     fig, axes = plt.subplots(1, 3, figsize=(13, 3.2), layout="constrained")
     show(axes[0], kappa, "True convergence", cmap="magma")
-    errors = {}
     for ax, method in zip(axes[1:], ("kaiser_squires", "ks_plus")):
         result = smpy.map_mass(table, method, weight_col="weight", smoothing=0, **TRUTH_SETTINGS)
-        errors[method] = result.maps["E"] - result.maps["E"][observed].mean() - kappa
-        im = show(ax, errors[method], f"{NAMES[method]} error", cmap="RdBu_r", vmin=-0.04, vmax=0.04)
-        print(f"{NAMES[method]}: RMS error in the holes {np.sqrt(np.mean(errors[method][gaps] ** 2)):.4f}")
+        error = result.maps["E"] - result.maps["E"][observed].mean() - kappa
+        im = show(ax, error, f"{NAMES[method]} error", cmap="RdBu_r", vmin=-0.04, vmax=0.04)
+        print(f"{NAMES[method]}: RMS error in the holes {np.sqrt(np.mean(error[gaps] ** 2)):.4f}")
     for ax in axes:
         ax.contour(gaps, levels=[0.5], colors="limegreen", linewidths=1)
     fig.colorbar(im, ax=axes[1:], label="Map minus true convergence")
     fig.savefig(OUTPUT / "holes.png", dpi=120)
-    plt.close(fig)
-    return kappa, gaps, errors
-
-def residuals(recovery, filled):
-    """Draw the paper's figure from the results of `truth_recovery` and
-    `holes`: the true convergence and the error of the Kaiser-Squires and KS+
-    maps, smoothed in the top row and unsmoothed with holes in the bottom row.
-
-    Each row's color scale spans the largest error where that row is assessed:
-    the whole map in the top row and the holes in the bottom row.
-    """
-    kappa, errors = recovery
-    kappa_holes, gaps, errors_holes = filled
-    fig, axes = plt.subplots(2, 3, figsize=(7.5, 3.6), layout="constrained")
-    rows = ((axes[0], kappa, errors, np.ones_like(gaps)), (axes[1], kappa_holes, errors_holes, gaps))
-    for row, truth, row_errors, assessed in rows:
-        fig.colorbar(show(row[0], truth, "True convergence", cmap="magma"), ax=row[0])
-        limit = max(np.abs(error[assessed]).max() for error in row_errors.values())
-        for ax, (method, error) in zip(row[1:], row_errors.items()):
-            im = show(ax, error, f"{NAMES[method]} error", cmap="RdBu_r", vmin=-limit, vmax=limit)
-        fig.colorbar(im, ax=row[1:], label="Map minus truth")
-    for ax in axes[1]:
-        ax.contour(gaps, levels=[0.5], colors="limegreen", linewidths=1)
-    fig.savefig(ROOT / "paper" / "residuals.png", dpi=200)
     plt.close(fig)
 
 def snr_calibration(catalogs=10):
@@ -176,5 +145,6 @@ def snr_calibration(catalogs=10):
 
 if __name__ == "__main__":
     OUTPUT.mkdir(parents=True, exist_ok=True)
-    residuals(truth_recovery(truth_catalog()), holes(truth_catalog()))
+    truth_recovery(truth_catalog())
+    holes(truth_catalog())
     snr_calibration()
