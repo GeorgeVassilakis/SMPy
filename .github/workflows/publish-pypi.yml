@@ -1,0 +1,77 @@
+name: Publish to PyPI
+
+on:
+  release:
+    types: [published]
+  # Publishes a release tag that already exists, such as one released before this workflow
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to publish, such as v1.0.0
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      - name: Check the tag
+        run: |
+          if [[ ! "${RELEASE_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Release tag must have the form vX.Y.Z" >&2
+            exit 1
+          fi
+      - uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ env.RELEASE_TAG }}
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+      - run: python -m pip install ".[test]" build twine check-wheel-contents
+      - run: python -m pytest -q
+      - run: python -m build
+      - run: python -m twine check --strict dist/*
+      - run: python -m check_wheel_contents dist/*.whl
+      - name: Check the wheel installed outside the source tree
+        run: |
+          python -m venv "${RUNNER_TEMP}/wheel"
+          "${RUNNER_TEMP}/wheel/bin/python" -m pip install dist/*.whl
+          "${RUNNER_TEMP}/wheel/bin/python" -m pip check
+          cd "${RUNNER_TEMP}"
+          "${RUNNER_TEMP}/wheel/bin/python" - <<'PY'
+          import os
+          from importlib.metadata import version
+
+          import smpy
+
+          expected = os.environ["RELEASE_TAG"].removeprefix("v")
+          if version("smpy-lensing") != expected:
+              raise SystemExit(f"Tag {expected} does not match smpy-lensing {version('smpy-lensing')}")
+          smpy.Config.from_defaults()
+          PY
+          "${RUNNER_TEMP}/wheel/bin/smpy" --help
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/smpy-lensing
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
