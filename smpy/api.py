@@ -5,7 +5,7 @@ from smpy.pipeline import compute
 
 def map_mass(catalog, method=None, *, coord_system=None, pixel_scale=None, downsample_factor=None,
              coord1_col=None, coord2_col=None, g1_col=None, g2_col=None, weight_col=None,
-             input_hdu=None, create_snr=None, snr=None, **method_settings):
+             input_hdu=None, create_snr=None, snr=None, backend=None, **method_settings):
     """Make E- and B-mode mass maps from a shear catalog.
 
     Settings left as `None` take their values from ``default.yaml``; defaults
@@ -37,6 +37,9 @@ def map_mass(catalog, method=None, *, coord_system=None, pixel_scale=None, downs
         Also compute signal-to-noise maps [False].
     snr : `dict`, optional
         Overrides for the ``snr`` settings, such as ``{"num_shuffles": 200}``.
+    backend : `str`, optional
+        'numpy' [default] or 'jax'. 'jax' bins, maps and computes SNR with
+        JAX, on a GPU when JAX sees one, and needs the ``jax`` extra.
     **method_settings
         Settings of the chosen method from the ``methods`` section of
         ``default.yaml``, such as ``smoothing=1.5`` or
@@ -52,6 +55,8 @@ def map_mass(catalog, method=None, *, coord_system=None, pixel_scale=None, downs
     ValueError
         Raised if a setting does not exist, is invalid, or is required but
         missing, or if ``snr`` is given without ``create_snr=True``.
+    ImportError
+        Raised if ``backend`` is 'jax' and JAX is not installed.
 
     Examples
     --------
@@ -63,7 +68,7 @@ def map_mass(catalog, method=None, *, coord_system=None, pixel_scale=None, downs
     config = Config.from_defaults(
         method, coord_system=coord_system, pixel_scale=pixel_scale, downsample_factor=downsample_factor,
         coord1_col=coord1_col, coord2_col=coord2_col, g1_col=g1_col, g2_col=g2_col, weight_col=weight_col,
-        input_hdu=input_hdu, create_snr=create_snr, snr=snr, **method_settings)
+        input_hdu=input_hdu, create_snr=create_snr, snr=snr, backend=backend, **method_settings)
     config.validate()
     return compute(catalog, config.resolved())
 

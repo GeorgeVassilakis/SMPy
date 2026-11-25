@@ -6,15 +6,12 @@ transforms. The method provides both E-mode and B-mode reconstruction
 with optional Gaussian smoothing.
 """
 
-import jax
-import jax.numpy as jnp
-
-from smpy._precision import numpy_double
-from smpy.filters.gaussian import gaussian_filter
+import numpy as np
+from scipy.ndimage import gaussian_filter
 
 from ..base import MassMapper
 
-def _shear_kernel(shape, dtype):
+def _shear_kernel(shape):
     """Return the Fourier-space operator D taking convergence to shear.
 
     D = (k1^2 - k2^2 + 2i k1 k2) / k^2. It is zero for the uniform mode,
@@ -24,33 +21,28 @@ def _shear_kernel(shape, dtype):
     undefined there.
     """
     npix_dec, npix_ra = shape
-    k1 = jnp.fft.fftfreq(npix_ra, dtype=dtype)[None, :]
-    k2 = jnp.fft.fftfreq(npix_dec, dtype=dtype)[:, None]
+    k1, k2 = np.meshgrid(np.fft.fftfreq(npix_ra), np.fft.fftfreq(npix_dec))
     k_squared = k1**2 + k2**2
-    k_squared = jnp.where(k_squared == 0, 1.0, k_squared)
+    k_squared[0, 0] = 1.0
     kernel = (k1**2 - k2**2 + 2j * k1 * k2) / k_squared
-    nyquist_ra = (npix_ra % 2 == 0) & (jnp.arange(npix_ra)[None, :] == npix_ra // 2)
-    nyquist_dec = (npix_dec % 2 == 0) & (jnp.arange(npix_dec)[:, None] == npix_dec // 2)
-    mixed_nyquist = (nyquist_ra & (k2 != 0)) | (nyquist_dec & (k1 != 0))
-    return jnp.where(mixed_nyquist, 0, kernel)
+    kernel[((k1 == -0.5) & (k2 != 0)) | ((k2 == -0.5) & (k1 != 0))] = 0
+    return kernel
 
-@numpy_double
-@jax.jit
 def shear_from_convergence(kappa_e, kappa_b):
     """Compute the shear produced by E- and B-mode convergence maps.
 
     Parameters
     ----------
-    kappa_e : `numpy.ndarray` or `jax.Array`
+    kappa_e : `numpy.ndarray`
         E-mode convergence map.
-    kappa_b : `numpy.ndarray` or `jax.Array`
+    kappa_b : `numpy.ndarray`
         B-mode convergence map, with the same shape.
 
     Returns
     -------
-    gamma1 : `numpy.ndarray` or `jax.Array`
+    gamma1 : `numpy.ndarray`
         First shear component.
-    gamma2 : `numpy.ndarray` or `jax.Array`
+    gamma2 : `numpy.ndarray`
         Second shear component.
 
     Notes
@@ -60,39 +52,33 @@ def shear_from_convergence(kappa_e, kappa_b):
     shear, and modes at the highest frequency of an even side that also vary
     along the other axis are dropped.
     """
-    dtype = jnp.result_type(kappa_e, kappa_b, 1.0)
-    kappa = jnp.asarray(kappa_e, dtype=dtype) + 1j * jnp.asarray(kappa_b, dtype=dtype)
-    gamma = jnp.fft.ifft2(_shear_kernel(kappa.shape, dtype) * jnp.fft.fft2(kappa))
+    gamma = np.fft.ifft2(_shear_kernel(kappa_e.shape) * np.fft.fft2(kappa_e + 1j * kappa_b))
     return gamma.real, gamma.imag
 
-@numpy_double
-@jax.jit
 def convergence_from_shear(gamma1, gamma2):
-    """Invert a shear field into E- and B-mode convergence maps.
+    """Invert a shear field into E- and B-mode convergence maps
+    (Kaiser & Squires 1993).
 
     Parameters
     ----------
-    gamma1 : `numpy.ndarray` or `jax.Array`
+    gamma1 : `numpy.ndarray`
         First shear component.
-    gamma2 : `numpy.ndarray` or `jax.Array`
+    gamma2 : `numpy.ndarray`
         Second shear component, with the same shape.
 
     Returns
     -------
-    kappa_e : `numpy.ndarray` or `jax.Array`
+    kappa_e : `numpy.ndarray`
         E-mode convergence map, with zero mean.
-    kappa_b : `numpy.ndarray` or `jax.Array`
+    kappa_b : `numpy.ndarray`
         B-mode convergence map, with zero mean.
 
     Notes
     -----
-    Kaiser & Squires (1993) use kappa_E + i kappa_B = D* (gamma1 + i gamma2)
-    in Fourier space, the inverse of `shear_from_convergence` for every
-    mode it keeps.
+    kappa_E + i kappa_B = D* (gamma1 + i gamma2) in Fourier space, the
+    inverse of `shear_from_convergence` for every mode it keeps.
     """
-    dtype = jnp.result_type(gamma1, gamma2, 1.0)
-    gamma = jnp.asarray(gamma1, dtype=dtype) + 1j * jnp.asarray(gamma2, dtype=dtype)
-    kappa = jnp.fft.ifft2(jnp.conj(_shear_kernel(gamma.shape, dtype)) * jnp.fft.fft2(gamma))
+    kappa = np.fft.ifft2(np.conj(_shear_kernel(gamma1.shape)) * np.fft.fft2(gamma1 + 1j * gamma2))
     return kappa.real, kappa.imag
 
 class KaiserSquiresMapper(MassMapper):
@@ -106,8 +92,7 @@ class KaiserSquiresMapper(MassMapper):
     Parameters
     ----------
     smoothing : `float`
-        Default Gaussian sigma in map pixels. It also sets the maximum
-        filter radius. Use 0 to disable smoothing.
+        Gaussian smoothing sigma in map pixels; 0 for no smoothing.
 
     Raises
     ------
@@ -126,28 +111,23 @@ class KaiserSquiresMapper(MassMapper):
             raise ValueError(f"smoothing must be a number of at least 0, got {smoothing!r}")
         self.smoothing = smoothing
 
-    @numpy_double
-    def create_maps(self, grid, *, smoothing=None):
+    def create_maps(self, grid):
         """Create convergence maps using Kaiser-Squires inversion.
 
         Perform direct inversion of shear components to reconstruct both
         E-mode and B-mode convergence maps using Fourier transforms, then
-        apply Gaussian smoothing.
+        apply the configured smoothing.
 
         Parameters
         ----------
         grid : `smpy.coordinates.ShearGrid`
             Binned shear.
-        smoothing : `float` or `jax.Array`, optional
-            Gaussian sigma in map pixels. A scalar tracer is supported.
-            Defaults to the mapper's smoothing setting, which also caps the
-            filter radius at ``int(4 * self.smoothing + 0.5)``.
 
         Returns
         -------
-        kappa_e : `numpy.ndarray` or `jax.Array`
+        kappa_e : `numpy.ndarray`
             E-mode convergence map.
-        kappa_b : `numpy.ndarray` or `jax.Array`
+        kappa_b : `numpy.ndarray`
             B-mode convergence map.
 
         Notes
@@ -156,7 +136,5 @@ class KaiserSquiresMapper(MassMapper):
         kappa_E = ((k1^2 - k2^2) * g1 + 2 * k1 * k2 * g2) / k^2
         kappa_B = ((k1^2 - k2^2) * g2 - 2 * k1 * k2 * g1) / k^2
         """
-        sigma = self.smoothing if smoothing is None else smoothing
-        radius = int(4 * self.smoothing + 0.5)
         kappa_e, kappa_b = convergence_from_shear(grid.g1, grid.g2)
-        return gaussian_filter(kappa_e, sigma, radius=radius), gaussian_filter(kappa_b, sigma, radius=radius)
+        return gaussian_filter(kappa_e, self.smoothing), gaussian_filter(kappa_b, self.smoothing)

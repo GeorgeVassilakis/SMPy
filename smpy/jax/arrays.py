@@ -4,13 +4,28 @@ from typing import NamedTuple
 
 import jax
 import jax.numpy as jnp
+import numpy as np
 
-from smpy._precision import native_array
 from smpy.config import Config
-from smpy.coordinates.base import ShearGrid, _bin_shear
-from smpy.coordinates.radec import _project_catalog
-from smpy.mapping_methods import METHODS
-from smpy.snr import _noise_step, _rotate_shear, _signal_to_noise
+from smpy.coordinates.base import ShearGrid
+
+from .aperture_mass import ApertureMassMapper
+from .coordinates import _bin_shear, _project_catalog
+from .kaiser_squires import KaiserSquiresMapper
+from .ks_plus import KSPlusMapper
+from .snr import _noise_step, _rotate_shear, _signal_to_noise
+
+METHODS = {
+    "kaiser_squires": KaiserSquiresMapper,
+    "aperture_mass": ApertureMassMapper,
+    "ks_plus": KSPlusMapper,
+}
+
+def _asarray(array):
+    """Make a JAX array, converting the byte order of host inputs."""
+    if isinstance(array, np.ndarray) and not array.dtype.isnative:
+        array = array.astype(array.dtype.newbyteorder("="))
+    return jnp.asarray(array)
 
 class ArrayMassMap(NamedTuple):
     """Mapping results for a fixed-size catalog, as a JAX pytree.
@@ -75,11 +90,11 @@ class ArrayMapper:
         maps : `dict` of `jax.Array`
             E- and B-mode maps keyed by "E" and "B".
         """
-        g1, g2 = jnp.asarray(native_array(g1)), jnp.asarray(native_array(g2))
+        g1, g2 = _asarray(g1), _asarray(g2)
         dtype = jnp.result_type(g1, g2, float)
         if g1.ndim != 2 or min(g1.shape) < 1 or g2.shape != g1.shape:
             raise ValueError("g1 and g2 must have the same nonempty two-dimensional shape")
-        weights = jnp.ones_like(g1, dtype=dtype) if weights is None else jnp.asarray(native_array(weights))
+        weights = jnp.ones_like(g1, dtype=dtype) if weights is None else _asarray(weights)
         if weights.shape != g1.shape:
             raise ValueError("weights must have the same shape as g1 and g2")
         grid = ShearGrid(g1.astype(dtype), g2.astype(dtype), weights, None)
@@ -132,6 +147,11 @@ class ArrayMapper:
 
         Notes
         -----
+        A galaxy outside the grid, at a non-finite position, or 90 degrees
+        or more from the tangent point adds nothing to the shear, weights
+        or counts. A galaxy exactly on an upper grid edge goes in the last
+        pixel, as in `smpy.map_mass`.
+
         Bilinear gridding makes position derivatives available within each
         interval between pixel centers. With hard bins, the bin indices
         are piecewise constant. Sky-frame shear rotation can still depend
@@ -147,28 +167,36 @@ class ArrayMapper:
             raise ValueError("shuffle_type must be 'orientation' or 'spatial'")
         if num_shuffles != 0 and (num_shuffles < 2 or key is None):
             raise ValueError("SNR requires a key and at least two shuffles")
-        x, y, g1, g2 = (jnp.asarray(native_array(column)) for column in (coord1, coord2, g1, g2))
-        weights = jnp.ones_like(g1) if weights is None else jnp.asarray(native_array(weights))
+        x, y, g1, g2 = (_asarray(column) for column in (coord1, coord2, g1, g2))
+        weights = jnp.ones_like(g1) if weights is None else _asarray(weights)
         if g1.ndim != 1 or any(column.shape != g1.shape for column in (x, y, g2, weights)):
             raise ValueError("Catalog coordinates, shears and weights must have matching 1D shapes")
         dtype = jnp.result_type(g1, g2, weights, float)
         g1, g2, weights = (column.astype(dtype) for column in (g1, g2, weights))
+        valid = jnp.isfinite(x) & jnp.isfinite(y)
+        # A finite stand-in keeps the gradients of the other galaxies finite
+        stand_in = origin if tangent_point is None else tangent_point
+        x, y = jnp.where(valid, x, stand_in[0]), jnp.where(valid, y, stand_in[1])
         if tangent_point is not None:
-            x, y, g1, g2, _ = _project_catalog(x, y, g1, g2, *tangent_point)
+            x, y, g1, g2, visible = _project_catalog(x, y, g1, g2, *tangent_point)
+            valid &= visible
         x, y = (x - origin[0]) / pixel_size, (y - origin[1]) / pixel_size
+        ny, nx = shape
+        valid &= (x >= 0) & (x <= nx) & (y >= 0) & (y <= ny)
 
-        grid = _bin_shear(x, y, g1, g2, weights, shape=shape, gridding=gridding)
+        grid = _bin_shear(x, y, g1, g2, weights, shape=shape, gridding=gridding, valid=valid)
         mapped = self._mapper.create_maps(grid, **parameters)
         snr = None
         if num_shuffles:
-            snr = self._catalog_snr(x, y, g1, g2, weights, shape, gridding,
+            snr = self._catalog_snr(x, y, g1, g2, weights, valid, shape, gridding,
                                     mapped, num_shuffles, shuffle_type, key, parameters)
         return ArrayMassMap(dict(zip("EB", mapped)), grid, snr)
 
-    def _catalog_snr(self, x, y, g1, g2, weights, shape, gridding,
+    def _catalog_snr(self, x, y, g1, g2, weights, valid, shape, gridding,
                      mapped, count, shuffle_type, key, parameters):
         """Compute null maps and accumulate their sample variance."""
         signal = jnp.stack(mapped)
+        ranks = jnp.maximum(jnp.cumsum(valid) - 1, 0)
 
         @jax.checkpoint
         def trial(index):
@@ -176,10 +204,13 @@ class ArrayMapper:
             if shuffle_type == "orientation":
                 angle = jax.random.uniform(trial_key, g1.shape, dtype=g1.dtype, maxval=2 * jnp.pi)
                 rotated = _rotate_shear(g1, g2, angle)
-                grid = _bin_shear(x, y, *rotated, weights, shape=shape, gridding=gridding)
+                grid = _bin_shear(x, y, *rotated, weights, shape=shape, gridding=gridding, valid=valid)
             else:
                 perm = jax.random.permutation(trial_key, len(g1))
-                grid = _bin_shear(x[perm], y[perm], g1, g2, weights, shape=shape, gridding=gridding)
+                # Pair valid shear rows with shuffled valid positions.
+                perm = perm[jnp.argsort(~valid[perm], stable=True)][ranks]
+                grid = _bin_shear(x[perm], y[perm], g1, g2, weights,
+                                  shape=shape, gridding=gridding, valid=valid)
             return jnp.stack(self._mapper.create_maps(grid, **parameters))
 
         def accumulate(index, state):

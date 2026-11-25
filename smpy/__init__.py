@@ -17,7 +17,6 @@ from .api import (
     map_ks_plus,
     map_mass,
 )
-from .arrays import ArrayMapper, ArrayMassMap
 
 # Config API - for power users who want more control
 from .config import Config
@@ -30,8 +29,6 @@ __all__ = [
     'map_kaiser_squires', 
     'map_aperture_mass',
     'map_ks_plus',
-    'ArrayMapper',
-    'ArrayMassMap',
     'Config',
     'MassMap',
     'run',

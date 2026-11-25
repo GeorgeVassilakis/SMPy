@@ -4,11 +4,8 @@ This module provides implementations of various filter functions used in
 aperture mass mapping including Schirmer and Schneider filters.
 """
 
-import jax.numpy as jnp
+import numpy as np
 
-from smpy._precision import numpy_precision
-
-@numpy_precision
 def schirmer_filter(scaled_radii, scale):
     """Compute Schirmer filter values for given scaled radii.
 
@@ -17,14 +14,14 @@ def schirmer_filter(scaled_radii, scale):
 
     Parameters
     ----------
-    scaled_radii : `array_like`
+    scaled_radii : `numpy.ndarray`
         Radius values scaled by the aperture radius.
-    scale : `float` or `jax.Array`
+    scale : `float`
         Scale radius of the filter in pixels.
 
     Returns
     -------
-    filter_values : `numpy.ndarray` or `jax.Array`
+    filter_values : `numpy.ndarray`
         Filter values at the given radii positions.
 
     Notes
@@ -34,28 +31,31 @@ def schirmer_filter(scaled_radii, scale):
 
     Parameters are set to a = 6, b = 150, c = 47, d = 50 (Hetterscheidt et
     al. 2005 [2]_) and x_c = 0.12 (McCleary et al. 2020 [1]_); Hetterscheidt
-    et al. use x_c = 0.15. The ratio tanh(x/x_c)/(x/x_c) takes its limiting
-    value of one at the origin.
+    et al. use x_c = 0.15.
 
     References
     ----------
     .. [1] McCleary et al. 2020
     .. [2] Hetterscheidt et al. 2005
     """
-    scaled_radii = jnp.asarray(scaled_radii)
+    # Filter parameters
     a = 6
     b = 150
     c = 47
     d = 50
     x_c = 0.12
 
-    log_taper_denominator = jnp.logaddexp(0.0, jnp.logaddexp(a - b * scaled_radii, d * scaled_radii - c))
-    x_ratio = scaled_radii / x_c
-    safe_ratio = jnp.where(x_ratio == 0, 1.0, x_ratio)
-    profile = jnp.where(x_ratio == 0, 1.0, jnp.tanh(safe_ratio) / safe_ratio)
-    return jnp.exp(-log_taper_denominator) * profile / (jnp.pi * scale**2)
+    # Calculate the first part: 1/(1 + e^(a-bx) + e^(dx-c))
+    part1 = 1.0 / (1.0 + np.exp(a - b*scaled_radii) + np.exp(d*scaled_radii - c))
 
-@numpy_precision
+    # Calculate the second part: tanh(x/x_c)/(pi*Rs^2*(x/x_c))
+    # Avoid division by zero when x = 0
+    x_ratio = np.divide(scaled_radii, x_c, out=np.ones_like(scaled_radii)*1e-10, where=scaled_radii!=0)
+    part2 = np.tanh(x_ratio) / (np.pi * scale**2 * x_ratio)
+
+    # Combine parts
+    return part1 * part2
+
 def schneider_filter(scaled_radii, scale, ell=3):
     """Compute Schneider filter values for given scaled radii.
 
@@ -64,16 +64,16 @@ def schneider_filter(scaled_radii, scale, ell=3):
 
     Parameters
     ----------
-    scaled_radii : `array_like`
+    scaled_radii : `numpy.ndarray`
         Radius values scaled by the aperture radius.
-    scale : `float` or `jax.Array`
+    scale : `float`
         Scale radius of the filter in pixels.
     ell : `int`, optional
         Polynomial order parameter.
 
     Returns
     -------
-    filter_values : `numpy.ndarray` or `jax.Array`
+    filter_values : `numpy.ndarray`
         Q filter values at the given radii positions.
 
     Notes
@@ -86,8 +86,15 @@ def schneider_filter(scaled_radii, scale, ell=3):
     ----------
     .. [1] Schneider et al. 1998
     """
-    scaled_radii = jnp.asarray(scaled_radii)
+    # Initialize filter values
+    filter_vals = np.zeros_like(scaled_radii)
+
+    # Apply filter only within the aperture radius (Heaviside function)
     mask = scaled_radii <= 1.0
-    radius_squared = jnp.where(mask, scaled_radii, 0.0)**2
-    profile = (1 + ell) * (2 + ell) / (jnp.pi * scale**2) * radius_squared * (1 - radius_squared)**ell
-    return jnp.where(mask, profile, 0.0)
+
+    # Q function filter
+    filter_vals[mask] = ((1 + ell) * (2 + ell) / (np.pi * scale**2)
+                         * scaled_radii[mask]**2
+                         * (1 - scaled_radii[mask]**2)**ell)
+
+    return filter_vals
