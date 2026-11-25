@@ -25,8 +25,7 @@ The package provides a robust implementation supporting both weighted and unweig
 
 ## Installation
 
-1. **Prerequisites.** SMPy requires Python 3.10 or newer. Installation includes the CPU build of JAX.
-   For GPU use, install a [JAX build for your accelerator](https://docs.jax.dev/en/latest/installation.html).
+1. **Prerequisites**: Ensure you have Python 3.10+ installed on your system. SMPy also requires `numpy`, `scipy`, `pandas`, `astropy`, `matplotlib`, and `pyyaml` for numerical computations and visualizations.
 
 2. **Install the Package:** Install SMPy from PyPI, then import and run it as `smpy`:
 
@@ -93,13 +92,14 @@ columns = dict(g1_col="g1_Rinv", g2_col="g2_Rinv", weight_col="weight")
    result_cfg = run(config)
    ```
 
-### Differentiable mapping
+### Optional JAX backend
 
-Use `smpy.ArrayMapper` to compose all three mapping methods with `jax.jit`,
-`jax.grad` and `jax.vmap`. It accepts gridded shear or a fixed-size galaxy
-catalogue and returns device arrays. See the
-[differentiable mapping guide](docs/source/differentiable.rst) for a
-gradient example and the limits at masks and filter cutoffs.
+NumPy is the default. Install JAX with `pip install "smpy-lensing[jax]"`.
+For GPU acceleration, pass `backend="jax"` to `smpy.map_mass` or set
+`backend: jax` under `general` in your YAML file. Both backends give the
+same maps up to rounding. See the [installation guide](https://smpy-docs.readthedocs.io/en/latest/installation.html)
+for GPU setup. Use `smpy.jax.ArrayMapper` with `jax.jit`, `jax.grad` and
+`jax.vmap` as shown in the [differentiable mapping guide](https://smpy-docs.readthedocs.io/en/latest/differentiable.html).
 
 ## Features
 ### Convergence Mapping
