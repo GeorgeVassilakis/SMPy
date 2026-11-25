@@ -1,5 +1,6 @@
 """Behavior tests for the Python API."""
 
+import importlib.util
 import random
 from pathlib import Path
 
@@ -88,6 +89,7 @@ INVALID = {
     "other method's setting": ({"inpainting_iterations": 5, **RADEC},
                                "Unknown setting 'inpainting_iterations'"),
     "unknown method": ({"method": "kaiser_squirez", **RADEC}, "general.method must be one of"),
+    "unknown backend": ({"backend": "other", **RADEC}, "general.backend must be one of numpy, jax"),
     "missing pixel_scale": (COLUMNS, "general.radec.pixel_scale is required"),
     "negative smoothing": ({"smoothing": -1.0, **RADEC}, "smoothing must be a number of at least 0"),
     "unknown filter": ({"method": "aperture_mass", "filter_type": "gauss", **RADEC}, "filter_type must be"),
@@ -115,6 +117,12 @@ def test_invalid_settings_name_the_setting(settings, name, tmp_path):
             smpy.run(tmp_path / "run.yaml")
         else:
             smpy.map_mass(CATALOG, **settings)
+
+@pytest.mark.skipif(importlib.util.find_spec("jax") is not None, reason="requires an environment without JAX")
+def test_missing_jax_names_extra_before_reading_catalog(tmp_path):
+    """Selecting JAX without the extra fails before opening the catalog."""
+    with pytest.raises(ImportError, match=r'pip install "smpy-lensing\[jax\]"'):
+        smpy.map_mass(tmp_path / "missing.fits", backend="jax", pixel_scale=0.4)
 
 def nan_shear(table):
     """Set one shear to NaN."""

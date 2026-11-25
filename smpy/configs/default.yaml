@@ -24,6 +24,7 @@ general:
 
   # Analysis
   method: "kaiser_squires"  # 'kaiser_squires', 'aperture_mass', or 'ks_plus'
+  backend: "numpy"  # 'numpy', or 'jax' (needs the jax extra: pip install "smpy-lensing[jax]")
   create_snr: false  # Also compute signal-to-noise maps
 
   # Outputs, written only by smpy.run and the smpy command

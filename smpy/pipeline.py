@@ -43,11 +43,24 @@ def compute(catalog, settings):
     grid_settings = general[general["coord_system"]]
     coord_system = get_coordinate_system(general["coord_system"])
 
+    use_jax = general["backend"] == "jax"
+    if use_jax:
+        # Imported before the catalog is read, so a missing JAX fails early
+        from smpy.jax.pipeline import compute_maps
+
     shear_df = load_shear_data(catalog, grid_settings["coord1_col"], grid_settings["coord2_col"],
                                general["g1_col"], general["g2_col"], general["weight_col"],
                                general["input_hdu"], "deg" if general["coord_system"] == "radec" else None)
     shear_df = coord_system.transform_coordinates(shear_df)
     scaled_boundaries, true_boundaries = coord_system.calculate_boundaries(shear_df, grid_settings)
+    if general["create_snr"] and settings["snr"]["seed"] == "random":
+        settings = {**settings, "snr": {**settings["snr"], "seed": secrets.randbits(128)}}
+
+    if use_jax:
+        maps, snr, grid = compute_maps(shear_df, scaled_boundaries, method, settings["methods"][method],
+                                       settings["snr"] if general["create_snr"] else None)
+        return MassMap(maps, snr, grid, scaled_boundaries, true_boundaries, settings)
+
     grid = coord_system.create_grid(shear_df, scaled_boundaries)
 
     start = time.perf_counter()
@@ -58,8 +71,6 @@ def compute(catalog, settings):
 
     snr = None
     if general["create_snr"]:
-        if settings["snr"]["seed"] == "random":
-            settings = {**settings, "snr": {**settings["snr"], "seed": secrets.randbits(128)}}
         snr = compute_snr(shear_df, coord_system, scaled_boundaries, mapper, maps, settings["snr"])
     return MassMap(maps, snr, grid, scaled_boundaries, true_boundaries, settings)
 

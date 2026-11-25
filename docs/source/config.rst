@@ -33,8 +33,9 @@ How Settings Combine
   `smpy.Config.save` rewrites them so they still point at the same files from
   the new location.
 - `smpy.run` writes ``<output_base_name>_<method>_settings.yaml`` next to its
-  outputs: every setting used, with absolute paths and the SMPy version. It can
-  be passed back to ``smpy -c`` to repeat the run.
+  outputs. The file records every setting used, including the backend, with
+  absolute paths and the SMPy version. Pass it back to ``smpy -c`` to repeat
+  the run.
 
 .. code-block:: python
 
@@ -92,6 +93,10 @@ General Settings
      - string
      - "kaiser_squires"
      - Mass mapping method: 'kaiser_squires', 'aperture_mass', or 'ks_plus'
+   * - backend
+     - string
+     - "numpy"
+     - Computation backend. Choose 'numpy' or 'jax'.
    * - create_snr
      - boolean
      - false
@@ -125,6 +130,30 @@ General Settings
 Only ``smpy.run`` and ``smpy -c`` write outputs; `smpy.map_mass` ignores the
 output settings. A NaN, infinite or masked value in a coordinate, shear or
 weight column raises an error naming the column; remove those rows first.
+
+NumPy is the default and reference implementation. To use JAX for GPU
+acceleration, set ``backend: jax`` under ``general`` for `smpy.run` or
+``smpy -c``, or pass ``backend="jax"`` to `smpy.map_mass`,
+`smpy.map_kaiser_squires`, `smpy.map_aperture_mass` or `smpy.map_ks_plus`.
+See :doc:`performance` for backend comparisons and :doc:`differentiable`
+for the array API used with JAX transforms.
+
+Both backends use the same NumPy code to load and project the catalog and
+place the grid. The JAX backend bins shear and computes maps and SNR in
+float64, using a GPU when JAX can see one. Both return a `smpy.MassMap`
+with NumPy arrays. With the same settings and seed, the maps and SNR agree
+up to rounding: within ``1e-12`` for maps of a catalog with double-precision
+columns. The JAX backend converts single-precision columns to double
+precision before binning, so for those the agreement is at single-precision
+rounding. KS+ with wavelet constraints divides by the spread of each wavelet
+band inside the gaps, which magnifies rounding where a band is almost
+constant there. For a small hole in a smooth, noise-free field the maps of
+the two backends have differed by up to ``3e-9`` and the SNR by up to
+``8e-9``. In a pixel where the shuffled maps do not vary, the SNR is
+undefined, and the two backends can mark it differently: NaN, or a very
+large number from rounding in the noise estimate. If JAX is missing,
+selecting ``jax`` raises an ``ImportError`` that names the
+``smpy-lensing[jax]`` extra.
 
 RA/Dec Coordinate Settings
 ~~~~~~~~~~~~~~~~~~~~~~~~~~

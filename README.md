@@ -92,6 +92,15 @@ columns = dict(g1_col="g1_Rinv", g2_col="g2_Rinv", weight_col="weight")
    result_cfg = run(config)
    ```
 
+### Optional JAX backend
+
+NumPy is the default. Install JAX with `pip install "smpy-lensing[jax]"`.
+For GPU acceleration, pass `backend="jax"` to `smpy.map_mass` or set
+`backend: jax` under `general` in your YAML file. Both backends give the
+same maps up to rounding. See the [installation guide](https://smpy-docs.readthedocs.io/en/latest/installation.html)
+for GPU setup. Use `smpy.jax.ArrayMapper` with `jax.jit`, `jax.grad` and
+`jax.vmap` as shown in the [differentiable mapping guide](https://smpy-docs.readthedocs.io/en/latest/differentiable.html).
+
 ## Features
 ### Convergence Mapping
 - **Kaiser-Squires Inversion**: Implementation of the classic [Kaiser & Squires (1993)](https://ui.adsabs.harvard.edu/abs/1993ApJ...404..441K/abstract) method for reconstructing convergence maps from weak lensing shear data

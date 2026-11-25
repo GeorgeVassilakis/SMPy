@@ -111,6 +111,7 @@ class Config:
         """
         general = self._settings["general"]
         _check_choice("general.method", general["method"], METHODS)
+        _check_choice("general.backend", general["backend"], ("numpy", "jax"))
         _check_choice("general.coord_system", general["coord_system"], ("radec", "pixel"))
         scale = "pixel_scale" if general["coord_system"] == "radec" else "downsample_factor"
         if general[general["coord_system"]][scale] is None:

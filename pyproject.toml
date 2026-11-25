@@ -27,6 +27,7 @@ dependencies = [
 
 [project.optional-dependencies]
 test = ["pytest", "pytest-cov"]
+jax = ["jax>=0.4.38"]
 
 [project.scripts]
 smpy = "smpy.cli:main"
