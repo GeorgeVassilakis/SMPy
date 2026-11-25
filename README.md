@@ -25,7 +25,8 @@ The package provides a robust implementation supporting both weighted and unweig
 
 ## Installation
 
-1. **Prerequisites**: Ensure you have Python 3.10+ installed on your system. SMPy also requires `numpy`, `scipy`, `pandas`, `astropy`, `matplotlib`, and `pyyaml` for numerical computations and visualizations.
+1. **Prerequisites.** SMPy requires Python 3.10 or newer. Installation includes the CPU build of JAX.
+   For GPU use, install a [JAX build for your accelerator](https://docs.jax.dev/en/latest/installation.html).
 
 2. **Install the Package:** Install SMPy from PyPI, then import and run it as `smpy`:
 
@@ -91,6 +92,14 @@ columns = dict(g1_col="g1_Rinv", g2_col="g2_Rinv", weight_col="weight")
    config.save("my_run.yaml")      # rerun later with: smpy -c my_run.yaml
    result_cfg = run(config)
    ```
+
+### Differentiable mapping
+
+Use `smpy.ArrayMapper` to compose all three mapping methods with `jax.jit`,
+`jax.grad` and `jax.vmap`. It accepts gridded shear or a fixed-size galaxy
+catalogue and returns device arrays. See the
+[differentiable mapping guide](docs/source/differentiable.rst) for a
+gradient example and the limits at masks and filter cutoffs.
 
 ## Features
 ### Convergence Mapping

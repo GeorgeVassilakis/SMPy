@@ -9,15 +9,17 @@ import secrets
 import time
 from pathlib import Path
 
+import jax
 import matplotlib.pyplot as plt
 import yaml
 
 from smpy import __version__
+from smpy._precision import enable_x64, to_numpy
 from smpy.config import Config
 from smpy.coordinates import get_coordinate_system
 from smpy.mapping_methods import METHODS
 from smpy.result import MassMap
-from smpy.snr import compute_snr
+from smpy.snr import _compute_device_snr
 from smpy.utils import load_shear_data
 
 logger = logging.getLogger(__name__)
@@ -48,19 +50,21 @@ def compute(catalog, settings):
                                general["input_hdu"], "deg" if general["coord_system"] == "radec" else None)
     shear_df = coord_system.transform_coordinates(shear_df)
     scaled_boundaries, true_boundaries = coord_system.calculate_boundaries(shear_df, grid_settings)
-    grid = coord_system.create_grid(shear_df, scaled_boundaries)
-
-    start = time.perf_counter()
-    mapper = METHODS[method](**settings["methods"][method])
-    map_e, map_b = mapper.create_maps(grid)
-    maps = {"E": map_e, "B": map_b}
-    logger.info("Created %s maps in %.2f s", method, time.perf_counter() - start)
-
-    snr = None
-    if general["create_snr"]:
-        if settings["snr"]["seed"] == "random":
-            settings = {**settings, "snr": {**settings["snr"], "seed": secrets.randbits(128)}}
-        snr = compute_snr(shear_df, coord_system, scaled_boundaries, mapper, maps, settings["snr"])
+    with enable_x64(True):
+        grid = coord_system._create_device_grid(shear_df, scaled_boundaries)
+        start = time.perf_counter()
+        mapper = METHODS[method](**settings["methods"][method])
+        maps = dict(zip("EB", mapper.create_maps(grid)))
+        jax.block_until_ready(maps)
+        logger.info("Created %s maps in %.2f s", method, time.perf_counter() - start)
+        snr = None
+        if general["create_snr"]:
+            if settings["snr"]["seed"] == "random":
+                settings = {**settings, "snr": {**settings["snr"], "seed": secrets.randbits(128)}}
+            snr = _compute_device_snr(
+                shear_df, coord_system, scaled_boundaries, mapper, maps, settings["snr"],
+            )
+        maps, snr, grid = to_numpy((maps, snr, grid))
     return MassMap(maps, snr, grid, scaled_boundaries, true_boundaries, settings)
 
 def run(config):

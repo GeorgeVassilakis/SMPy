@@ -9,9 +9,35 @@ import logging
 import random
 import time
 
+import jax
+import jax.numpy as jnp
 import numpy as np
 
+from smpy._precision import enable_x64, to_numpy
+from smpy.coordinates.base import _bin_shear, _grid_inputs
+
 logger = logging.getLogger(__name__)
+
+@jax.jit
+def _rotate_shear(g1, g2, angle):
+    """Turn the complex shear by a phase without changing its amplitude."""
+    cosine, sine = jnp.cos(angle), jnp.sin(angle)
+    return g1 * cosine - g2 * sine, g1 * sine + g2 * cosine
+
+@jax.jit
+def _noise_step(mean, m2, trial, count):
+    """Accumulate one pair of null maps using Welford's recurrence."""
+    delta = trial - mean
+    mean = mean + delta / count
+    return mean, m2 + delta * (trial - mean)
+
+@jax.jit
+def _signal_to_noise(signal, m2, count):
+    """Divide signal maps by the sample standard deviation."""
+    var = m2 / (count - 1)
+    defined = var > 0
+    sigma = jnp.sqrt(jnp.where(defined, var, 1))
+    return jnp.where(defined, signal / sigma, jnp.nan)
 
 def compute_snr(shear_df, coord_system, boundaries, mapper, maps, snr_settings):
     """Compute E- and B-mode signal-to-noise maps.
@@ -46,20 +72,55 @@ def compute_snr(shear_df, coord_system, boundaries, mapper, maps, snr_settings):
     galaxy's shear amplitude, lensing included, and for KS+ the spread of maps
     without signal need not equal the uncertainty of a map with signal.
     """
+    count = snr_settings["num_shuffles"]
+    shuffled = generate_multiple_shear_dfs(
+        shear_df, count, snr_settings["shuffle_type"], snr_settings["seed"],
+    )
+    grids = (coord_system.create_grid(catalog, boundaries) for catalog in shuffled)
+    return to_numpy(_snr_from_grids(grids, mapper, maps, count))
+
+def _compute_device_snr(shear_df, coord_system, boundaries, mapper, maps, snr_settings):
+    """Bin null catalogs for the built-in coordinate systems on the device."""
+    count = snr_settings["num_shuffles"]
+    grids = _device_shuffle_grids(shear_df, coord_system, boundaries, count,
+                                  snr_settings["shuffle_type"], snr_settings["seed"])
+    return _snr_from_grids(grids, mapper, maps, count)
+
+def _snr_from_grids(grids, mapper, maps, count):
+    """Accumulate null-map variance without transferring intermediate maps."""
     start = time.perf_counter()
-    noise = {"E": [], "B": []}
-    shuffled_dfs = generate_multiple_shear_dfs(shear_df, snr_settings["num_shuffles"],
-                                               snr_settings["shuffle_type"], snr_settings["seed"])
-    for shuffled_df in shuffled_dfs:
-        grid = coord_system.create_grid(shuffled_df, boundaries)
-        for mode, noise_map in zip("EB", mapper.create_maps(grid)):
-            noise[mode].append(noise_map)
-    snr = {}
-    for mode in "EB":
-        sigma = np.std(noise[mode], axis=0, ddof=1)
-        snr[mode] = np.divide(maps[mode], sigma, out=np.full_like(sigma, np.nan), where=sigma > 0)
+    with enable_x64(True):
+        signal = jnp.stack((maps["E"], maps["B"]))
+        mean = m2 = jnp.zeros_like(signal)
+        for count_so_far, grid in enumerate(grids, 1):
+            trial = jnp.stack(mapper.create_maps(grid))
+            mean, m2 = _noise_step(mean, m2, trial, count_so_far)
+        snr = dict(zip("EB", _signal_to_noise(signal, m2, count)))
+        jax.block_until_ready(snr)
     logger.info("Created SNR maps in %.2f s", time.perf_counter() - start)
     return snr
+
+def _device_shuffle_grids(shear_df, coord_system, boundaries, num_shuffles, shuffle_type, seed):
+    """Grid null catalogs without copying their columns through the host."""
+    (x, y, g1, g2, weight), shape = _grid_inputs(coord_system.prepare_data(shear_df), boundaries)
+    if shuffle_type == "orientation":
+        rng = np.random.default_rng(seed)
+        for _ in range(num_shuffles):
+            angle = rng.uniform(0, 2 * np.pi, len(g1))
+            rotated = _rotate_shear(g1, g2, angle)
+            yield _bin_shear(x, y, *rotated, weight, shape=shape)
+    elif shuffle_type == "spatial":
+        for index in range(num_shuffles):
+            perm = _permutation(len(g1), random.Random(seed + index))
+            yield _bin_shear(x[perm], y[perm], g1, g2, weight, shape=shape)
+    else:
+        raise ValueError(f"Invalid shuffle type: {shuffle_type}")
+
+def _permutation(size, rng):
+    """Permute row numbers in the legacy spatial shuffle order."""
+    indices = list(range(size))
+    rng.shuffle(indices)
+    return np.asarray(indices, dtype=np.int32)
 
 def _shuffle_coordinates(shear_df, rng):
     """Shuffle the scaled coordinates of the input DataFrame together.
@@ -81,20 +142,8 @@ def _shuffle_coordinates(shear_df, rng):
     """
     shuffled_df = shear_df.copy()
 
-    # Combine scaled coordinates into pairs
-    coord_pairs = list(zip(shuffled_df['coord1_scaled'],
-                          shuffled_df['coord2_scaled']))
-
-    # Shuffle the pairs
-    rng.shuffle(coord_pairs)
-
-    # Unzip the shuffled pairs
-    shuffled_coord1, shuffled_coord2 = zip(*coord_pairs)
-
-    # Update the scaled coordinates
-    shuffled_df['coord1_scaled'] = shuffled_coord1
-    shuffled_df['coord2_scaled'] = shuffled_coord2
-
+    columns = ['coord1_scaled', 'coord2_scaled']
+    shuffled_df[columns] = shear_df[columns].to_numpy()[_permutation(len(shear_df), rng)]
     return shuffled_df
 
 def _shuffle_galaxy_rotation(shear_df, rng):
@@ -117,15 +166,10 @@ def _shuffle_galaxy_rotation(shear_df, rng):
     """
     shuffled_df = shear_df.copy()
 
-    # Add a random angle to the galaxy rotation
-    g1, g2 = shuffled_df['g1'], shuffled_df['g2']
+    g1, g2 = (shear_df[key].to_numpy(dtype=np.float64) for key in ("g1", "g2"))
     angle = rng.uniform(0, 2 * np.pi, len(g1))
-    g1g2_len = np.sqrt(np.array(g1)**2 + np.array(g2)**2)
-    g1g2_angle = np.arctan2(g2, g1) + angle
-
-    shuffled_df['g1'] = g1g2_len * np.cos(g1g2_angle)
-    shuffled_df['g2'] = g1g2_len * np.sin(g1g2_angle)
-
+    with enable_x64(True):
+        shuffled_df['g1'], shuffled_df['g2'] = jax.device_get(_rotate_shear(g1, g2, angle))
     return shuffled_df
 
 def generate_multiple_shear_dfs(og_shear_df, num_shuffles=100, shuffle_type='orientation', seed=0):

@@ -14,43 +14,50 @@ This code draws from the CosmoStat implementation:
     (MIT Licensed)
 """
 
+from functools import partial
 from typing import Optional
 
+import jax
+import jax.numpy as jnp
 import numpy as np
+
+from smpy._precision import numpy_precision
 
 B3_SPLINE = np.array([1, 4, 6, 4, 1]) / 16
 """Taps of the B3-spline filter of the starlet transform (`numpy.ndarray`)."""
 
+def _filter_axis(data, step):
+    """Apply the dilated B3-spline to the first axis."""
+    size = data.shape[0]
+    padded = jnp.pad(data, ((2 * step, 2 * step), (0, 0)), mode="reflect")
+    return sum(float(tap) * padded[i * step:i * step + size] for i, tap in enumerate(B3_SPLINE))
+
+@numpy_precision
+@partial(jax.jit, static_argnames=("step",))
 def apply_filter(data, step):
-    """Smooth an image with the B3-spline filter, its taps ``step`` pixels
-    apart.
+    """Smooth an image with B3-spline taps spaced ``step`` pixels apart.
 
     Parameters
     ----------
-    data : `numpy.ndarray`
+    data : `jax.Array` or `numpy.ndarray`
         Input 2D image.
     step : `int`
-        Spacing of the filter taps; 2^j at scale j of the à trous algorithm.
+        Static spacing of the taps, 2^j at à trous scale j.
 
     Returns
     -------
-    smoothed : `numpy.ndarray`
+    smoothed : `numpy.ndarray` or `jax.Array`
         Smoothed 2D image.
 
     Notes
     -----
     The filter is applied along columns, then rows, with the image mirrored
     at its edges without repeating the edge pixel (``mode='reflect'`` in
-    `numpy.pad`). Only the five taps are applied, so the cost does not grow
-    with ``step``.
+    `numpy.pad`).
     """
-    # Filter down the columns, then transpose to filter along the rows
-    for _ in range(2):
-        n = data.shape[0]
-        padded = np.pad(data, ((2 * step, 2 * step), (0, 0)), mode="reflect")
-        data = sum(tap * padded[k * step:k * step + n] for k, tap in enumerate(B3_SPLINE)).T
-    return data
+    return _filter_axis(_filter_axis(data, step).T, step).T
 
+@numpy_precision
 def starlet_transform_2d(data, nscales):
     """Compute the isotropic undecimated wavelet transform of an image.
 
@@ -59,14 +66,14 @@ def starlet_transform_2d(data, nscales):
 
     Parameters
     ----------
-    data : `numpy.ndarray`
+    data : `jax.Array` or `numpy.ndarray`
         Input 2D image.
     nscales : `int`
         Number of wavelet scales to compute.
 
     Returns
     -------
-    wavelet_bands : `numpy.ndarray`
+    wavelet_bands : `numpy.ndarray` or `jax.Array`
         3D array containing wavelet coefficients with shape (nscales, ny, nx)
         where the first nscales-1 bands are wavelet coefficients and the
         last band is the coarse approximation.
@@ -77,44 +84,35 @@ def starlet_transform_2d(data, nscales):
     that preserves translation invariance. Each wavelet band represents
     the detail information between consecutive smoothing scales.
     """
-    # Make sure input is float
-    data = np.float64(data)
+    if isinstance(data, np.ndarray):
+        data = np.asarray(data, dtype=np.float64)
+    return _starlet_transform_2d(data, nscales)
 
-    # Initialize arrays
-    ny, nx = data.shape
-    wavelet_bands = np.zeros((nscales, ny, nx))
+@partial(jax.jit, static_argnames=("nscales",))
+def _starlet_transform_2d(data, nscales):
+    """Compute the detail bands and coarse image on the device."""
+    data = jnp.asarray(data, dtype=jnp.result_type(data, 1.0))
+    details = []
+    for scale in range(nscales - 1):
+        smoothed = apply_filter(data, 1 << scale)
+        details.append(data - smoothed)
+        data = smoothed
+    return jnp.stack((*details, data))
 
-    # Initialize smoothed data
-    smoothed_data = data.copy()
-
-    # Compute wavelet bands
-    for j in range(nscales-1):
-        # Smooth with the filter taps 2^j pixels apart
-        smoothed_j_plus_1 = apply_filter(smoothed_data, 2**j)
-
-        # Wavelet coefficients = detail signal between two scales
-        wavelet_bands[j] = smoothed_data - smoothed_j_plus_1
-
-        # Update smoothed data for next scale
-        smoothed_data = smoothed_j_plus_1
-
-    # Last scale contains the coarse approximation
-    wavelet_bands[nscales-1] = smoothed_data
-
-    return wavelet_bands
-
+@numpy_precision
+@jax.jit
 def inverse_starlet_transform_2d(wavelet_bands):
     """Reconstruct an image from its starlet transform coefficients.
 
     Parameters
     ----------
-    wavelet_bands : `numpy.ndarray`
+    wavelet_bands : `jax.Array` or `numpy.ndarray`
         Wavelet coefficients from starlet_transform_2d with shape
         (nscales, ny, nx).
 
     Returns
     -------
-    reconstructed : `numpy.ndarray`
+    reconstructed : `numpy.ndarray` or `jax.Array`
         Reconstructed 2D image.
 
     Notes
@@ -122,7 +120,7 @@ def inverse_starlet_transform_2d(wavelet_bands):
     Each detail band is the difference between two successive smoothings of
     the image, so the detail bands and the coarse residual sum to the image.
     """
-    return np.sum(wavelet_bands, axis=0)
+    return jnp.sum(wavelet_bands, axis=0)
 
 
 def compute_starlet_nscales_max(height: int, width: int) -> int:
@@ -147,16 +145,8 @@ def compute_starlet_nscales_max(height: int, width: int) -> int:
     nscales_max : `int`
         Maximum safe number of starlet scales (detail bands + coarse).
     """
-    N = int(min(height, width))
-
-    # Guard against very small images. Ensure at least one detail band.
-    if N <= 1:
-        return 2
-
-    value = (N - 1) / 4.0
-    # If value < 1, log2 is negative; clamp to at least 1 detail band
-    J_max = max(1, int(np.floor(np.log2(value))) + 1)
-    return J_max + 1
+    max_step = max(int(min(height, width)) - 1, 0) // 4
+    return 1 + max(1, max_step.bit_length())
 
 
 def starlet_nscales_support_aware(

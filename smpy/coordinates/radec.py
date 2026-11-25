@@ -5,9 +5,41 @@ field center (the gnomonic, or TAN, projection) and gridded there. The map x
 axis points west and y north, so east is to the left as the sky is seen.
 """
 
+import jax
+import jax.numpy as jnp
 import numpy as np
 
+from smpy._precision import enable_x64, to_numpy
+
 from .base import CoordinateSystem
+
+@jax.jit
+def _project(ra, dec, ra_center, dec_center):
+    """Return TAN coordinates and the projection-domain mask."""
+    ra, dec = jnp.deg2rad(ra), jnp.deg2rad(dec)
+    ra0, dec0 = jnp.deg2rad(ra_center), jnp.deg2rad(dec_center)
+    offset = ra - ra0
+    cos_distance = jnp.sin(dec0) * jnp.sin(dec) + jnp.cos(dec0) * jnp.cos(dec) * jnp.cos(offset)
+    visible = cos_distance > 0
+    denominator = jnp.where(visible, cos_distance, 1)
+    x = -jnp.cos(dec) * jnp.sin(offset) / denominator
+    y = (jnp.cos(dec0) * jnp.sin(dec) - jnp.sin(dec0) * jnp.cos(dec) * jnp.cos(offset)) / denominator
+    return jnp.rad2deg(x), jnp.rad2deg(y), visible
+
+@jax.jit
+def _project_catalog(ra, dec, g1, g2, ra_center, dec_center):
+    """Project positions and rotate local shear into the map frame."""
+    x, y, visible = _project(ra, dec, ra_center, dec_center)
+    offset = jnp.deg2rad(ra - ra_center)
+    north = jnp.arctan2(jnp.sin(offset) * jnp.sin(jnp.deg2rad(dec_center)), jnp.cos(offset))
+    cos_turn, sin_turn = jnp.cos(2 * north), jnp.sin(2 * north)
+    return x, y, g1 * cos_turn + g2 * sin_turn, g2 * cos_turn - g1 * sin_turn, visible
+
+def _check_projection(visible):
+    """Reject catalog positions outside the tangent hemisphere."""
+    if not np.all(visible):
+        raise ValueError("Positions 90 degrees or more from the field center cannot be projected onto its "
+                         "tangent plane")
 
 def project(ra, dec, ra_center, dec_center):
     """Project sky positions onto the plane tangent at the field center.
@@ -31,15 +63,11 @@ def project(ra, dec, ra_center, dec_center):
         Raised if a position is 90 degrees or more from the tangent point,
         where the projection is undefined.
     """
-    ra, dec = np.deg2rad(ra), np.deg2rad(dec)
-    ra0, dec0 = np.deg2rad(ra_center), np.deg2rad(dec_center)
-    cos_distance = np.sin(dec0) * np.sin(dec) + np.cos(dec0) * np.cos(dec) * np.cos(ra - ra0)
-    if np.any(cos_distance <= 0):
-        raise ValueError("Positions 90 degrees or more from the field center cannot be projected onto its "
-                         "tangent plane")
-    x = -np.cos(dec) * np.sin(ra - ra0) / cos_distance
-    y = (np.cos(dec0) * np.sin(dec) - np.sin(dec0) * np.cos(dec) * np.cos(ra - ra0)) / cos_distance
-    return np.rad2deg(x), np.rad2deg(y)
+    with enable_x64(True):
+        ra, dec = np.asarray(ra, dtype=float), np.asarray(dec, dtype=float)
+        x, y, visible = to_numpy(_project(ra, dec, ra_center, dec_center))
+    _check_projection(visible)
+    return x, y
 
 def unproject(x, y, ra_center, dec_center):
     """Return the sky positions of points on the plane tangent at the field
@@ -135,14 +163,10 @@ class RADecSystem(CoordinateSystem):
         """
         transformed_df = data_df.copy()
         ra, dec, ra_center, dec_center = _sky_coordinates(data_df)
-        transformed_df['coord1_scaled'], transformed_df['coord2_scaled'] = project(ra, dec, ra_center,
-                                                                                   dec_center)
-
-        # Angle from the map's y axis to each galaxy's local north
-        ra_offset = np.deg2rad(ra - ra_center)
-        north = np.arctan2(np.sin(ra_offset) * np.sin(np.deg2rad(dec_center)), np.cos(ra_offset))
-        cos_turn, sin_turn = np.cos(2 * north), np.sin(2 * north)
-        g1, g2 = data_df['g1'].to_numpy(), data_df['g2'].to_numpy()
-        transformed_df['g1'] = g1 * cos_turn + g2 * sin_turn
-        transformed_df['g2'] = g2 * cos_turn - g1 * sin_turn
+        g1, g2 = (data_df[key].to_numpy(dtype=np.float64) for key in ("g1", "g2"))
+        with enable_x64(True):
+            x, y, g1, g2, visible = jax.device_get(_project_catalog(ra, dec, g1, g2, ra_center, dec_center))
+        _check_projection(visible)
+        transformed_df['coord1_scaled'], transformed_df['coord2_scaled'] = x, y
+        transformed_df['g1'], transformed_df['g2'] = g1, g2
         return transformed_df
