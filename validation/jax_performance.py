@@ -1,17 +1,17 @@
 # Copyright (c) 2023-2026 Georgios N. Vassilakis
 # SPDX-License-Identifier: MIT
 
-"""Benchmark the original SMPy and the JAX port on the same catalogs.
+"""Benchmark SMPy's NumPy and JAX backends on the same catalogs.
 
-Run this file in a fresh process for each backend, with the intended checkout
-installed or on ``PYTHONPATH``. For example::
+From the checkout root, run this file in a fresh process for each backend.
+Put the checkout first on ``PYTHONPATH``. For example::
 
-    python validation/jax_performance.py --backend numpy --output numpy.json
-    python validation/jax_performance.py --backend jax-cpu --output cpu.json
-    python validation/jax_performance.py --backend jax-gpu --output gpu.json
+    PYTHONPATH=. python validation/jax_performance.py --backend numpy
+    PYTHONPATH=. python validation/jax_performance.py --backend jax-cpu
+    PYTHONPATH=. python validation/jax_performance.py --backend jax-gpu
 
-On XTX, use the same CPU allocation for each run and make one allocated GPU
-visible for the GPU run. Use ``--case smoke`` to check the harness, and
+Use the same CPU affinity for the NumPy and JAX CPU runs and make one GPU
+visible for the JAX GPU run. Use ``--case smoke`` to check the harness, and
 ``--revision`` to record the source revision of the package being timed.
 
 Notes
@@ -114,7 +114,7 @@ def _load_case(name, cluster_fits):
     return table, settings, metadata
 
 def _method_settings(args, case, method):
-    """Return matched method settings for the two source revisions."""
+    """Return method settings shared by both backends."""
     if method == "kaiser_squires":
         return {"smoothing": 2.0}
     if method == "aperture_mass":
@@ -230,11 +230,13 @@ def main():
     args = _parse_args()
     jax_info = None
     device = None
+    backend_settings = {}
     if args.backend == "numpy":
         jax = None
     else:
         import jax
 
+        backend_settings = {"backend": "jax"}
         jax.config.update("jax_platforms", "cpu" if args.backend == "jax-cpu" else "cuda")
         jax.config.update("jax_enable_x64", True)
         jax.config.update("jax_disable_jit", False)
@@ -242,6 +244,8 @@ def main():
         devices, init_seconds = _timed(jax.devices)
         device = devices[0]
         jax.config.update("jax_default_device", device)
+        from smpy.jax import ArrayMapper
+
         jax_info = {
             "device": str(device),
             "platform": device.platform,
@@ -252,11 +256,6 @@ def main():
         }
 
     import smpy
-
-    if args.backend == "numpy" and hasattr(smpy, "ArrayMapper"):
-        raise SystemExit(f"--backend numpy requires original SMPy, imported {smpy.__file__}")
-    if jax is not None and not hasattr(smpy, "ArrayMapper"):
-        raise SystemExit(f"{args.backend} requires SMPy with ArrayMapper, imported {smpy.__file__}")
 
     packages = ["numpy", "scipy", "astropy", "pandas", "pyyaml"]
     if jax is not None:
@@ -292,7 +291,8 @@ def main():
         for method in args.method:
             print(f"{args.backend} {case} {method}: timing maps", file=sys.stderr, flush=True)
             method_settings = _method_settings(args, case, method)
-            call = partial(_map_mass_host, smpy.map_mass, table, method, **settings, **method_settings)
+            call = partial(_map_mass_host, smpy.map_mass, table, method,
+                           **settings, **method_settings, **backend_settings)
             if jax is not None:
                 jax.clear_caches()
             (result, maps), timing = _time_series(call, args.repeats)
@@ -311,7 +311,7 @@ def main():
                 _, seconds = _timed(partial(call, create_snr=True, snr=snr_settings))
                 record["map_mass_snr"] = {"settings": snr_settings, "seconds": seconds}
             if jax is not None:
-                make_mapper = partial(smpy.ArrayMapper, method, **method_settings)
+                make_mapper = partial(ArrayMapper, method, **method_settings)
                 record["map_grid"] = _device_timings(jax, device, make_mapper, grid, maps,
                                                      args.repeats, args.gradient)
             report["cases"][case]["methods"][method] = record
