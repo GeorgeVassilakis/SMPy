@@ -9,7 +9,7 @@ with optional Gaussian smoothing.
 import jax
 import jax.numpy as jnp
 
-from smpy._precision import numpy_precision
+from smpy._precision import numpy_double
 from smpy.filters.gaussian import gaussian_filter
 
 from ..base import MassMapper
@@ -34,7 +34,7 @@ def _shear_kernel(shape, dtype):
     mixed_nyquist = (nyquist_ra & (k2 != 0)) | (nyquist_dec & (k1 != 0))
     return jnp.where(mixed_nyquist, 0, kernel)
 
-@numpy_precision
+@numpy_double
 @jax.jit
 def shear_from_convergence(kappa_e, kappa_b):
     """Compute the shear produced by E- and B-mode convergence maps.
@@ -65,7 +65,7 @@ def shear_from_convergence(kappa_e, kappa_b):
     gamma = jnp.fft.ifft2(_shear_kernel(kappa.shape, dtype) * jnp.fft.fft2(kappa))
     return gamma.real, gamma.imag
 
-@numpy_precision
+@numpy_double
 @jax.jit
 def convergence_from_shear(gamma1, gamma2):
     """Invert a shear field into E- and B-mode convergence maps.
@@ -126,7 +126,7 @@ class KaiserSquiresMapper(MassMapper):
             raise ValueError(f"smoothing must be a number of at least 0, got {smoothing!r}")
         self.smoothing = smoothing
 
-    @numpy_precision
+    @numpy_double
     def create_maps(self, grid, *, smoothing=None):
         """Create convergence maps using Kaiser-Squires inversion.
 

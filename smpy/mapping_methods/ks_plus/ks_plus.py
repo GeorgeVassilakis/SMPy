@@ -15,7 +15,7 @@ from jax import lax
 from jax.scipy import fft
 from jax.scipy.special import erf
 
-from smpy._precision import numpy_precision
+from smpy._precision import numpy_double
 from smpy.filters.gaussian import gaussian_filter
 from smpy.filters.starlet import apply_filter, starlet_nscales_support_aware
 
@@ -88,7 +88,7 @@ class KSPlusMapper(MassMapper):
         self.extension_size = extension_size
         self.use_wavelet_constraints = use_wavelet_constraints
 
-    @numpy_precision
+    @numpy_double
     def create_maps(self, grid, *, smoothing=None):
         """Create convergence maps using Kaiser-Squires Plus inversion.
 

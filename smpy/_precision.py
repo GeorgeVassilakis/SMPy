@@ -10,7 +10,7 @@ try:
 except ImportError:
     from jax.experimental import enable_x64
 
-__all__ = ["enable_x64", "native_array", "numpy_precision", "to_numpy"]
+__all__ = ["enable_x64", "native_array", "numpy_double", "numpy_precision", "to_numpy"]
 
 def native_array(array):
     """Convert non-native NumPy byte order before passing data to JAX."""
@@ -18,8 +18,22 @@ def native_array(array):
         return array.astype(array.dtype.newbyteorder("="))
     return array
 
+def _double_array(array):
+    """Promote real NumPy inputs to native float64."""
+    if isinstance(array, np.ndarray) and array.dtype.kind == "f":
+        return array.astype(np.float64, copy=False)
+    return native_array(array)
+
+def numpy_double(function):
+    """Run real NumPy array calls in float64 and preserve JAX dtypes."""
+    return _numpy_dispatch(function, _double_array)
+
 def numpy_precision(function):
     """Run host-array calls in double-precision mode."""
+    return _numpy_dispatch(function, native_array)
+
+def _numpy_dispatch(function, convert):
+    """Adapt NumPy calls while keeping traced JAX calls on the device."""
     @wraps(function)
     def call(*args, **kwargs):
         leaves = jax.tree_util.tree_leaves((args, kwargs))
@@ -28,7 +42,7 @@ def numpy_precision(function):
         if not any(isinstance(leaf, np.ndarray) for leaf in leaves):
             return function(*args, **kwargs)
         with enable_x64(True):
-            args, kwargs = jax.tree_util.tree_map(native_array, (args, kwargs))
+            args, kwargs = jax.tree_util.tree_map(convert, (args, kwargs))
             return to_numpy(function(*args, **kwargs))
 
     return call

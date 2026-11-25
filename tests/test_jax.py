@@ -9,10 +9,16 @@ import pandas as pd
 import pytest
 
 import smpy
+from smpy.coordinates import ShearGrid
 from smpy.coordinates.pixel import PixelSystem
 from smpy.filters.processing import schirmer_filter, schneider_filter
 from smpy.filters.starlet import starlet_transform_2d
-from smpy.mapping_methods.kaiser_squires import KaiserSquiresMapper
+from smpy.mapping_methods.kaiser_squires import (
+    KaiserSquiresMapper,
+    convergence_from_shear,
+    shear_from_convergence,
+)
+from smpy.mapping_methods.ks_plus import KSPlusMapper
 from smpy.snr import compute_snr
 
 try:
@@ -25,6 +31,51 @@ def _double_precision():
     """Use double precision for analytic and finite-difference checks."""
     with enable_x64(True):
         yield
+
+def test_numpy_ks_interfaces_keep_double_precision():
+    """The axial KS mode is inverted in float64 for NumPy inputs."""
+    profile = np.array([0.02, -0.34, 0.16, 0.09, -0.01, 0.07, 0.04], dtype=np.float32)
+    shear1 = np.tile(profile, (3, 1))
+    shear2 = np.flip(shear1, axis=1)
+    weights = np.ones_like(shear1)
+    grid = ShearGrid(shear1, shear2, weights, weights)
+    ks = KaiserSquiresMapper(smoothing=0)
+    ks_plus = KSPlusMapper(smoothing=0, inpainting_iterations=2, reduced_shear_iterations=1,
+                           extension_size=0, nscales=None, use_wavelet_constraints=False)
+
+    with enable_x64(False):
+        outputs = (convergence_from_shear(shear1, shear2), shear_from_convergence(shear1, shear2),
+                   ks.create_maps(grid), ks_plus.create_maps(grid))
+
+    # Along the x axis the Fourier kernel is one for all nonzero modes.
+    expected = np.array([shear1, shear2], dtype=np.float64)
+    expected -= expected.mean(axis=(1, 2), keepdims=True)
+    for output in outputs:
+        assert all(array.dtype == np.float64 for array in output)
+        np.testing.assert_allclose(output, expected, atol=1e-12, rtol=0)
+
+    jax_grid = smpy.ArrayMapper("kaiser_squires", smoothing=0)
+    maps = jax.jit(jax_grid.map_grid)(jnp.asarray(shear1), jnp.asarray(shear2))
+    assert all(array.dtype == jnp.float32 for array in maps.values())
+
+def test_sky_catalog_position_differentiates_shear_rotation():
+    """Moving a source off the TAN meridian changes its shear frame."""
+    mapper = smpy.ArrayMapper()
+    ra0, dec0, shear = 41.0, -30.0, 0.2
+
+    def projected_g2(ra):
+        result = mapper.map_catalog(
+            jnp.array([ra]), jnp.array([dec0]), jnp.array([shear]), jnp.zeros(1),
+            shape=(3, 3), origin=(-1.5, -1.5), tangent_point=(ra0, dec0),
+        )
+        return result.grid.g2.sum()
+
+    value, derivative = jax.jit(jax.value_and_grad(projected_g2))(ra0)
+    # At the central meridian the local north rotates at sin(dec0)
+    # radians per radian of RA. The shear rotates as a spin-two field.
+    expected = -2 * shear * np.sin(np.deg2rad(dec0)) * np.pi / 180
+    np.testing.assert_allclose(value, 0.0, atol=1e-14)
+    np.testing.assert_allclose(derivative, expected, rtol=1e-12)
 
 def test_kaiser_squires_smoothing_derivative():
     """A traced Gaussian sigma changes the gain of an axial Fourier mode."""
